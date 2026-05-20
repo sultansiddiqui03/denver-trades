@@ -38,3 +38,11 @@
   max-width: 340px;
   line-height: 1.6;
 }
+
+.defaultIcon {
+  opacity: 0.5;
+}
+
+.actionBtn {
+  margin-top: var(--space-2);
+}

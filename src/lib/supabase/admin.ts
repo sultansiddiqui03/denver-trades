@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from './database.types';
 
-let serviceClient: SupabaseClient | null = null;
+let serviceClient: SupabaseClient<Database> | null = null;
 
 export function getSupabaseServiceClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -11,7 +12,7 @@ export function getSupabaseServiceClient() {
   }
 
   if (!serviceClient) {
-    serviceClient = createClient(supabaseUrl, serviceRoleKey, {
+    serviceClient = createClient<Database>(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,

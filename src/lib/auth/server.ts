@@ -2,6 +2,7 @@ import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getSupabaseServiceClient } from '@/lib/supabase/admin';
+import type { Database } from '@/lib/supabase/database.types';
 
 export const DEFAULT_ORG_ID =
   process.env.DENVER_TRADES_DEFAULT_ORG_ID || 'd3b07384-d113-4e4e-9c8e-5b123d456789';
@@ -18,7 +19,7 @@ export interface UserContext {
   user: User;
   profile: Profile;
   orgId: string;
-  supabase: SupabaseClient;
+  supabase: SupabaseClient<Database>;
 }
 
 function userDisplayName(user: User) {

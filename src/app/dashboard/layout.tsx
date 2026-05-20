@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { Menu, Search } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { ToastProvider } from '@/components/Toast';
 import CommandPalette from '@/components/CommandPalette';
 import ProgressBar from '@/components/ProgressBar';
 import NotificationCenter from '@/components/NotificationCenter';
+import TopBarUser from '@/components/TopBarUser';
 import styles from './layout.module.css';
 
 export default function DashboardLayout({
@@ -17,7 +19,6 @@ export default function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [cmdkOpen, setCmdkOpen] = useState(false);
 
-  // Global Ctrl+K / Cmd+K listener
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault();
@@ -32,78 +33,59 @@ export default function DashboardLayout({
 
   return (
     <ToastProvider>
-    <div className={styles.dashboardContainer}>
-      <ProgressBar />
-      <CommandPalette isOpen={cmdkOpen} onClose={() => setCmdkOpen(false)} />
+      <div className={styles.dashboardContainer}>
+        <ProgressBar />
+        <CommandPalette isOpen={cmdkOpen} onClose={() => setCmdkOpen(false)} />
 
-      {/* Sidebar Overlay for Mobile */}
-      {mobileOpen && (
-        <div
-          className={styles.sidebarOverlay}
-          onClick={() => setMobileOpen(false)}
+        {mobileOpen && (
+          <div
+            className={styles.sidebarOverlay}
+            onClick={() => setMobileOpen(false)}
+            role="presentation"
+          />
+        )}
+
+        <Sidebar
+          collapsed={collapsed}
+          setCollapsed={setCollapsed}
+          mobileOpen={mobileOpen}
+          setMobileOpen={setMobileOpen}
         />
-      )}
 
-      <Sidebar
-        collapsed={collapsed}
-        setCollapsed={setCollapsed}
-        mobileOpen={mobileOpen}
-        setMobileOpen={setMobileOpen}
-      />
+        <div
+          className={`${styles.mainContent} ${
+            collapsed ? styles.contentCollapsed : styles.contentExpanded
+          }`}
+        >
+          <header className={styles.topBar}>
+            <button
+              className={styles.hamburgerBtn}
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="Toggle navigation menu"
+            >
+              <Menu size={22} strokeWidth={1.8} />
+            </button>
 
-      <div
-        className={`${styles.mainContent} ${
-          collapsed ? styles.contentCollapsed : styles.contentExpanded
-        }`}
-      >
-        {/* TopBar Header */}
-        <header className={styles.topBar}>
-          {/* Hamburger Menu (Mobile Only) */}
-          <button
-            className={styles.hamburgerBtn}
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="Toggle Navigation Menu"
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="4" y1="12" x2="20" y2="12" />
-              <line x1="4" y1="6" x2="20" y2="6" />
-              <line x1="4" y1="18" x2="20" y2="18" />
-            </svg>
-          </button>
+            <button
+              className={styles.searchPlaceholder}
+              onClick={() => setCmdkOpen(true)}
+              type="button"
+              aria-label="Open command palette"
+            >
+              <Search size={18} strokeWidth={1.6} />
+              <span className={styles.searchText}>Search anything…</span>
+              <kbd className={styles.searchKbd}>⌘K</kbd>
+            </button>
 
-          {/* Cmd+K Search Trigger */}
-          <button
-            className={styles.searchPlaceholder}
-            onClick={() => setCmdkOpen(true)}
-            type="button"
-          >
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="8.5" cy="8.5" r="5.5" />
-              <path d="M13 13l4 4" />
-            </svg>
-            <span className={styles.searchText}>Search anything...</span>
-            <kbd className={styles.searchKbd}>⌘K</kbd>
-          </button>
-
-          <div className={styles.topBarActions}>
-            {/* Notification Center */}
-            <NotificationCenter />
-
-            {/* Profile Avatar */}
-            <div className={styles.profileSummary}>
-              <div className={styles.avatar}>ST</div>
-              <div className={styles.profileText}>
-                <span className={styles.profileName}>Sultan Trades</span>
-                <span className={styles.profileRole}>Owner</span>
-              </div>
+            <div className={styles.topBarActions}>
+              <NotificationCenter />
+              <TopBarUser />
             </div>
-          </div>
-        </header>
+          </header>
 
-        {/* Content container */}
-        <div className={`${styles.pageBody} dot-grid`}>{children}</div>
+          <div className={`${styles.pageBody} dot-grid`}>{children}</div>
+        </div>
       </div>
-    </div>
     </ToastProvider>
   );
 }

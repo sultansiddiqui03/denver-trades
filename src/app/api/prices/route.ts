@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireUserContext } from '@/lib/auth/server';
-import { getSupabaseServiceClient } from '@/lib/supabase/admin';
 import { getErrorMessage } from '@/lib/errors';
 import { isAutomationAuthorized } from '@/lib/security/request';
+import { runPriceIngest } from '@/lib/agents/priceIngest';
 
 export async function GET(request: Request) {
   try {
@@ -55,40 +55,12 @@ export async function POST() {
 
 async function triggerVolatilityTick() {
   try {
-    const supabase = getSupabaseServiceClient();
-    const { data: prices, error: fetchError } = await supabase
-      .from('commodity_prices')
-      .select('*');
-
-    if (fetchError) throw fetchError;
-
-    const updates = [];
-    for (const feed of prices) {
-      // Calculate a random price fluctuation between -1.5% and +1.5%
-      const volatility = 1 + (Math.random() * 0.03 - 0.015);
-      const newPrice = Math.round(Number(feed.price_usd) * volatility * 100) / 100;
-
-      const { data: updatedFeed, error: updateError } = await supabase
-        .from('commodity_prices')
-        .insert({
-          commodity: feed.commodity,
-          origin_country: feed.origin_country,
-          price_usd: newPrice,
-          unit: feed.unit,
-          source: feed.source,
-          recorded_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (updateError) throw updateError;
-      updates.push(updatedFeed);
-    }
-
+    const result = await runPriceIngest();
     return NextResponse.json({
       success: true,
       message: 'Simulated price feed tick triggered.',
-      updatedFeeds: updates
+      processed: result.processed,
+      created: result.created,
     });
   } catch (error: unknown) {
     console.error('Price Ingest trigger error:', error);
