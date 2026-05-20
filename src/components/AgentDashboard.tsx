@@ -52,6 +52,7 @@ export default function AgentDashboard() {
 
   const [runs, setRuns] = useState<AgentRun[]>([]);
   const [triggering, setTriggering] = useState<string | null>(null);
+  const [scraperQuery, setScraperQuery] = useState('Spice exporters in Vietnam');
 
   const fetchRuns = async () => {
     try {
@@ -70,6 +71,13 @@ export default function AgentDashboard() {
 
   useEffect(() => {
     fetchRuns();
+
+    // Auto-refresh runs log history every 5 seconds to track active background runs
+    const interval = setInterval(() => {
+      fetchRuns();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleRunAgent = async (agentName: string) => {
@@ -79,57 +87,19 @@ export default function AgentDashboard() {
     setAgents(prev => prev.map(a => a.name === agentName ? { ...a, status: 'Running' } : a));
 
     try {
-      const orgId = 'd3b07384-d113-4e4e-9c8e-5b123d456789';
-      
-      // 1. Insert "Running" agent run into DB
-      const { data: runRecord, error: insertError } = await supabase
-        .from('agent_runs')
-        .insert({
-          org_id: orgId,
-          agent_name: agentName,
-          status: 'Running',
-          records_processed: 0,
-          records_created: 0
+      const res = await fetch('/api/agents/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          agentName,
+          query: agentName === 'Lead Scraper Agent' ? scraperQuery : undefined
         })
-        .select()
-        .single();
+      });
 
-      if (insertError) throw insertError;
-      await fetchRuns();
-
-      // 2. Simulate 2.5 seconds processing lag
-      await new Promise(resolve => setTimeout(resolve, 2500));
-
-      const processed = Math.floor(Math.random() * 45) + 5;
-      const created = Math.floor(Math.random() * 4) + 1;
-
-      // 3. Update agent run to "Success"
-      await supabase
-        .from('agent_runs')
-        .update({
-          status: 'Success',
-          records_processed: processed,
-          records_created: created,
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', runRecord.id);
-
-      // If Lead Scraper run, insert a simulated company for visual wow!
-      if (agentName === 'Lead Scraper Agent') {
-        const randId = Math.floor(Math.random() * 1000);
-        await supabase
-          .from('companies')
-          .insert({
-            org_id: orgId,
-            name: `Indo-Global Spices PT #${randId}`,
-            type: 'Exporter',
-            hq_country: 'Indonesia',
-            hq_city: 'Jakarta',
-            products_dealt: ['Coriander Seeds', 'Nutmeg wholes', 'Black Pepper'],
-            description: 'Discovered via automated Lead Scraper search scan. Specializes in organic spice processing.',
-            is_enriched: true,
-            confidence_score: 0.94
-          });
+      if (!res.ok) {
+        throw new Error(`Failed to trigger agent: ${await res.text()}`);
       }
 
       await fetchRuns();
@@ -159,6 +129,36 @@ export default function AgentDashboard() {
               </span>
             </div>
             <p className={styles.description}>{agent.description}</p>
+            
+            {/* Dynamic query input field for scraper agent */}
+            {agent.name === 'Lead Scraper Agent' && (
+              <div style={{ marginBottom: 'var(--space-4)', marginTop: '-8px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Scraping Query
+                </label>
+                <input
+                  type="text"
+                  value={scraperQuery}
+                  onChange={(e) => setScraperQuery(e.target.value)}
+                  placeholder="e.g., Spice exporters in Vietnam"
+                  disabled={triggering !== null}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.8125rem',
+                    transition: 'border-color 0.2s ease',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = 'var(--accent-color)'}
+                  onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}
+                />
+              </div>
+            )}
+
             <div className={styles.metaRow}>
               <span className={styles.schedule}>🕒 {agent.schedule}</span>
               <button
