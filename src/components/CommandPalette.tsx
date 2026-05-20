@@ -48,10 +48,35 @@ interface CommandPaletteProps {
   onClose: () => void;
 }
 
+const RECENT_KEY = 'denver-trades.cmdk.recent';
+const MAX_RECENT = 5;
+
+function loadRecent(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(RECENT_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecent(ids: string[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(RECENT_KEY, JSON.stringify(ids.slice(0, MAX_RECENT)));
+  } catch {
+    /* quota / disabled storage — silently ignore */
+  }
+}
+
 export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [recentIds, setRecentIds] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
@@ -64,6 +89,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
   useEffect(() => {
     if (isOpen) {
       previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+      setRecentIds(loadRecent());
       const timer = window.setTimeout(() => {
         setQuery('');
         setSelectedIndex(0);
@@ -80,10 +106,13 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
 
   const handleSelect = useCallback(
     (item: CommandItem) => {
+      const next = [item.id, ...recentIds.filter((id) => id !== item.id)];
+      saveRecent(next);
+      setRecentIds(next);
       router.push(item.path);
       onClose();
     },
-    [router, onClose]
+    [router, onClose, recentIds]
   );
 
   const handleKeyDown = useCallback(
@@ -110,8 +139,20 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
 
   if (!isOpen) return null;
 
-  const navigateItems = filtered.filter((c) => c.category === 'Navigate');
-  const actionItems = filtered.filter((c) => c.category === 'Action');
+  // Show "Recent" only when the user hasn't typed anything yet.
+  const recentItems = !query
+    ? recentIds
+        .map((id) => commands.find((c) => c.id === id))
+        .filter((c): c is CommandItem => Boolean(c))
+        .slice(0, MAX_RECENT)
+    : [];
+  const recentIdSet = new Set(recentItems.map((c) => c.id));
+  const navigateItems = filtered.filter(
+    (c) => c.category === 'Navigate' && !recentIdSet.has(c.id)
+  );
+  const actionItems = filtered.filter(
+    (c) => c.category === 'Action' && !recentIdSet.has(c.id)
+  );
   let globalIdx = -1;
 
   return (
@@ -141,6 +182,34 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
         <div className={styles.results}>
           {filtered.length === 0 && (
             <div className={styles.noResults}>No results for &ldquo;{query}&rdquo;</div>
+          )}
+
+          {recentItems.length > 0 && (
+            <>
+              <div className={styles.groupLabel}>Recent</div>
+              {recentItems.map((item) => {
+                globalIdx++;
+                const idx = globalIdx;
+                return (
+                  <button
+                    key={`recent-${item.id}`}
+                    className={`${styles.resultItem} ${
+                      idx === selectedIndex ? styles.selected : ''
+                    }`}
+                    onClick={() => handleSelect(item)}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                  >
+                    <span className={styles.resultIcon}>
+                      <item.Icon size={18} strokeWidth={1.5} />
+                    </span>
+                    <div className={styles.resultText}>
+                      <span className={styles.resultLabel}>{item.label}</span>
+                      <span className={styles.resultDesc}>{item.description}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </>
           )}
 
           {navigateItems.length > 0 && (

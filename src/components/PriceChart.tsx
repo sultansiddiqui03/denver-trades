@@ -1,46 +1,24 @@
 'use client';
 
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import styles from './PriceChart.module.css';
+import type { PriceLinePoint } from './charts/PriceLineChart';
 
-interface ChartPoint {
-  date: string;
-  time: string;
-  price: number;
-  origin: string;
-  unit: string;
-}
-
-const PriceLineChart = memo(function PriceLineChart({ data }: { data: ChartPoint[] }) {
-  return (
-    <ResponsiveContainer width="100%" height={320}>
-      <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
-        <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
-        <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} domain={['auto', 'auto']} />
-        <Tooltip
-          contentStyle={{
-            background: 'var(--bg-primary)',
-            border: '1px solid var(--border-primary)',
-            borderRadius: '8px',
-          }}
-          labelStyle={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}
-          itemStyle={{ color: 'var(--accent-lime)', fontSize: '0.9rem', fontWeight: 600 }}
-        />
-        <Line
-          type="monotone"
-          dataKey="price"
-          name="Price (USD)"
-          stroke="var(--accent-lime)"
-          strokeWidth={3}
-          dot={{ fill: 'var(--accent-lime)', stroke: 'var(--bg-primary)', strokeWidth: 2, r: 4 }}
-          activeDot={{ r: 6, strokeWidth: 0 }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  );
+// Lazy-loaded: recharts (~140KB) only ships when the prices page actually
+// renders the chart. The loading skeleton matches the chart's footprint
+// to avoid layout shift.
+const PriceLineChart = dynamic(() => import('./charts/PriceLineChart'), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="skeleton"
+      style={{ height: 320, borderRadius: 'var(--radius-md)' }}
+    />
+  ),
 });
+
+type ChartPoint = PriceLinePoint;
 
 interface PriceRecord {
   id: string;

@@ -1,0 +1,56 @@
+'use client';
+
+import { memo } from 'react';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+
+export interface StagePoint {
+  name: string;
+  count: number;
+  color: string;
+}
+
+interface DealsBarChartProps {
+  data: StagePoint[];
+}
+
+function DealsBarChart({ data }: DealsBarChartProps) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
+        <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
+        <YAxis
+          stroke="var(--text-muted)"
+          fontSize={11}
+          tickLine={false}
+          allowDecimals={false}
+        />
+        <Tooltip
+          contentStyle={{
+            background: 'rgba(10,10,10,0.95)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '8px',
+          }}
+          labelStyle={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}
+          itemStyle={{ color: 'var(--accent-lime)', fontSize: '0.85rem', fontWeight: 600 }}
+        />
+        <Bar dataKey="count" name="Deals" fill="var(--accent-lime)" radius={[4, 4, 0, 0]}>
+          {data.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.color} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+export default memo(DealsBarChart);

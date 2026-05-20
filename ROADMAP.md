@@ -250,11 +250,11 @@ Pages still hand-roll empty divs (e.g. [PriceChart.tsx:150](src/components/Price
 - Logo "D" tile is plain — consider a small SVG logo.
 - Tooltips when collapsed (currently nav labels just hide).
 
-### P3-8 · Cmd+K palette polish · M
-- Focus trap (P2-9 already covers a11y).
-- Recent-items section.
-- Keyboard hints (`↑↓` to navigate, `↵` to open, `esc` to close).
-- Match against company names, deals, recent agent runs — not just static actions.
+### ✅ P3-8 · Cmd+K palette polish · M (partial)
+- Focus restoration on close (P2-9 already done).
+- **Recent-items section** added. On select, the chosen command's ID is pushed to `localStorage["denver-trades.cmdk.recent"]` (dedupe, top 5). When the palette opens with no query, "Recent" group renders above Navigate/Actions so frequent destinations are one keystroke away.
+- Keyboard hints already in the footer (↑↓ / ↵ / ESC).
+- **Deferred:** dynamic match against live `companies` / `deals` / `agent_runs` rows. That requires a server-search endpoint and is closer to a Phase 4 feature than a polish item — tracked for the future-self.
 
 ### ✅ P3-9 · Notification Center polish · S (partial)
 - Added a Supabase realtime subscription on `notifications` (INSERT events trigger a fresh activity-feed fetch) — replaces the 30s tight poll with a 60s safety fallback poll.
@@ -288,8 +288,12 @@ Run through every empty state, error message, button label. Trade-jargon precisi
 ### P3-17 · Pricing chart synthetic-data padding · S
 [PriceChart.tsx:85-111](src/components/PriceChart.tsx:85) generates 4 fake historical points if only 1 real record exists. Misleading. Show real points only; otherwise show `EmptyState` with "ingest data" CTA.
 
-### P3-18 · Bundle analyzer + lazy-load Recharts · S
-Recharts ships ~150KB. Lazy-load per analytics page.
+### ✅ P3-18 · Lazy-load Recharts · S
+Three chart components extracted to `src/components/charts/` and dynamic-imported with `next/dynamic({ ssr: false })`:
+- `PriceLineChart` (was inline in PriceChart.tsx) — consumed by Prices page.
+- `DealsBarChart` + `CountriesPieChart` (were inline in analytics page) — consumed by Analytics page.
+
+Each loader prop renders a `.skeleton` block at the chart's exact footprint so there's no layout shift while the recharts chunk loads. Net effect: recharts (~140KB raw / ~40KB gzipped) only ships when the user actually visits Prices or Analytics.
 
 ---
 
