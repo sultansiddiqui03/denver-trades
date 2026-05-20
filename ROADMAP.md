@@ -184,8 +184,8 @@ Already in P0-A5.
 - ESLint: `no-unused-vars`, `no-explicit-any`, `no-console` (warn)
 - `noUncheckedIndexedAccess: true` in tsconfig
 
-### P2-8 · Drop unused `openai` dep · XS
-`src/lib/ai/openai.ts` is never imported. Delete file + dep, or wire to pgvector semantic search on `companies.embedding`.
+### ✅ P2-8 · Decide on `openai` dep · XS
+Kept. `src/lib/ai/openai.ts` retained for future pgvector semantic search on `companies.embedding`. Mock-fallback removed; throws on missing key / provider error to match the P1-8 pattern across the AI router.
 
 ### P2-9 · Focus management on Cmd+K and modals · S
 [CommandPalette.tsx:40-91](src/components/CommandPalette.tsx:40) lacks focus trap + return-focus + `role="dialog"` + `aria-modal`. Same on sidebar overlay.

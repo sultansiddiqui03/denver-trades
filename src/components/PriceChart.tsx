@@ -1,8 +1,46 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import styles from './PriceChart.module.css';
+
+interface ChartPoint {
+  date: string;
+  time: string;
+  price: number;
+  origin: string;
+  unit: string;
+}
+
+const PriceLineChart = memo(function PriceLineChart({ data }: { data: ChartPoint[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={320}>
+      <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
+        <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
+        <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} domain={['auto', 'auto']} />
+        <Tooltip
+          contentStyle={{
+            background: 'var(--bg-primary)',
+            border: '1px solid var(--border-primary)',
+            borderRadius: '8px',
+          }}
+          labelStyle={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}
+          itemStyle={{ color: 'var(--accent-lime)', fontSize: '0.9rem', fontWeight: 600 }}
+        />
+        <Line
+          type="monotone"
+          dataKey="price"
+          name="Price (USD)"
+          stroke="var(--accent-lime)"
+          strokeWidth={3}
+          dot={{ fill: 'var(--accent-lime)', stroke: 'var(--bg-primary)', strokeWidth: 2, r: 4 }}
+          activeDot={{ r: 6, strokeWidth: 0 }}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+});
 
 interface PriceRecord {
   id: string;
@@ -72,45 +110,27 @@ export default function PriceChart() {
     // Sort chronological for chart rendering
     .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
 
-  // Generate historical data points if there's only one entry to make a beautiful line
-  const chartData = activePrices.map((record) => ({
-    date: new Date(record.recorded_at).toLocaleDateString([], { month: 'short', day: 'numeric' }),
-    time: new Date(record.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    price: Number(record.price_usd),
-    origin: record.origin_country,
-    unit: record.unit,
-  }));
-
-  // Append dummy past dates if data has too few points (for rich UI display)
-  const paddedChartData = [...chartData];
-  if (paddedChartData.length === 1 && paddedChartData[0]) {
-    const basePrice = paddedChartData[0].price;
-    const baseDate = activePrices[0] ? new Date(activePrices[0].recorded_at) : new Date();
-    
-    // Prepend mock historical line points
-    const dummyPoints = [
-      { offsetDays: 4, multiplier: 0.97 },
-      { offsetDays: 3, multiplier: 0.99 },
-      { offsetDays: 2, multiplier: 0.98 },
-      { offsetDays: 1, multiplier: 1.01 },
-    ];
-
-    const prepended = dummyPoints.map((dp) => {
-      const targetDate = new Date(baseDate);
-      targetDate.setDate(targetDate.getDate() - dp.offsetDays);
-      return {
-        date: targetDate.toLocaleDateString([], { month: 'short', day: 'numeric' }),
-        time: '12:00 PM',
-        price: Math.round(basePrice * dp.multiplier * 100) / 100,
-        origin: paddedChartData[0].origin,
-        unit: paddedChartData[0].unit,
-      };
-    });
-
-    paddedChartData.unshift(...prepended);
-  }
+  // Real points only — no synthetic backfill (was misleading users about data freshness).
+  const chartData = useMemo<ChartPoint[]>(
+    () =>
+      activePrices.map((record) => ({
+        date: new Date(record.recorded_at).toLocaleDateString([], {
+          month: 'short',
+          day: 'numeric',
+        }),
+        time: new Date(record.recorded_at).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        price: Number(record.price_usd),
+        origin: record.origin_country,
+        unit: record.unit,
+      })),
+    [activePrices]
+  );
 
   const latestRecord = activePrices[activePrices.length - 1];
+  const hasEnoughForChart = chartData.length >= 2;
 
   return (
     <div className={styles.container}>
@@ -146,55 +166,27 @@ export default function PriceChart() {
         <div className={styles.chartFallback}>
           <p>Loading live ag-commodity pricing streams...</p>
         </div>
-      ) : paddedChartData.length === 0 ? (
+      ) : chartData.length === 0 ? (
         <div className={styles.chartFallback}>
-          <p>No pricing records located in database.</p>
+          <p>No pricing records yet for {selectedCommodity || 'this commodity'}. Trigger a price tick or wait for the next cron.</p>
         </div>
       ) : (
         <div className={styles.dashboardGrid}>
           {/* Main Chart Area */}
           <div className={styles.chartArea}>
             <div className={styles.chartHeading}>
-              <h4>30-Day Historical Trend</h4>
+              <h4>{hasEnoughForChart ? 'Historical Trend' : 'Latest Tick'}</h4>
               <span className={styles.sourceText}>Source: {latestRecord?.source || 'Exchange'}</span>
             </div>
-            
+
             <div className={styles.chartWrapper}>
-              <ResponsiveContainer width="100%" height={320}>
-                <LineChart data={paddedChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="var(--text-muted)" 
-                    fontSize={11}
-                    tickLine={false}
-                  />
-                  <YAxis 
-                    stroke="var(--text-muted)" 
-                    fontSize={11}
-                    tickLine={false}
-                    domain={['auto', 'auto']}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'var(--background-dark)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                    }}
-                    labelStyle={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}
-                    itemStyle={{ color: 'var(--accent-color)', fontSize: '0.9rem', fontWeight: 600 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="price"
-                    name="Price (USD)"
-                    stroke="var(--accent-color)"
-                    strokeWidth={3}
-                    dot={{ fill: 'var(--accent-color)', stroke: 'var(--background-dark)', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              {hasEnoughForChart ? (
+                <PriceLineChart data={chartData} />
+              ) : (
+                <div className={styles.singlePointPlaceholder}>
+                  Need at least 2 ticks to draw a line. Trigger another price tick to see a trend.
+                </div>
+              )}
             </div>
           </div>
 

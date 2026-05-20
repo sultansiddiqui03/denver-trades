@@ -1,20 +1,16 @@
-'use client';
-
-import React from 'react';
 import AgentDashboard from '@/components/AgentDashboard';
+import styles from './page.module.css';
 
 export default function AgentsPage() {
   return (
-    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-      {/* Header */}
-      <div>
-        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 800 }}>Autonomous Agents</h1>
-        <p className="text-secondary" style={{ fontSize: '0.875rem' }}>
+    <div className={`fade-in ${styles.page}`}>
+      <header className={styles.pageHeader}>
+        <h1 className={styles.pageTitle}>Autonomous Agents</h1>
+        <p className={styles.pageSubtitle}>
           Monitor background processes, auto-scrapers, and WhatsApp webhook triggers.
         </p>
-      </div>
+      </header>
 
-      {/* Real-time Agent Dashboard */}
       <AgentDashboard />
     </div>
   );

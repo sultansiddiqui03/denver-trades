@@ -46,40 +46,48 @@ export default function WhatsAppInbox() {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch messages from Supabase
-  const fetchMessages = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('outreach_threads')
-        .select('*')
-        .eq('channel', 'WhatsApp')
-        .order('created_at', { ascending: true });
+  // Fetch messages from Supabase (cancellable so unmount-mid-fetch doesn't update state)
+  const fetchMessages = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        const { data, error } = await supabase
+          .from('outreach_threads')
+          .select('*')
+          .eq('channel', 'WhatsApp')
+          .order('created_at', { ascending: true })
+          .abortSignal(signal!);
 
-      if (error) throw error;
-      setMessages(data || []);
-    } catch (err) {
-      console.error('Error fetching messages:', err);
-    }
-  }, [supabase]);
+        if (signal?.aborted) return;
+        if (error) throw error;
+        setMessages(data || []);
+      } catch (err) {
+        if (signal?.aborted) return;
+        if (err instanceof Error && err.name === 'AbortError') return;
+        console.error('Error fetching messages:', err);
+      }
+    },
+    [supabase]
+  );
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchTimer = window.setTimeout(() => {
-      void fetchMessages();
+      void fetchMessages(controller.signal);
     }, 0);
 
-    // Set up realtime subscription to refresh when new messages are added
     const channel = supabase
       .channel('schema-db-changes')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'outreach_threads' },
         () => {
-          fetchMessages();
+          fetchMessages(controller.signal);
         }
       )
       .subscribe();
 
     return () => {
+      controller.abort();
       window.clearTimeout(fetchTimer);
       supabase.removeChannel(channel);
     };

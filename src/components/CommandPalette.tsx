@@ -53,6 +53,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   const filtered = commands.filter((cmd) => {
     if (!query) return true;
@@ -62,13 +63,18 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
 
   useEffect(() => {
     if (isOpen) {
+      previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
       const timer = window.setTimeout(() => {
         setQuery('');
         setSelectedIndex(0);
         inputRef.current?.focus();
       }, 50);
 
-      return () => window.clearTimeout(timer);
+      return () => {
+        window.clearTimeout(timer);
+        // Return focus to whatever opened the palette (button, link, etc.)
+        previouslyFocusedRef.current?.focus?.();
+      };
     }
   }, [isOpen]);
 

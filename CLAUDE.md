@@ -75,7 +75,7 @@ next.config.ts               Empty (needs security headers — see ROADMAP)
 - **Service role:** `getSupabaseServiceClient()` from [src/lib/supabase/admin.ts](src/lib/supabase/admin.ts) is **only** for webhook ingestion and cron. Anywhere else, use the user-context server client.
 - **Webhook security:** validate via [src/lib/security/request.ts](src/lib/security/request.ts). Prefer the `x-denver-webhook-secret` header over query-string secrets (the current Apify dispatch uses query strings — see ROADMAP critical item).
 - **Multi-tenancy:** every domain table carries `org_id` **except** `commodity_prices` (intentionally global, TBC in roadmap).
-- **Styling:** CSS Modules — one `Foo.module.css` next to each `Foo.tsx`.
+- **Styling:** CSS Modules — one `Foo.module.css` next to each `Foo.tsx`. **Dark-only by design** — no light theme planned. All tokens (colors, spacing, radii, shadows, typography) live in [globals.css](src/app/globals.css) `:root`; component modules should reference those vars rather than raw hex.
 - **Charts:** Recharts; chart components are client-only — wrap in Suspense / memo when added (current code doesn't).
 - **AI calls:** route through [src/lib/ai/router.ts](src/lib/ai/router.ts). Today it silently returns mock data on error — being replaced (see ROADMAP).
 
