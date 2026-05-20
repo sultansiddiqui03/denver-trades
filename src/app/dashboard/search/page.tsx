@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useToast } from '@/components/Toast';
+import EmptyState from '@/components/EmptyState';
 import styles from './page.module.css';
 
 interface Company {
@@ -25,6 +27,7 @@ const suggestions = [
 ];
 
 export default function SearchWorkspace() {
+  const { toast } = useToast();
   const [query, setQuery] = useState('');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filterCountry, setFilterCountry] = useState('All');
@@ -69,10 +72,27 @@ export default function SearchWorkspace() {
 
   const handleEnrich = async (id: string) => {
     setEnrichingId(id);
-    setTimeout(() => {
-      setCompanies(prev => prev.map(c => c.id === id ? { ...c, is_enriched: true } : c));
+    try {
+      const res = await fetch('/api/companies/enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: id }),
+      });
+      const data = await res.json();
+      if (data.success && data.company) {
+        setCompanies(prev =>
+          prev.map(c => (c.id === id ? { ...c, ...data.company, is_enriched: true } : c))
+        );
+        toast(`${data.company.name} enriched with AI intelligence`, 'success');
+      } else {
+        toast(data.error || 'Enrichment failed', 'error');
+      }
+    } catch (err) {
+      console.error('Enrichment error:', err);
+      toast('Failed to enrich company. Check your API keys.', 'error');
+    } finally {
       setEnrichingId(null);
-    }, 1500);
+    }
   };
 
   // Filter Logic client-side for quick narrow downs
@@ -169,9 +189,12 @@ export default function SearchWorkspace() {
             <div className="skeleton" style={{ height: '140px', borderRadius: '12px' }}></div>
           </div>
         ) : filteredCompanies.length === 0 ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
-            No companies found matching the search criteria. Try another search query.
-          </div>
+          <EmptyState
+            title="No Companies Found"
+            description="Try a different search query like 'Pepper exporters in Vietnam' or run the Lead Scraper Agent to discover new companies."
+            actionLabel="Run Lead Scraper"
+            onAction={() => window.location.href = '/dashboard/agents'}
+          />
         ) : (
           /* Company Card Grid */
           <div className={styles.resultsGrid}>

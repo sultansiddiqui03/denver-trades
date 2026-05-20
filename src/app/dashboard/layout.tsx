@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
+import { ToastProvider } from '@/components/Toast';
 import styles from './layout.module.css';
 
 export default function DashboardLayout({
@@ -13,6 +14,7 @@ export default function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
+    <ToastProvider>
     <div className={styles.dashboardContainer}>
       {/* Sidebar Overlay for Mobile */}
       {mobileOpen && (
@@ -82,5 +84,6 @@ export default function DashboardLayout({
         <div className={`${styles.pageBody} dot-grid`}>{children}</div>
       </div>
     </div>
+    </ToastProvider>
   );
 }

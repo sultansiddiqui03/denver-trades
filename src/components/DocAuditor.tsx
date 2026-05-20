@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { useToast } from '@/components/Toast';
 import styles from './DocAuditor.module.css';
 
 interface Discrepancy {
@@ -67,6 +68,7 @@ DESCRIPTION OF GOODS: 1 X 40FT CONTAINER STC:
 ACTUAL SHIPPED ON BOARD DATE: 2026-05-18  <-- MISMATCH (L/C Latest Shipment: May 15)`;
 
 export default function DocAuditor() {
+  const { toast } = useToast();
   const [textA, setTextA] = useState(SAMPLE_LC_MISMATCH);
   const [textB, setTextB] = useState(SAMPLE_BL_MISMATCH);
   const [fileA, setFileA] = useState<UploadedFile | null>(null);
@@ -179,11 +181,19 @@ export default function DocAuditor() {
       const data = await response.json();
       if (data.success) {
         setAuditResult(data.audit);
+        const count = data.audit?.discrepancies?.length ?? 0;
+        if (count === 0) {
+          toast('Audit passed — no discrepancies found', 'success');
+        } else {
+          toast(`Audit complete — ${count} discrepanc${count === 1 ? 'y' : 'ies'} detected`, 'warning');
+        }
       } else {
         console.error('Audit failed:', data.error);
+        toast('Document audit failed', 'error');
       }
     } catch (error) {
       console.error('Error during document audit:', error);
+      toast('Error running document audit', 'error');
     } finally {
       setLoading(false);
     }

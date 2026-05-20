@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useToast } from '@/components/Toast';
+import EmptyState from '@/components/EmptyState';
 import styles from './AgentDashboard.module.css';
 
 interface AgentRun {
@@ -23,6 +25,7 @@ interface Agent {
 
 export default function AgentDashboard() {
   const supabase = createClient();
+  const { toast } = useToast();
   const [agents, setAgents] = useState<Agent[]>([
     {
       name: 'Lead Scraper Agent',
@@ -103,8 +106,10 @@ export default function AgentDashboard() {
       }
 
       await fetchRuns();
+      toast(`${agentName} completed successfully`, 'success');
     } catch (err) {
       console.error('Error running agent:', err);
+      toast(`${agentName} failed to execute`, 'error');
     } finally {
       // Revert status to Idle/Active
       setAgents(prev => prev.map(a => 
@@ -184,9 +189,10 @@ export default function AgentDashboard() {
         </div>
 
         {runs.length === 0 ? (
-          <div className={styles.emptyTable}>
-            <p>No agent run logs found. Trigger an agent run above to populate logs.</p>
-          </div>
+          <EmptyState
+            title="No Agent Runs Yet"
+            description="Trigger an agent above to see execution logs, processing stats, and lead creation results."
+          />
         ) : (
           <div className={styles.tableWrapper}>
             <table className={styles.table}>

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useToast } from '@/components/Toast';
 import styles from './WhatsAppInbox.module.css';
 
 interface Message {
@@ -22,6 +23,7 @@ interface Contact {
 
 export default function WhatsAppInbox() {
   const supabase = createClient();
+  const { toast } = useToast();
   const [contacts, setContacts] = useState<Contact[]>([
     {
       phone: '+971 50 123 4567',
@@ -107,8 +109,10 @@ export default function WhatsAppInbox() {
 
       setNewMessage('');
       fetchMessages();
+      toast('WhatsApp message sent', 'success');
     } catch (err) {
       console.error('Error sending message:', err);
+      toast('Failed to send WhatsApp message', 'error');
     } finally {
       setLoading(false);
     }

@@ -1,0 +1,40 @@
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 32px;
+  text-align: center;
+  border: 1px dashed var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.01);
+  animation: fadeIn 0.4s ease forwards;
+}
+
+.iconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-primary);
+  margin-bottom: 20px;
+  color: var(--text-muted);
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.description {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  max-width: 340px;
+  line-height: 1.6;
+}

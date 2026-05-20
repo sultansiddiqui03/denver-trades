@@ -126,6 +126,11 @@
   box-shadow: 0 0 8px var(--accent-purple);
 }
 
+.dotYellow {
+  background-color: var(--warning);
+  box-shadow: 0 0 8px var(--warning);
+}
+
 .activityContent {
   flex: 1;
   display: flex;
