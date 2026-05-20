@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     if (!parsed.ok) return parsed.response;
     const { event, datasetId } = parsed.data;
 
-    console.log(`Apify Webhook triggered for Run ID: ${agentRunId}. Event: ${event}, Dataset ID: ${datasetId}`);
+    console.info(`Apify Webhook triggered for Run ID: ${agentRunId}. Event: ${event}, Dataset ID: ${datasetId}`);
 
     const { data: runRecord, error: runFetchError } = await supabase
       .from('agent_runs')
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
     }
 
     const items: ScrapedPlace[] = await datasetResponse.json();
-    console.log(`Fetched ${items.length} items from Apify dataset ${datasetId}`);
+    console.info(`Fetched ${items.length} items from Apify dataset ${datasetId}`);
 
     if (items.length === 0) {
       await supabase

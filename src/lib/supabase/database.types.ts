@@ -339,6 +339,7 @@ export type Database = {
           report_pdf_path: string | null
           status: string | null
           summary: string | null
+          updated_at: string | null
         }
         Insert: {
           completed_at?: string | null
@@ -354,6 +355,7 @@ export type Database = {
           report_pdf_path?: string | null
           status?: string | null
           summary?: string | null
+          updated_at?: string | null
         }
         Update: {
           completed_at?: string | null
@@ -369,6 +371,7 @@ export type Database = {
           report_pdf_path?: string | null
           status?: string | null
           summary?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -397,6 +400,7 @@ export type Database = {
           org_id: string
           title: string
           type: string
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
@@ -408,6 +412,7 @@ export type Database = {
           org_id: string
           title: string
           type: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
@@ -419,6 +424,7 @@ export type Database = {
           org_id?: string
           title?: string
           type?: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -450,6 +456,7 @@ export type Database = {
           slug: string
           target_markets: string[] | null
           twilio_whatsapp_number: string | null
+          updated_at: string | null
         }
         Insert: {
           commodities?: string[] | null
@@ -462,6 +469,7 @@ export type Database = {
           slug: string
           target_markets?: string[] | null
           twilio_whatsapp_number?: string | null
+          updated_at?: string | null
         }
         Update: {
           commodities?: string[] | null
@@ -474,6 +482,7 @@ export type Database = {
           slug?: string
           target_markets?: string[] | null
           twilio_whatsapp_number?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -496,6 +505,7 @@ export type Database = {
           status: string | null
           subject: string | null
           twilio_message_sid: string | null
+          updated_at: string | null
         }
         Insert: {
           ai_generated?: boolean | null
@@ -515,6 +525,7 @@ export type Database = {
           status?: string | null
           subject?: string | null
           twilio_message_sid?: string | null
+          updated_at?: string | null
         }
         Update: {
           ai_generated?: boolean | null
@@ -534,6 +545,7 @@ export type Database = {
           status?: string | null
           subject?: string | null
           twilio_message_sid?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -569,6 +581,7 @@ export type Database = {
           name: string
           org_id: string
           query: string
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
@@ -580,6 +593,7 @@ export type Database = {
           name: string
           org_id: string
           query: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
@@ -591,6 +605,7 @@ export type Database = {
           name?: string
           org_id?: string
           query?: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -624,6 +639,7 @@ export type Database = {
           product: string
           shipment_date: string | null
           source_reference: string | null
+          updated_at: string | null
           weight_kg: number | null
         }
         Insert: {
@@ -639,6 +655,7 @@ export type Database = {
           product: string
           shipment_date?: string | null
           source_reference?: string | null
+          updated_at?: string | null
           weight_kg?: number | null
         }
         Update: {
@@ -654,6 +671,7 @@ export type Database = {
           product?: string
           shipment_date?: string | null
           source_reference?: string | null
+          updated_at?: string | null
           weight_kg?: number | null
         }
         Relationships: [
@@ -683,6 +701,7 @@ export type Database = {
           onboarding_step: number | null
           org_id: string | null
           role: string | null
+          updated_at: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -693,6 +712,7 @@ export type Database = {
           onboarding_step?: number | null
           org_id?: string | null
           role?: string | null
+          updated_at?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -703,6 +723,7 @@ export type Database = {
           onboarding_step?: number | null
           org_id?: string | null
           role?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {

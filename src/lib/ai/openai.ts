@@ -2,23 +2,28 @@ import OpenAI from 'openai';
 
 const apiKey = process.env.OPENAI_API_KEY;
 
+/**
+ * Generates a 1536-dim embedding via OpenAI `text-embedding-3-small`.
+ * Throws on missing key or provider failure so callers can decide what to do
+ * (consistent with the Claude/Gemini error-propagation pattern from P1-8).
+ *
+ * Currently no caller in-tree; reserved for future pgvector semantic search
+ * on `companies.embedding` (see P3 / P4 in ROADMAP.md).
+ */
 export async function generateEmbedding(text: string): Promise<number[]> {
   if (!apiKey) {
-    console.warn("OPENAI_API_KEY is not defined. Returning mock embedding.");
-    return new Array(1536).fill(0).map(() => Math.random() - 0.5);
+    throw new Error('OPENAI_API_KEY is not configured.');
   }
 
-  try {
-    const openai = new OpenAI({ apiKey });
-    const response = await openai.embeddings.create({
-      model: 'text-embedding-3-small',
-      input: text,
-    });
+  const openai = new OpenAI({ apiKey });
+  const response = await openai.embeddings.create({
+    model: 'text-embedding-3-small',
+    input: text,
+  });
 
-    return response.data[0].embedding;
-  } catch (error) {
-    console.error("Error generating OpenAI embedding:", error);
-    // Return a mock embedding in case of error
-    return new Array(1536).fill(0).map(() => Math.random() - 0.5);
+  const first = response.data[0];
+  if (!first) {
+    throw new Error('OpenAI embeddings response was empty.');
   }
+  return first.embedding;
 }

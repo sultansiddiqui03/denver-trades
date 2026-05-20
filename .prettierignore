@@ -1,0 +1,6 @@
+.next
+node_modules
+public
+package-lock.json
+src/lib/supabase/database.types.ts
+supabase/migrations
