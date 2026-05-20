@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useToast } from '@/components/Toast';
+import { exportToCsv } from '@/lib/exportCsv';
 import styles from './page.module.css';
 
 interface Deal {
@@ -70,6 +72,7 @@ const mapDbToUiStage = (dbStage: string): Deal['stage'] => {
 
 export default function KanbanPipeline() {
   const supabase = createClient();
+  const { toast } = useToast();
   const [deals, setDeals] = useState<Deal[]>(initialDeals);
   const [loading, setLoading] = useState(false);
   const [savingState, setSavingState] = useState<string | null>(null);
@@ -139,6 +142,7 @@ export default function KanbanPipeline() {
 
       if (error) throw error;
       setSavingState('Changes saved!');
+      toast(`Deal moved to ${nextStage}`, 'success');
       setTimeout(() => setSavingState(null), 2000);
     } catch (err) {
       console.error('Failed to sync pipeline update:', err);
@@ -170,12 +174,31 @@ export default function KanbanPipeline() {
             Manage active shipments, buyer negotiations, and audit checklists.
           </p>
         </div>
-        
-        {savingState && (
-          <div className={styles.savingStateBadge}>
-            <span className={styles.pulse}></span> {savingState}
-          </div>
-        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            type="button"
+            className="btn-secondary"
+            style={{ fontSize: '0.75rem', padding: '6px 12px' }}
+            onClick={() => {
+              if (deals.length === 0) return;
+              exportToCsv('denver-trades-pipeline', deals.map(d => ({
+                Company: d.companyName,
+                Stage: d.stage,
+                Value: d.value,
+                Products: d.products.join('; '),
+              })));
+              toast(`Exported ${deals.length} deals to CSV`, 'success');
+            }}
+          >
+            ↓ Export CSV
+          </button>
+          {savingState && (
+            <div className={styles.savingStateBadge}>
+              <span className={styles.pulse}></span> {savingState}
+            </div>
+          )}
+        </div>
       </div>
 
       {loading ? (

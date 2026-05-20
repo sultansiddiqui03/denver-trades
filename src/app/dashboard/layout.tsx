@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { ToastProvider } from '@/components/Toast';
+import CommandPalette from '@/components/CommandPalette';
+import ProgressBar from '@/components/ProgressBar';
+import NotificationCenter from '@/components/NotificationCenter';
 import styles from './layout.module.css';
 
 export default function DashboardLayout({
@@ -12,10 +15,27 @@ export default function DashboardLayout({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [cmdkOpen, setCmdkOpen] = useState(false);
+
+  // Global Ctrl+K / Cmd+K listener
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      setCmdkOpen((prev) => !prev);
+    }
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
   return (
     <ToastProvider>
     <div className={styles.dashboardContainer}>
+      <ProgressBar />
+      <CommandPalette isOpen={cmdkOpen} onClose={() => setCmdkOpen(false)} />
+
       {/* Sidebar Overlay for Mobile */}
       {mobileOpen && (
         <div
@@ -51,23 +71,23 @@ export default function DashboardLayout({
             </svg>
           </button>
 
-          <div className={styles.searchPlaceholder}>
+          {/* Cmd+K Search Trigger */}
+          <button
+            className={styles.searchPlaceholder}
+            onClick={() => setCmdkOpen(true)}
+            type="button"
+          >
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="8.5" cy="8.5" r="5.5" />
               <path d="M13 13l4 4" />
             </svg>
             <span className={styles.searchText}>Search anything...</span>
-          </div>
+            <kbd className={styles.searchKbd}>⌘K</kbd>
+          </button>
 
           <div className={styles.topBarActions}>
-            {/* Notification Bell */}
-            <button className={styles.iconBtn} aria-label="Notifications">
-              <span className={styles.badgeDot}></span>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-            </button>
+            {/* Notification Center */}
+            <NotificationCenter />
 
             {/* Profile Avatar */}
             <div className={styles.profileSummary}>

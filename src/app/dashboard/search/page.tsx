@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import EmptyState from '@/components/EmptyState';
+import { exportToCsv } from '@/lib/exportCsv';
 import styles from './page.module.css';
 
 interface Company {
@@ -156,6 +157,28 @@ export default function SearchWorkspace() {
           <span className={styles.resultsCount}>
             Found {filteredCompanies.length} matching entities
           </span>
+
+          <button
+            type="button"
+            className="btn-secondary"
+            style={{ fontSize: '0.75rem', padding: '6px 12px' }}
+            onClick={() => {
+              if (filteredCompanies.length === 0) return;
+              exportToCsv('denver-trades-companies', filteredCompanies.map(c => ({
+                Name: c.name,
+                Type: c.type,
+                Country: c.hq_country,
+                City: c.hq_city,
+                Products: (c.products_dealt || []).join('; '),
+                'Match Score': `${Math.round(c.confidence_score * 100)}%`,
+                Enriched: c.is_enriched ? 'Yes' : 'No',
+                Description: c.description || '',
+              })));
+              toast(`Exported ${filteredCompanies.length} companies to CSV`, 'success');
+            }}
+          >
+            ↓ Export CSV
+          </button>
 
           {/* Filtering controls */}
           <div className={styles.filtersRow}>

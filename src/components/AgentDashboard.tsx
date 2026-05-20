@@ -75,12 +75,27 @@ export default function AgentDashboard() {
   useEffect(() => {
     fetchRuns();
 
-    // Auto-refresh runs log history every 5 seconds to track active background runs
+    // Realtime subscription for instant updates
+    const channel = supabase
+      .channel('agent-runs-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'agent_runs' },
+        () => {
+          fetchRuns();
+        }
+      )
+      .subscribe();
+
+    // Fallback poll every 30 seconds
     const interval = setInterval(() => {
       fetchRuns();
-    }, 5000);
+    }, 30000);
 
-    return () => clearInterval(interval);
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, []);
 
   const handleRunAgent = async (agentName: string) => {
