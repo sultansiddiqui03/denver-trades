@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { requireUserContext } from '@/lib/auth/server';
+import { getErrorMessage } from '@/lib/errors';
 
 export async function GET() {
   try {
-    const orgId = 'd3b07384-d113-4e4e-9c8e-5b123d456789';
+    const { context, response } = await requireUserContext();
+    if (!context) return response;
+
+    const { orgId, supabase } = context;
 
     // Run all counts in parallel
     const [
@@ -65,10 +64,10 @@ export async function GET() {
         enrichedLeads,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Dashboard stats error:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: getErrorMessage(error) },
       { status: 500 }
     );
   }

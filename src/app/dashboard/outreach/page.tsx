@@ -14,6 +14,7 @@ export default function OutreachCenter() {
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedDraft, setGeneratedDraft] = useState('');
+  const [draftId, setDraftId] = useState('');
   const [copied, setCopied] = useState(false);
 
   const handleGenerate = async () => {
@@ -35,6 +36,7 @@ export default function OutreachCenter() {
       const data = await response.json();
       if (data.success) {
         setGeneratedDraft(data.pitch);
+        setDraftId(data.draft?.id || '');
       } else {
         console.error('Error generating pitch:', data.error);
       }
@@ -166,7 +168,13 @@ export default function OutreachCenter() {
           <div className={styles.cardTitle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>Generated Copy</span>
             {generatedDraft && (
-              <button type="button" className="btn-ghost" onClick={handleCopy} style={{ fontSize: '0.8125rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {draftId && (
+                  <span className="badge badge-yellow">
+                    Saved for review
+                  </span>
+                )}
+                <button type="button" className="btn-ghost" onClick={handleCopy} style={{ fontSize: '0.8125rem' }}>
                 {copied ? (
                   <span className={styles.copySuccess}>
                     ✓ Copied
@@ -174,7 +182,8 @@ export default function OutreachCenter() {
                 ) : (
                   'Copy to Clipboard'
                 )}
-              </button>
+                </button>
+              </div>
             )}
           </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
 import EmptyState from '@/components/EmptyState';
@@ -24,7 +24,7 @@ interface Agent {
 }
 
 export default function AgentDashboard() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const { toast } = useToast();
   const [agents, setAgents] = useState<Agent[]>([
     {
@@ -57,7 +57,7 @@ export default function AgentDashboard() {
   const [triggering, setTriggering] = useState<string | null>(null);
   const [scraperQuery, setScraperQuery] = useState('Spice exporters in Vietnam');
 
-  const fetchRuns = async () => {
+  const fetchRuns = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('agent_runs')
@@ -70,10 +70,12 @@ export default function AgentDashboard() {
     } catch (err) {
       console.error('Error fetching agent runs:', err);
     }
-  };
+  }, [supabase]);
 
   useEffect(() => {
-    fetchRuns();
+    const fetchTimer = window.setTimeout(() => {
+      void fetchRuns();
+    }, 0);
 
     // Realtime subscription for instant updates
     const channel = supabase
@@ -93,10 +95,11 @@ export default function AgentDashboard() {
     }, 30000);
 
     return () => {
+      window.clearTimeout(fetchTimer);
       supabase.removeChannel(channel);
       clearInterval(interval);
     };
-  }, []);
+  }, [fetchRuns, supabase]);
 
   const handleRunAgent = async (agentName: string) => {
     setTriggering(agentName);

@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { requireUserContext } from '@/lib/auth/server';
+import { getErrorMessage } from '@/lib/errors';
 
 export async function POST(request: Request) {
   try {
+    const { context, response } = await requireUserContext();
+    if (!context) return response;
+
+    const { orgId, supabase } = context;
     const body = await request.json();
     const {
-      org_id = 'd3b07384-d113-4e4e-9c8e-5b123d456789',
       company_id,
       deal_id,
       recipient,
@@ -85,7 +84,7 @@ export async function POST(request: Request) {
     const { data: threadMsg, error: dbError } = await supabase
       .from('outreach_threads')
       .insert({
-        org_id,
+        org_id: orgId,
         company_id: company_id || null,
         deal_id: deal_id || null,
         channel: 'WhatsApp',
@@ -112,10 +111,10 @@ export async function POST(request: Request) {
       message: threadMsg
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Outbound WhatsApp endpoint error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Internal Server Error' },
+      { success: false, error: getErrorMessage(error) },
       { status: 500 }
     );
   }

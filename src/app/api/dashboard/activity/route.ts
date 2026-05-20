@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { requireUserContext } from '@/lib/auth/server';
+import { getErrorMessage } from '@/lib/errors';
 
 interface ActivityItem {
   id: string;
@@ -17,7 +13,10 @@ interface ActivityItem {
 
 export async function GET() {
   try {
-    const orgId = 'd3b07384-d113-4e4e-9c8e-5b123d456789';
+    const { context, response } = await requireUserContext();
+    if (!context) return response;
+
+    const { orgId, supabase } = context;
     const activities: ActivityItem[] = [];
 
     // 1. Recent agent runs
@@ -103,10 +102,10 @@ export async function GET() {
       success: true,
       activities: activities.slice(0, 8),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Activity feed error:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: getErrorMessage(error) },
       { status: 500 }
     );
   }

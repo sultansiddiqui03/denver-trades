@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
 import styles from './WhatsAppInbox.module.css';
@@ -22,9 +22,9 @@ interface Contact {
 }
 
 export default function WhatsAppInbox() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const { toast } = useToast();
-  const [contacts, setContacts] = useState<Contact[]>([
+  const contacts = useMemo<Contact[]>(() => [
     {
       phone: '+971 50 123 4567',
       name: 'Youssef Al-Rashid',
@@ -37,7 +37,7 @@ export default function WhatsAppInbox() {
       companyName: 'Gulf Spices & Seeds Industry',
       companyId: 'c0f0a884-c812-4d2d-8bde-d51352e463a2'
     }
-  ]);
+  ], []);
   
   const [selectedContact, setSelectedContact] = useState<Contact>(contacts[0]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -47,7 +47,7 @@ export default function WhatsAppInbox() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch messages from Supabase
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('outreach_threads')
@@ -60,10 +60,12 @@ export default function WhatsAppInbox() {
     } catch (err) {
       console.error('Error fetching messages:', err);
     }
-  };
+  }, [supabase]);
 
   useEffect(() => {
-    fetchMessages();
+    const fetchTimer = window.setTimeout(() => {
+      void fetchMessages();
+    }, 0);
 
     // Set up realtime subscription to refresh when new messages are added
     const channel = supabase
@@ -78,9 +80,10 @@ export default function WhatsAppInbox() {
       .subscribe();
 
     return () => {
+      window.clearTimeout(fetchTimer);
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchMessages, supabase]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -108,7 +111,7 @@ export default function WhatsAppInbox() {
       }
 
       setNewMessage('');
-      fetchMessages();
+      void fetchMessages();
       toast('WhatsApp message sent', 'success');
     } catch (err) {
       console.error('Error sending message:', err);
@@ -135,7 +138,7 @@ export default function WhatsAppInbox() {
 
       if (response.ok) {
         setSimulatedInbound('');
-        fetchMessages();
+        void fetchMessages();
       } else {
         console.error('Simulation webhook failed');
       }

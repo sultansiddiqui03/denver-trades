@@ -1,25 +1,43 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { DEFAULT_ORG_ID } from '@/lib/auth/server';
+import { getSupabaseServiceClient } from '@/lib/supabase/admin';
+import { verifyTwilioRequest, isWebhookSecretAuthorized } from '@/lib/security/request';
 
 export async function POST(request: Request) {
   try {
+    const supabase = getSupabaseServiceClient();
     const contentType = request.headers.get('content-type') || '';
     let from = '';
     let to = '';
     let body = '';
+    const signatureParams: Record<string, string> = {};
 
     if (contentType.includes('application/x-www-form-urlencoded')) {
       const formData = await request.formData();
       from = formData.get('From') as string || '';
       to = formData.get('To') as string || '';
       body = formData.get('Body') as string || '';
+      formData.forEach((value, key) => {
+        if (typeof value === 'string') {
+          signatureParams[key] = value;
+        }
+      });
+
+      const isValidTwilio = await verifyTwilioRequest(request, signatureParams);
+      if (!isValidTwilio) {
+        return new Response('<Response><Message>Unauthorized webhook</Message></Response>', {
+          headers: { 'Content-Type': 'text/xml' },
+          status: 401,
+        });
+      }
     } else {
       // Allow JSON payloads for testing
+      if (!isWebhookSecretAuthorized(request, 'WHATSAPP_WEBHOOK_SECRET')) {
+        return new Response('<Response><Message>Unauthorized webhook</Message></Response>', {
+          headers: { 'Content-Type': 'text/xml' },
+          status: 401,
+        });
+      }
+
       const json = await request.json();
       from = json.From || json.from || '';
       to = json.To || json.to || '';
@@ -34,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     // Default Org ID (multi-tenancy)
-    const orgId = 'd3b07384-d113-4e4e-9c8e-5b123d456789';
+    const orgId = DEFAULT_ORG_ID;
 
     // 1. Resolve company by phone number match in contacts JSONB
     // We clean 'whatsapp:' prefix to match phone format
@@ -52,7 +70,7 @@ export async function POST(request: Request) {
     if (companies && !companyError) {
       for (const comp of companies) {
         const contacts = comp.contacts || [];
-        const matches = contacts.some((c: any) => {
+        const matches = contacts.some((c: { phone?: string }) => {
           if (!c.phone) return false;
           const cleanedContactPhone = c.phone.replace(/[\s\-\+]/g, '');
           const cleanedInboundPhone = cleanPhone.replace(/[\s\-\+]/g, '');
@@ -122,7 +140,7 @@ export async function POST(request: Request) {
       status: 200
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('WhatsApp webhook error:', error);
     return new Response('<Response><Message>Error processing webhook</Message></Response>', {
       headers: { 'Content-Type': 'text/xml' },

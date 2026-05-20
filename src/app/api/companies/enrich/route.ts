@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { generateJSON } from '@/lib/ai/gemini';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { requireUserContext } from '@/lib/auth/server';
+import { getErrorMessage } from '@/lib/errors';
 
 interface EnrichmentResult {
   description: string;
@@ -18,6 +14,10 @@ interface EnrichmentResult {
 
 export async function POST(request: Request) {
   try {
+    const { context, response } = await requireUserContext();
+    if (!context) return response;
+
+    const { orgId, supabase } = context;
     const { companyId } = await request.json();
 
     if (!companyId) {
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
       .from('companies')
       .select('*')
       .eq('id', companyId)
+      .eq('org_id', orgId)
       .single();
 
     if (fetchError || !company) {
@@ -90,16 +91,17 @@ Current Description: ${company.description || 'None'}`;
         confidence_score: 0.92,
       })
       .eq('id', companyId)
+      .eq('org_id', orgId)
       .select()
       .single();
 
     if (updateError) throw updateError;
 
     return NextResponse.json({ success: true, company: updated });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Enrich API error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Enrichment failed' },
+      { success: false, error: getErrorMessage(error) },
       { status: 500 }
     );
   }

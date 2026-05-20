@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import styles from './PriceChart.module.css';
 
@@ -21,7 +21,7 @@ export default function PriceChart() {
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
 
-  const fetchPrices = async () => {
+  const fetchPrices = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch('/api/prices');
@@ -33,20 +33,22 @@ export default function PriceChart() {
         // Extract unique commodity names
         const unique = Array.from(new Set(records.map((r: PriceRecord) => r.commodity))) as string[];
         setCommodities(unique);
-        if (unique.length > 0 && !selectedCommodity) {
-          setSelectedCommodity(unique[0]);
-        }
+        setSelectedCommodity((current) => current || unique[0] || '');
       }
     } catch (error) {
       console.error('Error fetching prices:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchPrices();
-  }, []);
+    const timer = window.setTimeout(() => {
+      void fetchPrices();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [fetchPrices]);
 
   const triggerPriceTick = async () => {
     setUpdating(true);

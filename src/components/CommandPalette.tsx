@@ -47,9 +47,13 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
 
   useEffect(() => {
     if (isOpen) {
-      setQuery('');
-      setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
+      const timer = window.setTimeout(() => {
+        setQuery('');
+        setSelectedIndex(0);
+        inputRef.current?.focus();
+      }, 50);
+
+      return () => window.clearTimeout(timer);
     }
   }, [isOpen]);
 
@@ -73,7 +77,8 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
   }, [filtered, selectedIndex, handleSelect, onClose]);
 
   useEffect(() => {
-    setSelectedIndex(0);
+    const timer = window.setTimeout(() => setSelectedIndex(0), 0);
+    return () => window.clearTimeout(timer);
   }, [query]);
 
   if (!isOpen) return null;

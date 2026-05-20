@@ -1,4 +1,4 @@
-export function exportToCsv(filename: string, rows: Record<string, any>[]) {
+export function exportToCsv(filename: string, rows: Record<string, unknown>[]) {
   if (rows.length === 0) return;
   const headers = Object.keys(rows[0]);
   const csvContent = [

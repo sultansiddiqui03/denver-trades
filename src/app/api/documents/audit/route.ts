@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { generateJSON, generateMultimodalJSON } from '@/lib/ai/gemini';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { requireUserContext } from '@/lib/auth/server';
+import { getErrorMessage } from '@/lib/errors';
 
 interface Discrepancy {
   severity: 'HIGH' | 'WARNING' | 'INFO';
@@ -20,6 +16,10 @@ interface AuditResponse {
 
 export async function POST(request: Request) {
   try {
+    const { context, response } = await requireUserContext();
+    if (!context) return response;
+
+    const { orgId, supabase } = context;
     const body = await request.json();
     const {
       deal_id,
@@ -29,7 +29,6 @@ export async function POST(request: Request) {
       doc_type_b = 'Bill of Lading',
       text_b,
       file_b, // { base64: string, mimeType: string, name: string }
-      org_id = 'd3b07384-d113-4e4e-9c8e-5b123d456789'
     } = body;
 
     const hasAttachment = (file_a && file_a.base64) || (file_b && file_b.base64);
@@ -96,7 +95,7 @@ ${text_b}
     const { data, error } = await supabase
       .from('document_audits')
       .insert({
-        org_id,
+        org_id: orgId,
         deal_id: deal_id || null,
         doc_type_a,
         doc_path_a: file_a ? file_a.name : 'Text payload input',
@@ -120,10 +119,10 @@ ${text_b}
       audit: data
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Document Audit API error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Internal Server Error' },
+      { success: false, error: getErrorMessage(error) },
       { status: 500 }
     );
   }

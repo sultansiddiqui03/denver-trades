@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server';
 import { generateText } from '@/lib/ai/router';
+import { requireUserContext } from '@/lib/auth/server';
+import { getErrorMessage } from '@/lib/errors';
 
 export async function POST(request: Request) {
   try {
+    const { context, response } = await requireUserContext();
+    if (!context) return response;
+
+    const { orgId, supabase } = context;
+
     const body = await request.json();
     const { 
       company_name, 
@@ -50,15 +57,42 @@ Strict Formatting rules:
       systemPrompt,
     });
 
+    const { data: draft, error: draftError } = await supabase
+      .from('outreach_threads')
+      .insert({
+        org_id: orgId,
+        channel,
+        direction: 'Outbound',
+        recipient: company_name || 'Prospect Company',
+        subject: channel === 'Email' ? `AI outreach draft for ${product}` : null,
+        message_content: pitch,
+        status: 'Draft',
+        language,
+        ai_generated: true,
+        needs_review: true,
+        extracted_terms: {
+          product,
+          tone,
+          deal_value: deal_value || null,
+        },
+      })
+      .select()
+      .single();
+
+    if (draftError) {
+      throw draftError;
+    }
+
     return NextResponse.json({
       success: true,
       pitch,
+      draft,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Outreach Generate API error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Internal Server Error' },
+      { success: false, error: getErrorMessage(error) },
       { status: 500 }
     );
   }

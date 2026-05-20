@@ -1,11 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { generateJSON } from '@/lib/ai/gemini';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { getSupabaseServiceClient } from '@/lib/supabase/admin';
+import { getErrorMessage } from '@/lib/errors';
+import { isWebhookSecretAuthorized } from '@/lib/security/request';
 
 interface ScrapedPlace {
   title?: string;
@@ -32,19 +29,39 @@ interface EnrichedCompany {
 }
 
 export async function POST(request: Request) {
+  const supabase = getSupabaseServiceClient();
+
   try {
+    if (!isWebhookSecretAuthorized(request, 'APIFY_WEBHOOK_SECRET')) {
+      return NextResponse.json(
+        { success: false, error: 'Webhook authorization failed' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const agentRunId = searchParams.get('agent_run_id');
-    const orgId = 'd3b07384-d113-4e4e-9c8e-5b123d456789'; // Default Org ID
 
     if (!agentRunId) {
       return NextResponse.json({ success: false, error: 'agent_run_id is required' }, { status: 400 });
     }
 
     const payload = await request.json();
-    const { runId, event, datasetId } = payload;
+    const { event, datasetId } = payload;
 
     console.log(`Apify Webhook triggered for Run ID: ${agentRunId}. Event: ${event}, Dataset ID: ${datasetId}`);
+
+    const { data: runRecord, error: runFetchError } = await supabase
+      .from('agent_runs')
+      .select('id, org_id')
+      .eq('id', agentRunId)
+      .single();
+
+    if (runFetchError || !runRecord) {
+      return NextResponse.json({ success: false, error: 'Agent run not found' }, { status: 404 });
+    }
+
+    const orgId = runRecord.org_id;
 
     // If the run failed, update agent run and exit
     if (event !== 'ACTOR.RUN.SUCCEEDED') {
@@ -60,7 +77,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, message: 'Updated run to failed state' });
     }
 
-    const token = process.env.APIFY_TOKEN;
+    const token = process.env.APIFY_TOKEN || process.env.APIFY_API_TOKEN;
     if (!token) {
       throw new Error('APIFY_TOKEN is missing in environment variables');
     }
@@ -173,7 +190,7 @@ Country Code: ${item.countryCode || 'N/A'}`;
       created: createdCount
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Apify Webhook error:', error);
     
     // Attempt to log failure in database
@@ -184,14 +201,14 @@ Country Code: ${item.countryCode || 'N/A'}`;
         .from('agent_runs')
         .update({
           status: 'Failed',
-          error_log: error.message || 'Internal Server Webhook Error',
+          error_log: getErrorMessage(error),
           completed_at: new Date().toISOString()
         })
         .eq('id', agentRunId);
     }
 
     return NextResponse.json(
-      { success: false, error: error.message || 'Internal Server Error' },
+      { success: false, error: getErrorMessage(error) },
       { status: 500 }
     );
   }

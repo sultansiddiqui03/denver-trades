@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  AreaChart,
-  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -27,6 +25,12 @@ interface AnalyticsData {
   enrichedCompanies: number;
 }
 
+interface LegendEntry {
+  payload?: {
+    value?: number;
+  };
+}
+
 const STAGE_COLORS: Record<string, string> = {
   Discovery: '#CCFF00',
   Outreach: '#00D47E',
@@ -42,13 +46,17 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/dashboard/analytics')
-      .then((res) => res.json())
-      .then((res) => {
-        if (res.success) setData(res.analytics);
-      })
-      .catch((err) => console.error('Analytics fetch error:', err))
-      .finally(() => setLoading(false));
+    const timer = window.setTimeout(() => {
+      fetch('/api/dashboard/analytics')
+        .then((res) => res.json())
+        .then((res) => {
+          if (res.success) setData(res.analytics);
+        })
+        .catch((err) => console.error('Analytics fetch error:', err))
+        .finally(() => setLoading(false));
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   const enrichRate = data
@@ -201,9 +209,9 @@ export default function AnalyticsPage() {
                     verticalAlign="bottom"
                     height={36}
                     iconType="circle"
-                    formatter={(value: string, entry: any) => (
+                    formatter={(value: string, entry: LegendEntry) => (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                        {value} ({entry.payload.value})
+                        {value} ({entry.payload?.value ?? 0})
                       </span>
                     )}
                   />

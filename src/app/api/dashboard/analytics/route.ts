@@ -1,14 +1,25 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { requireUserContext } from '@/lib/auth/server';
+import { getErrorMessage } from '@/lib/errors';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+interface DealStageRow {
+  stage: string | null;
+}
+
+interface CompanyCountryRow {
+  hq_country: string | null;
+}
+
+interface AgentRunStatusRow {
+  status: string | null;
+}
 
 export async function GET() {
   try {
-    const orgId = 'd3b07384-d113-4e4e-9c8e-5b123d456789';
+    const { context, response } = await requireUserContext();
+    if (!context) return response;
+
+    const { orgId, supabase } = context;
 
     const [dealsRes, companiesRes, agentRunsRes, pipelineRes, totalCoRes, enrichedCoRes] = await Promise.all([
       supabase.from('deals_pipeline').select('stage').eq('org_id', orgId),
@@ -21,7 +32,7 @@ export async function GET() {
 
     // Deals by stage
     const stageCounts: Record<string, number> = {};
-    (dealsRes.data || []).forEach((d: any) => {
+    ((dealsRes.data || []) as DealStageRow[]).forEach((d) => {
       const s = d.stage || 'Discovery';
       stageCounts[s] = (stageCounts[s] || 0) + 1;
     });
@@ -29,7 +40,7 @@ export async function GET() {
 
     // Companies by country
     const countryCounts: Record<string, number> = {};
-    (companiesRes.data || []).forEach((c: any) => {
+    ((companiesRes.data || []) as CompanyCountryRow[]).forEach((c) => {
       const country = c.hq_country || 'Unknown';
       countryCounts[country] = (countryCounts[country] || 0) + 1;
     });
@@ -39,9 +50,9 @@ export async function GET() {
       .map(([country, count]) => ({ country, count }));
 
     // Agent success rate
-    const runs = agentRunsRes.data || [];
+    const runs = (agentRunsRes.data || []) as AgentRunStatusRow[];
     const total = runs.length;
-    const successful = runs.filter((r: any) => r.status === 'Success').length;
+    const successful = runs.filter((r) => r.status === 'Success').length;
     const rate = total > 0 ? Math.round((successful / total) * 100) : 0;
 
     // Pipeline value
@@ -60,7 +71,7 @@ export async function GET() {
         enrichedCompanies: enrichedCoRes.count ?? 0,
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ success: false, error: getErrorMessage(error) }, { status: 500 });
   }
 }

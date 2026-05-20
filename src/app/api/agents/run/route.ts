@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { requireUserContext } from '@/lib/auth/server';
+import { getErrorMessage } from '@/lib/errors';
 
 export async function POST(request: Request) {
   try {
+    const { context, response: authResponse } = await requireUserContext();
+    if (!context) return authResponse;
+
+    const { orgId, supabase } = context;
     const body = await request.json();
     const { agentName, query } = body;
-    const orgId = 'd3b07384-d113-4e4e-9c8e-5b123d456789'; // Default Org ID
 
     if (!agentName) {
       return NextResponse.json({ success: false, error: 'Agent name is required' }, { status: 400 });
@@ -32,7 +31,7 @@ export async function POST(request: Request) {
 
     if (insertError) throw insertError;
 
-    const token = process.env.APIFY_TOKEN;
+    const token = process.env.APIFY_TOKEN || process.env.APIFY_API_TOKEN;
     const actorId = process.env.APIFY_ACTOR_ID || 'apify~google-maps-scraper';
 
     // 2. Lead Scraper Logic
@@ -85,7 +84,11 @@ export async function POST(request: Request) {
       // Live Mode: Call Apify
       const apifyUrl = `https://api.apify.com/v2/acts/${actorId}/runs?token=${token}`;
       const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://denver-trades.vercel.app';
-      const webhookUrl = `${domain}/api/webhooks/apify?agent_run_id=${runRecord.id}`;
+      const webhookUrl = `${domain}/api/webhooks/apify?agent_run_id=${runRecord.id}${
+        process.env.APIFY_WEBHOOK_SECRET
+          ? `&secret=${encodeURIComponent(process.env.APIFY_WEBHOOK_SECRET)}`
+          : ''
+      }`;
 
       const response = await fetch(apifyUrl, {
         method: 'POST',
@@ -167,8 +170,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, mode: 'simulation', run: updatedRun });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Run Agent API error:', error);
-    return NextResponse.json({ success: false, error: error.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: getErrorMessage(error) }, { status: 500 });
   }
 }

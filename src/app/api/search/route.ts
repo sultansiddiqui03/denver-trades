@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { generateJSON } from '@/lib/ai/gemini';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { requireUserContext } from '@/lib/auth/server';
+import { getErrorMessage } from '@/lib/errors';
 
 interface ParsedQuery {
   keywords?: string[];
@@ -15,9 +11,12 @@ interface ParsedQuery {
 
 export async function GET(request: Request) {
   try {
+    const { context, response } = await requireUserContext();
+    if (!context) return response;
+
+    const { orgId, supabase } = context;
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q') || '';
-    const orgId = searchParams.get('org_id') || 'd3b07384-d113-4e4e-9c8e-5b123d456789'; // Default seeded Org
 
     if (!query) {
       // Return all companies for the org if query is empty
@@ -102,10 +101,10 @@ Format as JSON:
       results: scoredResults
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Search API error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Internal Server Error' },
+      { success: false, error: getErrorMessage(error) },
       { status: 500 }
     );
   }

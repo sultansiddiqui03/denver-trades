@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { requireUserContext } from '@/lib/auth/server';
+import { getSupabaseServiceClient } from '@/lib/supabase/admin';
+import { getErrorMessage } from '@/lib/errors';
+import { isAutomationAuthorized } from '@/lib/security/request';
 
 export async function GET(request: Request) {
   try {
@@ -12,8 +10,19 @@ export async function GET(request: Request) {
     const isCron = searchParams.get('cron') === 'true';
 
     if (isCron) {
+      if (!isAutomationAuthorized(request)) {
+        return NextResponse.json(
+          { success: false, error: 'Cron authorization failed' },
+          { status: 401 }
+        );
+      }
       return await triggerVolatilityTick();
     }
+
+    const { context, response } = await requireUserContext();
+    if (!context) return response;
+
+    const { supabase } = context;
 
     const { data: prices, error } = await supabase
       .from('commodity_prices')
@@ -27,10 +36,10 @@ export async function GET(request: Request) {
       success: true,
       prices
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Prices API error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Internal Server Error' },
+      { success: false, error: getErrorMessage(error) },
       { status: 500 }
     );
   }
@@ -38,11 +47,15 @@ export async function GET(request: Request) {
 
 // Simulates a cron job to update prices with minor market volatility
 export async function POST() {
+  const { context, response } = await requireUserContext();
+  if (!context) return response;
+
   return await triggerVolatilityTick();
 }
 
 async function triggerVolatilityTick() {
   try {
+    const supabase = getSupabaseServiceClient();
     const { data: prices, error: fetchError } = await supabase
       .from('commodity_prices')
       .select('*');
@@ -77,10 +90,10 @@ async function triggerVolatilityTick() {
       message: 'Simulated price feed tick triggered.',
       updatedFeeds: updates
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Price Ingest trigger error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Internal Server Error' },
+      { success: false, error: getErrorMessage(error) },
       { status: 500 }
     );
   }

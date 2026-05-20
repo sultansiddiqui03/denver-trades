@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import EmptyState from '@/components/EmptyState';
@@ -37,7 +37,7 @@ export default function SearchWorkspace() {
   const [enrichingId, setEnrichingId] = useState<string | null>(null);
 
   // Fetch initial (unfiltered) list from search API
-  const performSearch = async (searchQuery: string = '') => {
+  const performSearch = useCallback(async (searchQuery: string = '') => {
     setLoading(true);
     try {
       const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
@@ -50,11 +50,15 @@ export default function SearchWorkspace() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    performSearch();
-  }, []);
+    const timer = window.setTimeout(() => {
+      void performSearch();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [performSearch]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

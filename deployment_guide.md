@@ -29,11 +29,25 @@ Follow these steps to deploy the application on Vercel:
     | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
     | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Client Anonymous Key |
     | `SUPABASE_SERVICE_ROLE_KEY` | Supabase Service Role Key (secure backend bypass) |
+    | `DENVER_TRADES_DEFAULT_ORG_ID` | Default organization UUID used when first creating Google-auth user profiles |
     | `GEMINI_API_KEY` | Google AI Studio Key (for AI Search & Document Audits) |
     | `CLAUDE_API_KEY` | Anthropic Console Key (for Outreach Pitch Generator) |
     | `OPENAI_API_KEY` | OpenAI API Key (for semantic vector calculations) |
+    | `CRON_SECRET` | Shared secret for Vercel cron and manual price-ingest triggers |
+    | `APIFY_API_TOKEN` | Apify API token for the lead scraper agent |
+    | `APIFY_WEBHOOK_SECRET` | Shared secret appended to Apify webhook callbacks |
+    | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | Twilio credentials for WhatsApp sending and request signature verification |
+    | `TWILIO_WHATSAPP_NUMBER` | Twilio WhatsApp sender, for example `whatsapp:+14155238886` |
+    | `WHATSAPP_WEBHOOK_SECRET` | Optional JSON-test webhook secret for non-Twilio simulator payloads |
+    | `NEXT_PUBLIC_APP_URL` / `NEXT_PUBLIC_SITE_URL` | Public deployment URL, for example `https://denver-trades.vercel.app` |
+
+3.  **Supabase Google Auth**:
+    * In Supabase Auth providers, enable **Google**.
+    * In Google Cloud, add the Supabase callback URL shown in the Supabase Google provider settings.
+    * In Supabase Auth URL configuration, add `https://denver-trades.vercel.app/auth/callback` and your local callback URL to the redirect allow list.
+    * Set the production Site URL to `https://denver-trades.vercel.app`.
     
-3.  **Deploy**: Click **Deploy**. Vercel will build the Next.js routes and compile page assets.
+4.  **Deploy**: Click **Deploy**. Vercel will build the Next.js routes and compile page assets.
 
 ---
 
@@ -67,6 +81,6 @@ The application includes a `vercel.json` file configuring background price volat
 *   **Trigger Interval**: Once daily at 2:00 AM.
 *   **Manual Trigger**: To test background cron ticks in production, make a `GET` call using curl or Postman:
     ```bash
-    curl -X GET "https://<your-vercel-domain>.vercel.app/api/prices?cron=true"
+    curl -H "Authorization: Bearer <CRON_SECRET>" "https://<your-vercel-domain>.vercel.app/api/prices?cron=true"
     ```
     This triggers a tick updating market indices with simulated volatility.

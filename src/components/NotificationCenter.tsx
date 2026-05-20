@@ -44,9 +44,14 @@ export default function NotificationCenter() {
   }, []);
 
   useEffect(() => {
-    fetchNotifications();
+    const fetchTimer = window.setTimeout(() => {
+      void fetchNotifications();
+    }, 0);
     const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      window.clearTimeout(fetchTimer);
+      clearInterval(interval);
+    };
   }, [fetchNotifications]);
 
   // Close on click outside

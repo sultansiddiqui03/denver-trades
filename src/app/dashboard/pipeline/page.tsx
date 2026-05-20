@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
 import { exportToCsv } from '@/lib/exportCsv';
@@ -12,6 +12,22 @@ interface Deal {
   value: string;
   products: string[];
   stage: 'Discovery' | 'Outreach' | 'Negotiation' | 'Audit' | 'Closed';
+}
+
+interface PipelineRow {
+  id: string;
+  title: string | null;
+  value_usd: number | string | null;
+  product: string | null;
+  stage: string | null;
+  companies:
+    | {
+        name: string | null;
+      }
+    | {
+        name: string | null;
+      }[]
+    | null;
 }
 
 const initialDeals: Deal[] = [
@@ -60,7 +76,7 @@ const stages: { label: string; key: Deal['stage'] }[] = [
   { label: 'Closed / Won', key: 'Closed' },
 ];
 
-const mapDbToUiStage = (dbStage: string): Deal['stage'] => {
+const mapDbToUiStage = (dbStage: string | null): Deal['stage'] => {
   const s = (dbStage || '').trim().toLowerCase();
   if (s.includes('discovery') || s.includes('new')) return 'Discovery';
   if (s.includes('outreach')) return 'Outreach';
@@ -71,13 +87,13 @@ const mapDbToUiStage = (dbStage: string): Deal['stage'] => {
 };
 
 export default function KanbanPipeline() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const { toast } = useToast();
   const [deals, setDeals] = useState<Deal[]>(initialDeals);
   const [loading, setLoading] = useState(false);
   const [savingState, setSavingState] = useState<string | null>(null);
 
-  const fetchDeals = async () => {
+  const fetchDeals = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -96,13 +112,17 @@ export default function KanbanPipeline() {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        const mapped: Deal[] = data.map((d: any) => ({
-          id: d.id,
-          companyName: d.companies?.name || d.title || 'Unknown Buyer',
-          value: `$${Number(d.value_usd || 0).toLocaleString()}`,
-          products: [d.product || 'Agricultural commodities'],
-          stage: mapDbToUiStage(d.stage),
-        }));
+        const mapped: Deal[] = (data as unknown as PipelineRow[]).map((d) => {
+          const company = Array.isArray(d.companies) ? d.companies[0] : d.companies;
+
+          return {
+            id: d.id,
+            companyName: company?.name || d.title || 'Unknown Buyer',
+            value: `$${Number(d.value_usd || 0).toLocaleString()}`,
+            products: [d.product || 'Agricultural commodities'],
+            stage: mapDbToUiStage(d.stage),
+          };
+        });
         setDeals(mapped);
       }
     } catch (err) {
@@ -110,11 +130,15 @@ export default function KanbanPipeline() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]);
 
   useEffect(() => {
-    fetchDeals();
-  }, []);
+    const timer = window.setTimeout(() => {
+      void fetchDeals();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [fetchDeals]);
 
   const moveDeal = async (id: string, direction: 'forward' | 'backward') => {
     const currentDeal = deals.find((d) => d.id === id);

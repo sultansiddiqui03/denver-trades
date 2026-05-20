@@ -10,9 +10,10 @@ export default function ProgressBar() {
   const [complete, setComplete] = useState(false);
 
   useEffect(() => {
-    // Show progress bar briefly on each route change
-    setVisible(true);
-    setComplete(false);
+    const showTimer = setTimeout(() => {
+      setVisible(true);
+      setComplete(false);
+    }, 0);
 
     const timer = setTimeout(() => {
       setComplete(true);
@@ -24,6 +25,7 @@ export default function ProgressBar() {
     }, 600);
 
     return () => {
+      clearTimeout(showTimer);
       clearTimeout(timer);
       clearTimeout(hideTimer);
     };

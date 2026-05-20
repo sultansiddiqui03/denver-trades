@@ -45,38 +45,43 @@ function timeAgo(timestamp: string): string {
 }
 
 export default function DashboardOverview() {
-  const [currentDate, setCurrentDate] = useState('');
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [loadingStats, setLoadingStats] = useState(true);
-  const [loadingActivity, setLoadingActivity] = useState(true);
-
-  useEffect(() => {
+  const [currentDate] = useState(() => {
     const options: Intl.DateTimeFormatOptions = {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     };
-    setCurrentDate(new Date().toLocaleDateString('en-US', options));
 
-    // Fetch live stats
-    fetch('/api/dashboard/stats')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setStats(data.stats);
-      })
-      .catch((err) => console.error('Stats fetch error:', err))
-      .finally(() => setLoadingStats(false));
+    return new Date().toLocaleDateString('en-US', options);
+  });
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingActivity, setLoadingActivity] = useState(true);
 
-    // Fetch live activity
-    fetch('/api/dashboard/activity')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setActivities(data.activities);
-      })
-      .catch((err) => console.error('Activity fetch error:', err))
-      .finally(() => setLoadingActivity(false));
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      // Fetch live stats
+      fetch('/api/dashboard/stats')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) setStats(data.stats);
+        })
+        .catch((err) => console.error('Stats fetch error:', err))
+        .finally(() => setLoadingStats(false));
+
+      // Fetch live activity
+      fetch('/api/dashboard/activity')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) setActivities(data.activities);
+        })
+        .catch((err) => console.error('Activity fetch error:', err))
+        .finally(() => setLoadingActivity(false));
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   return (
@@ -84,7 +89,7 @@ export default function DashboardOverview() {
       {/* Header */}
       <div className={styles.headerSection}>
         <h1 className={styles.welcomeTitle}>Welcome Back, Sultan Trades</h1>
-        <span className={styles.dateSubtitle}>{currentDate || 'Loading date...'}</span>
+        <span className={styles.dateSubtitle}>{currentDate}</span>
       </div>
 
       {/* Stats Cards Grid */}
