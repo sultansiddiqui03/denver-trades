@@ -1,28 +1,10 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useToast } from '@/components/Toast';
+import DocColumn, { type UploadedFile } from './docAudit/DocColumn';
+import DocAuditResult, { type AuditData } from './docAudit/DocAuditResult';
 import styles from './DocAuditor.module.css';
-
-interface Discrepancy {
-  severity: 'HIGH' | 'WARNING' | 'INFO';
-  category: string;
-  description: string;
-}
-
-interface AuditData {
-  id?: string;
-  status: string;
-  summary: string;
-  discrepancies: Discrepancy[];
-}
-
-interface UploadedFile {
-  name: string;
-  size: number;
-  type: string;
-  base64: string;
-}
 
 const SAMPLE_LC_MATCH = `LETTER OF CREDIT (L/C) - ADVICE NO: LC82739102
 ISSUING BANK: EMIRATES NBD, DUBAI, UAE
@@ -62,10 +44,40 @@ CARRIER: CMA CGM
 SHIPPER: DENVER TRADES, INDIA BRANCH
 CONSIGNEE: GULF SPICES & SEEDS INDUSTRY, SHARJAH, UAE
 PORT OF LOADING: MUNDRA PORT, INDIA
-PORT OF DISCHARGE: JEBEL ALI PORT, DUBAI, UAE  <-- MISMATCH (L/C says Sharjah)
+PORT OF DISCHARGE: JEBEL ALI PORT, DUBAI, UAE
 DESCRIPTION OF GOODS: 1 X 40FT CONTAINER STC:
-23,850 KG CORIANDER SEEDS WHOLE SPLIT  <-- MISMATCH (L/C says 24,000 KG)
-ACTUAL SHIPPED ON BOARD DATE: 2026-05-18  <-- MISMATCH (L/C Latest Shipment: May 15)`;
+23,850 KG CORIANDER SEEDS WHOLE SPLIT
+ACTUAL SHIPPED ON BOARD DATE: 2026-05-18`;
+
+function processFileToState(
+  file: File,
+  onLoad: (uploaded: UploadedFile, decodedText: string | null) => void
+) {
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const base64 = (event.target?.result as string) ?? '';
+    const uploaded: UploadedFile = {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      base64,
+    };
+
+    let decoded: string | null = null;
+    if (file.type.startsWith('text/') || file.name.endsWith('.txt')) {
+      try {
+        decoded = atob(base64.split(',')[1] ?? '');
+      } catch {
+        decoded = `[Document File: ${file.name}]`;
+      }
+    } else {
+      decoded = `[Document File: ${file.name}]`;
+    }
+
+    onLoad(uploaded, decoded);
+  };
+  reader.readAsDataURL(file);
+}
 
 export default function DocAuditor() {
   const { toast } = useToast();
@@ -77,9 +89,6 @@ export default function DocAuditor() {
   const [isDragOverB, setIsDragOverB] = useState(false);
   const [loading, setLoading] = useState(false);
   const [auditResult, setAuditResult] = useState<AuditData | null>(null);
-
-  const fileInputRefA = useRef<HTMLInputElement>(null);
-  const fileInputRefB = useRef<HTMLInputElement>(null);
 
   const handlePreFill = (type: 'match' | 'mismatch') => {
     setFileA(null);
@@ -94,74 +103,6 @@ export default function DocAuditor() {
     setAuditResult(null);
   };
 
-  const handleDragOver = (e: React.DragEvent, type: 'a' | 'b') => {
-    e.preventDefault();
-    if (type === 'a') setIsDragOverA(true);
-    else setIsDragOverB(true);
-  };
-
-  const handleDragLeave = (type: 'a' | 'b') => {
-    if (type === 'a') setIsDragOverA(false);
-    else setIsDragOverB(false);
-  };
-
-  const handleDrop = (e: React.DragEvent, type: 'a' | 'b') => {
-    e.preventDefault();
-    if (type === 'a') setIsDragOverA(false);
-    else setIsDragOverB(false);
-
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      processFile(file, type);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'a' | 'b') => {
-    const file = e.target.files?.[0];
-    if (file) {
-      processFile(file, type);
-    }
-  };
-
-  const processFile = (file: File, type: 'a' | 'b') => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      const uploaded: UploadedFile = {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        base64
-      };
-      if (type === 'a') {
-        setFileA(uploaded);
-        if (file.type.startsWith('text/') || file.name.endsWith('.txt')) {
-          try {
-            const decoded = atob(base64.split(',')[1]);
-            setTextA(decoded);
-          } catch {
-            setTextA(`[Document File: ${file.name}]`);
-          }
-        } else {
-          setTextA(`[Document File: ${file.name}]`);
-        }
-      } else {
-        setFileB(uploaded);
-        if (file.type.startsWith('text/') || file.name.endsWith('.txt')) {
-          try {
-            const decoded = atob(base64.split(',')[1]);
-            setTextB(decoded);
-          } catch {
-            setTextB(`[Document File: ${file.name}]`);
-          }
-        } else {
-          setTextB(`[Document File: ${file.name}]`);
-        }
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
   const handleAudit = async () => {
     setLoading(true);
     try {
@@ -174,8 +115,8 @@ export default function DocAuditor() {
           file_a: fileA,
           doc_type_b: 'Bill of Lading',
           text_b: textB,
-          file_b: fileB
-        })
+          file_b: fileB,
+        }),
       });
 
       const data = await response.json();
@@ -185,15 +126,18 @@ export default function DocAuditor() {
         if (count === 0) {
           toast('Audit passed — no discrepancies found', 'success');
         } else {
-          toast(`Audit complete — ${count} discrepanc${count === 1 ? 'y' : 'ies'} detected`, 'warning');
+          toast(
+            `Audit complete — ${count} discrepanc${count === 1 ? 'y' : 'ies'} detected`,
+            'warning'
+          );
         }
       } else {
         console.error('Audit failed:', data.error);
-        toast('Document audit failed', 'error');
+        toast(data.error || 'Document audit failed', 'error');
       }
     } catch (error) {
       console.error('Error during document audit:', error);
-      toast('Error running document audit', 'error');
+      toast(error instanceof Error ? error.message : 'Error running document audit', 'error');
     } finally {
       setLoading(false);
     }
@@ -201,22 +145,21 @@ export default function DocAuditor() {
 
   return (
     <div className={styles.container}>
-      {/* Top action bar */}
       <div className={styles.actionBar}>
         <div className={styles.preFillGroup}>
-          <button 
-            type="button" 
+          <button
+            type="button"
             className={styles.secondaryBtn}
             onClick={() => handlePreFill('mismatch')}
           >
-            Pre-Fill Mismatched Docs (Fails Audit)
+            Pre-fill mismatched docs (fails audit)
           </button>
-          <button 
-            type="button" 
+          <button
+            type="button"
             className={styles.secondaryBtn}
             onClick={() => handlePreFill('match')}
           >
-            Pre-Fill Clean Docs (Passes Audit)
+            Pre-fill clean docs (passes audit)
           </button>
         </div>
 
@@ -226,162 +169,93 @@ export default function DocAuditor() {
           onClick={handleAudit}
           disabled={loading || (!textA.trim() && !fileA) || (!textB.trim() && !fileB)}
         >
-          {loading ? 'Analyzing Compliance...' : 'Run Compliance Audit'}
+          {loading ? 'Analyzing compliance…' : 'Run compliance audit'}
         </button>
       </div>
 
-      {/* Side-by-side editing panel */}
       <div className={styles.splitGrid}>
-        
-        {/* Document A Column */}
-        <div className={styles.docColumn}>
-          <div className={styles.columnHeader}>
-            <span>Document A: Letter of Credit (L/C)</span>
-            <span className={styles.typeBadge}>UCP 600 Rules</span>
-          </div>
+        <DocColumn
+          label="Document A: Letter of Credit (L/C)"
+          typeBadge="UCP 600 Rules"
+          text={textA}
+          file={fileA}
+          isDragOver={isDragOverA}
+          dropPromptText="Drag & drop L/C document here, or click to upload"
+          textareaPlaceholder="Or paste Letter of Credit instructions here…"
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragOverA(true);
+          }}
+          onDragLeave={() => setIsDragOverA(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragOverA(false);
+            const file = e.dataTransfer.files?.[0];
+            if (file) {
+              processFileToState(file, (uploaded, decoded) => {
+                setFileA(uploaded);
+                if (decoded) setTextA(decoded);
+              });
+            }
+          }}
+          onFileChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              processFileToState(file, (uploaded, decoded) => {
+                setFileA(uploaded);
+                if (decoded) setTextA(decoded);
+              });
+            }
+          }}
+          onTextChange={setTextA}
+          onRemoveFile={() => {
+            setFileA(null);
+            setTextA('');
+          }}
+        />
 
-          <div 
-            className={`${styles.dropzone} ${isDragOverA ? styles.dropzoneActive : ''} ${fileA ? styles.dropzoneCompleted : ''}`}
-            onDragOver={(e) => handleDragOver(e, 'a')}
-            onDragLeave={() => handleDragLeave('a')}
-            onDrop={(e) => handleDrop(e, 'a')}
-            onClick={() => fileInputRefA.current?.click()}
-          >
-            <input 
-              type="file" 
-              ref={fileInputRefA} 
-              style={{ display: 'none' }} 
-              accept=".pdf,.png,.jpg,.jpeg,.txt"
-              onChange={(e) => handleFileChange(e, 'a')}
-            />
-            {fileA ? (
-              <div className={styles.fileDetails}>
-                <span className={styles.fileIcon}>📄</span>
-                <div style={{ flex: 1 }}>
-                  <p className={styles.fileName}>{fileA.name}</p>
-                  <p className={styles.fileSize}>{(fileA.size / 1024).toFixed(1)} KB • Attached</p>
-                </div>
-                <button 
-                  type="button" 
-                  className={styles.removeFileBtn} 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFileA(null);
-                    setTextA('');
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-            ) : (
-              <div className={styles.dropPrompt}>
-                <span>📥</span>
-                <p>Drag & drop L/C document here, or click to upload</p>
-                <span className={styles.fileSupport}>Supports PDF, images, TXT</span>
-              </div>
-            )}
-          </div>
-
-          {!fileA && (
-            <textarea
-              className={styles.textarea}
-              value={textA}
-              onChange={(e) => setTextA(e.target.value)}
-              placeholder="Or paste Letter of Credit instructions here..."
-            />
-          )}
-        </div>
-
-        {/* Document B Column */}
-        <div className={styles.docColumn}>
-          <div className={styles.columnHeader}>
-            <span>Document B: Bill of Lading (B/L)</span>
-            <span className={styles.typeBadge}>Carrier Issue</span>
-          </div>
-
-          <div 
-            className={`${styles.dropzone} ${isDragOverB ? styles.dropzoneActive : ''} ${fileB ? styles.dropzoneCompleted : ''}`}
-            onDragOver={(e) => handleDragOver(e, 'b')}
-            onDragLeave={() => handleDragLeave('b')}
-            onDrop={(e) => handleDrop(e, 'b')}
-            onClick={() => fileInputRefB.current?.click()}
-          >
-            <input 
-              type="file" 
-              ref={fileInputRefB} 
-              style={{ display: 'none' }} 
-              accept=".pdf,.png,.jpg,.jpeg,.txt"
-              onChange={(e) => handleFileChange(e, 'b')}
-            />
-            {fileB ? (
-              <div className={styles.fileDetails}>
-                <span className={styles.fileIcon}>📄</span>
-                <div style={{ flex: 1 }}>
-                  <p className={styles.fileName}>{fileB.name}</p>
-                  <p className={styles.fileSize}>{(fileB.size / 1024).toFixed(1)} KB • Attached</p>
-                </div>
-                <button 
-                  type="button" 
-                  className={styles.removeFileBtn} 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFileB(null);
-                    setTextB('');
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-            ) : (
-              <div className={styles.dropPrompt}>
-                <span>📥</span>
-                <p>Drag & drop B/L document here, or click to upload</p>
-                <span className={styles.fileSupport}>Supports PDF, images, TXT</span>
-              </div>
-            )}
-          </div>
-
-          {!fileB && (
-            <textarea
-              className={styles.textarea}
-              value={textB}
-              onChange={(e) => setTextB(e.target.value)}
-              placeholder="Or paste Bill of Lading cargo details here..."
-            />
-          )}
-        </div>
+        <DocColumn
+          label="Document B: Bill of Lading (B/L)"
+          typeBadge="Carrier Issue"
+          text={textB}
+          file={fileB}
+          isDragOver={isDragOverB}
+          dropPromptText="Drag & drop B/L document here, or click to upload"
+          textareaPlaceholder="Or paste Bill of Lading cargo details here…"
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragOverB(true);
+          }}
+          onDragLeave={() => setIsDragOverB(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragOverB(false);
+            const file = e.dataTransfer.files?.[0];
+            if (file) {
+              processFileToState(file, (uploaded, decoded) => {
+                setFileB(uploaded);
+                if (decoded) setTextB(decoded);
+              });
+            }
+          }}
+          onFileChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              processFileToState(file, (uploaded, decoded) => {
+                setFileB(uploaded);
+                if (decoded) setTextB(decoded);
+              });
+            }
+          }}
+          onTextChange={setTextB}
+          onRemoveFile={() => {
+            setFileB(null);
+            setTextB('');
+          }}
+        />
       </div>
 
-      {/* Results overlay */}
-      {auditResult && (
-        <div className={styles.resultPanel}>
-          <div className={styles.resultHeader}>
-            <h3>Compliance Scan Results</h3>
-            <span className={`${styles.statusBadge} ${
-              auditResult.discrepancies.length === 0 ? styles.statusPass : styles.statusFail
-            }`}>
-              {auditResult.discrepancies.length === 0 ? 'Compliant' : `${auditResult.discrepancies.length} Discrepancies Found`}
-            </span>
-          </div>
-          <p className={styles.summaryText}>{auditResult.summary}</p>
-
-          {auditResult.discrepancies.length > 0 && (
-            <div className={styles.discrepancyList}>
-              {auditResult.discrepancies.map((d, index) => (
-                <div key={index} className={styles.discrepancyCard}>
-                  <div className={styles.discrepancyMeta}>
-                    <span className={`${styles.severity} ${styles[d.severity.toLowerCase()]}`}>
-                      {d.severity}
-                    </span>
-                    <span className={styles.category}>{d.category}</span>
-                  </div>
-                  <p className={styles.desc}>{d.description}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {auditResult && <DocAuditResult result={auditResult} />}
     </div>
   );
 }

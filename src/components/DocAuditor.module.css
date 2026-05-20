@@ -1,7 +1,7 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-5);
   width: 100%;
 }
 
@@ -9,32 +9,32 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 15px;
+  gap: var(--space-4);
   flex-wrap: wrap;
 }
 
 .preFillGroup {
   display: flex;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .primaryBtn {
-  background: var(--accent-color);
-  color: var(--background-dark);
+  background: var(--accent-lime);
+  color: var(--text-inverse);
   border: none;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-weight: 700;
-  padding: 12px 24px;
-  border-radius: 8px;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 0 15px rgba(204, 255, 0, 0.15);
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-glow);
 }
 
 .primaryBtn:hover:not(:disabled) {
-  opacity: 0.9;
+  background: var(--accent-lime-hover);
   transform: translateY(-1px);
-  box-shadow: 0 0 20px rgba(204, 255, 0, 0.3);
+  box-shadow: var(--shadow-glow-lg);
 }
 
 .primaryBtn:disabled {
@@ -44,25 +44,26 @@
 
 .secondaryBtn {
   background: rgba(255, 255, 255, 0.03);
-  color: var(--text-color);
-  border: 1px solid var(--border-color);
-  padding: 10px 16px;
-  border-radius: 8px;
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
 }
 
 .secondaryBtn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
 }
 
 .splitGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: var(--space-5);
 }
 
 @media (max-width: 768px) {
@@ -74,31 +75,37 @@
 .docColumn {
   display: flex;
   flex-direction: column;
-  background: var(--background-glass);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
 .columnHeader {
-  background: rgba(10, 31, 20, 0.4);
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.02);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--border-primary);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--text-color);
+  font-size: 0.875rem;
+  color: var(--text-primary);
 }
 
 .typeBadge {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text-muted);
   font-size: 0.75rem;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.hiddenInput {
+  display: none;
 }
 
 .textarea {
@@ -106,23 +113,23 @@
   border: none;
   resize: vertical;
   min-height: 250px;
-  padding: 20px;
-  color: var(--text-color);
+  padding: var(--space-5);
+  color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   line-height: 1.6;
   outline: none;
 }
 
 .dropzone {
-  border: 2px dashed var(--border-color);
-  border-radius: 8px;
+  border: 2px dashed var(--border-primary);
+  border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.01);
-  padding: 24px;
+  padding: var(--space-5);
   text-align: center;
   cursor: pointer;
-  margin: 15px;
-  transition: all 0.2s ease;
+  margin: var(--space-4);
+  transition: all var(--transition-fast);
   min-height: 120px;
   display: flex;
   align-items: center;
@@ -130,14 +137,19 @@
 }
 
 .dropzone:hover {
-  background: rgba(204, 255, 0, 0.02);
-  border-color: var(--accent-color);
+  background: var(--accent-lime-muted);
+  border-color: var(--border-focus);
+}
+
+.dropzone:focus-visible {
+  outline: 2px solid var(--accent-lime);
+  outline-offset: 2px;
 }
 
 .dropzoneActive {
-  background: rgba(204, 255, 0, 0.05);
-  border-color: var(--accent-color);
-  box-shadow: 0 0 10px rgba(204, 255, 0, 0.1);
+  background: var(--accent-lime-muted);
+  border-color: var(--accent-lime);
+  box-shadow: 0 0 10px var(--accent-lime-glow);
 }
 
 .dropzoneCompleted {
@@ -150,17 +162,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  color: var(--text-color);
-}
-
-.dropPrompt span {
-  font-size: 1.5rem;
+  gap: var(--space-2);
+  color: var(--text-primary);
 }
 
 .dropPrompt p {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 
@@ -173,19 +181,31 @@
   display: flex;
   align-items: center;
   width: 100%;
-  gap: 12px;
+  gap: var(--space-3);
   text-align: left;
 }
 
 .fileIcon {
-  font-size: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--accent-lime-muted);
+  color: var(--accent-lime);
+}
+
+.fileMeta {
+  flex: 1;
+  min-width: 0;
 }
 
 .fileName {
-  margin: 0 0 4px 0;
+  margin: 0 0 2px 0;
   font-weight: 600;
   font-size: 0.875rem;
-  color: var(--text-color);
+  color: var(--text-primary);
   word-break: break-all;
 }
 
@@ -196,134 +216,146 @@
 }
 
 .removeFileBtn {
-  background: rgba(255, 50, 50, 0.1);
-  color: #ff5252;
-  border: 1px solid rgba(255, 50, 50, 0.2);
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  background: var(--danger-muted);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .removeFileBtn:hover {
-  background: rgba(255, 50, 50, 0.2);
-  border-color: #ff5252;
+  background: rgba(239, 68, 68, 0.2);
+  border-color: var(--danger);
 }
 
 .resultPanel {
-  background: rgba(10, 31, 20, 0.4);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 24px;
-  animation: fadeIn 0.3s ease;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  animation: docAuditFadeIn 0.3s ease;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes docAuditFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .resultHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 15px;
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-primary);
+  padding-bottom: var(--space-4);
 }
 
 .resultHeader h3 {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   margin: 0;
-  color: var(--text-color);
+  font-size: 1.125rem;
+  color: var(--text-primary);
 }
 
 .statusBadge {
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   font-weight: 700;
-  padding: 4px 12px;
-  border-radius: 12px;
+  padding: 4px var(--space-3);
+  border-radius: var(--radius-full);
 }
 
 .statusPass {
-  background: rgba(0, 255, 100, 0.1);
-  color: #00ff64;
-  border: 1px solid rgba(0, 255, 100, 0.2);
+  background: var(--success-muted);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.25);
 }
 
 .statusFail {
-  background: rgba(255, 50, 50, 0.1);
-  color: #ff3232;
-  border: 1px solid rgba(255, 50, 50, 0.2);
+  background: var(--danger-muted);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
 .summaryText {
-  color: var(--text-color);
-  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
   line-height: 1.6;
-  margin: 0 0 20px 0;
+  margin: 0 0 var(--space-5) 0;
 }
 
 .discrepancyList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 .discrepancyCard {
   background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 16px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
 }
 
 .discrepancyMeta {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 6px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-1);
 }
 
 .severity {
   font-size: 0.75rem;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
 }
 
 .high {
-  background: rgba(255, 50, 50, 0.15);
-  color: #ff5252;
-  border: 1px solid rgba(255, 50, 50, 0.3);
+  background: var(--danger-muted);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .warning {
-  background: rgba(255, 150, 0, 0.15);
-  color: #ff9800;
-  border: 1px solid rgba(255, 150, 0, 0.3);
+  background: var(--warning-muted);
+  color: var(--warning);
+  border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
 .info {
-  background: rgba(0, 150, 255, 0.15);
-  color: #00b0ff;
-  border: 1px solid rgba(0, 150, 255, 0.3);
+  background: var(--info-muted);
+  color: var(--info);
+  border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
 .category {
   font-weight: 600;
-  color: var(--text-color);
-  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-size: 0.875rem;
 }
 
 .desc {
   margin: 0;
-  color: var(--text-muted);
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
   line-height: 1.5;
 }
 
@@ -331,18 +363,17 @@
   .actionBar {
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
+    gap: var(--space-3);
   }
 
   .preFillGroup {
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .primaryBtn,
   .secondaryBtn {
     width: 100%;
-    text-align: center;
   }
 }
