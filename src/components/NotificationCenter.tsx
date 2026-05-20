@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import styles from './NotificationCenter.module.css';
 
 interface NotificationItem {
@@ -27,8 +28,10 @@ const DOT_CLASS: Record<string, string> = {
 };
 
 export default function NotificationCenter() {
+  const supabase = useMemo(() => createClient(), []);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
+  const [hasFetched, setHasFetched] = useState(false);
   const [unread, setUnread] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -38,21 +41,43 @@ export default function NotificationCenter() {
       const data = await res.json();
       if (data.success) {
         setItems(data.activities || []);
-        setUnread(prev => prev === 0 && data.activities.length > 0 ? data.activities.length : prev);
+        setUnread((prev) =>
+          prev === 0 && data.activities.length > 0 ? data.activities.length : prev
+        );
       }
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    } finally {
+      setHasFetched(true);
+    }
   }, []);
 
   useEffect(() => {
     const fetchTimer = window.setTimeout(() => {
       void fetchNotifications();
     }, 0);
-    const interval = setInterval(fetchNotifications, 30000);
+
+    // Realtime: refresh when a new notification lands; falls back to 60s poll
+    // so we still surface activity-feed items that don't trigger a notification row.
+    const channel = supabase
+      .channel('notification-center')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications' },
+        () => {
+          void fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    const interval = setInterval(fetchNotifications, 60000);
+
     return () => {
       window.clearTimeout(fetchTimer);
+      supabase.removeChannel(channel);
       clearInterval(interval);
     };
-  }, [fetchNotifications]);
+  }, [fetchNotifications, supabase]);
 
   // Close on click outside
   useEffect(() => {
@@ -90,12 +115,32 @@ export default function NotificationCenter() {
           </div>
 
           <div className={styles.dropdownBody}>
-            {items.length === 0 ? (
+            {!hasFetched ? (
+              <>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={`notif-skel-${i}`} className={styles.notifItem}>
+                    <div className={styles.notifDot} />
+                    <div className={styles.notifContent}>
+                      <span
+                        className="skeleton"
+                        style={{ width: '60%', height: 12, display: 'block' }}
+                      />
+                      <span
+                        className="skeleton"
+                        style={{ width: '85%', height: 10, display: 'block', marginTop: 6 }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : items.length === 0 ? (
               <div className={styles.emptyNotif}>No notifications yet</div>
             ) : (
               items.map((item) => (
                 <div key={item.id} className={styles.notifItem}>
-                  <div className={`${styles.notifDot} ${styles[DOT_CLASS[item.color] || 'dotGreen']}`} />
+                  <div
+                    className={`${styles.notifDot} ${styles[DOT_CLASS[item.color] || 'dotGreen']}`}
+                  />
                   <div className={styles.notifContent}>
                     <span className={styles.notifTitle}>{item.title}</span>
                     <span className={styles.notifDesc}>{item.description}</span>

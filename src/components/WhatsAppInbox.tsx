@@ -41,6 +41,7 @@ export default function WhatsAppInbox() {
   
   const [selectedContact, setSelectedContact] = useState<Contact>(contacts[0]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [hasFetched, setHasFetched] = useState(false);
   const [newMessage, setNewMessage] = useState('');
   const [simulatedInbound, setSimulatedInbound] = useState('');
   const [loading, setLoading] = useState(false);
@@ -64,6 +65,8 @@ export default function WhatsAppInbox() {
         if (signal?.aborted) return;
         if (err instanceof Error && err.name === 'AbortError') return;
         console.error('Error fetching messages:', err);
+      } finally {
+        if (!signal?.aborted) setHasFetched(true);
       }
     },
     [supabase]
@@ -207,7 +210,28 @@ export default function WhatsAppInbox() {
 
         {/* Message stream */}
         <div className={styles.messageStream}>
-          {currentChatMessages.length === 0 ? (
+          {!hasFetched ? (
+            <>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={`msg-skel-${i}`}
+                  className={`${styles.messageBubble} ${
+                    i % 2 === 0 ? styles.inbound : styles.outbound
+                  }`}
+                  style={{ minWidth: 180 }}
+                >
+                  <span
+                    className="skeleton"
+                    style={{ width: 160 + (i % 3) * 30, height: 12, display: 'block' }}
+                  />
+                  <span
+                    className="skeleton"
+                    style={{ width: 110, height: 10, display: 'block', marginTop: 6 }}
+                  />
+                </div>
+              ))}
+            </>
+          ) : currentChatMessages.length === 0 ? (
             <div className={styles.emptyChat}>
               <p>No messages yet. Send a message to start the trade negotiation.</p>
             </div>

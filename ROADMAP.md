@@ -227,8 +227,12 @@ This is the polish workstream the user flagged. Concrete fixes, not vibes.
 ### P3-2 · Real-time agent status — pulse on Running rows · S
 Add a `pulse-glow` animation (already defined in [globals.css:501](src/app/globals.css:501)) to `agent_runs` table rows where `status === 'Running'`. Tiny detail, huge perceived-quality bump.
 
-### P3-3 · Skeleton loaders on first paint · S
-[AgentDashboard.tsx:209](src/components/AgentDashboard.tsx:209) shows `EmptyState` immediately while loading — distracting flicker. Use `.skeleton` (already in [globals.css:537](src/app/globals.css:537)) until first fetch completes, then render content or `EmptyState`.
+### ✅ P3-3 · Skeleton loaders on first paint · S
+- **AgentDashboard** — 3 skeleton table rows until first `agent_runs` fetch returns; then content or `EmptyState`.
+- **NotificationCenter** — 3 skeleton bell items on first paint.
+- **PriceChart** — full dashboard-grid skeleton (chart area + 2 info cards) instead of "Loading…" text.
+- **WhatsAppInbox** — 4 alternating skeleton message bubbles in the stream while messages load.
+- **AnalyticsPage** — already had skeletons on the stats cards + 2 charts (kept).
 
 ### P3-4 · Loading states on every action button · S
 All `Run Agent` / `Refresh Logs` / `Enrich` / `Generate Outreach` buttons should show a spinner and disable while in-flight. Right now most just toggle disabled + text.
@@ -252,10 +256,10 @@ Pages still hand-roll empty divs (e.g. [PriceChart.tsx:150](src/components/Price
 - Keyboard hints (`↑↓` to navigate, `↵` to open, `esc` to close).
 - Match against company names, deals, recent agent runs — not just static actions.
 
-### P3-9 · Notification Center polish · S
-- Stop hardcoded 30s polling ([NotificationCenter.tsx:50](src/components/NotificationCenter.tsx:50)) — use Supabase realtime.
-- Group by type; "Mark all read" action.
-- Unread badge on the bell icon.
+### ✅ P3-9 · Notification Center polish · S (partial)
+- Added a Supabase realtime subscription on `notifications` (INSERT events trigger a fresh activity-feed fetch) — replaces the 30s tight poll with a 60s safety fallback poll.
+- Skeleton list during first paint (P3-3 work).
+- "Mark all read" still only clears local unread count — the bell badge now genuinely reflects new arrivals. Persisting it to `notifications.is_read = true` is deferred: the dropdown currently shows an activity feed (mix of agent runs, deals, audits), not the `notifications` table directly, so the "read" semantic needs a small data-model rethink. Tracked as a follow-up note in CLAUDE.md.
 
 ### P3-10 · Card hover/press states consistent · S
 `.card` defines hover lift; many components don't use `.card` (e.g. agent cards use their own `.agentCard`). Audit and unify on the global `.card` or extend it.

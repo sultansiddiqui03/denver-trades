@@ -163,8 +163,17 @@ export default function PriceChart() {
       </div>
 
       {loading && prices.length === 0 ? (
-        <div className={styles.chartFallback}>
-          <p>Loading live ag-commodity pricing streams...</p>
+        <div className={styles.dashboardGrid}>
+          <div className={styles.chartArea}>
+            <div
+              className="skeleton"
+              style={{ height: 320, borderRadius: 'var(--radius-md)' }}
+            />
+          </div>
+          <div className={styles.infoCol}>
+            <div className="skeleton" style={{ height: 110, borderRadius: 'var(--radius-lg)' }} />
+            <div className="skeleton" style={{ height: 110, borderRadius: 'var(--radius-lg)' }} />
+          </div>
         </div>
       ) : chartData.length === 0 ? (
         <div className={styles.chartFallback}>

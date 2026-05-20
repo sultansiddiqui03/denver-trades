@@ -79,6 +79,7 @@ export default function AgentDashboard() {
   const { toast } = useToast();
   const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);
   const [runs, setRuns] = useState<AgentRun[]>([]);
+  const [hasFetched, setHasFetched] = useState(false);
   const [triggering, setTriggering] = useState<string | null>(null);
   const [scraperQuery, setScraperQuery] = useState('Spice exporters in Vietnam');
   const [simulationActive, setSimulationActive] = useState(false);
@@ -95,6 +96,8 @@ export default function AgentDashboard() {
       setRuns((data ?? []) as AgentRun[]);
     } catch (err) {
       console.error('Error fetching agent runs:', err);
+    } finally {
+      setHasFetched(true);
     }
   }, [supabase]);
 
@@ -251,7 +254,36 @@ export default function AgentDashboard() {
           </button>
         </div>
 
-        {runs.length === 0 ? (
+        {!hasFetched ? (
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Agent Name</th>
+                  <th>Status</th>
+                  <th>Processed</th>
+                  <th>Created/Updated</th>
+                  <th>Execution Started</th>
+                  <th>Detail</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <tr key={`skeleton-${i}`}>
+                    {Array.from({ length: 6 }).map((__, j) => (
+                      <td key={j}>
+                        <span
+                          className="skeleton"
+                          style={{ display: 'block', height: 16, width: j === 0 ? 140 : '60%' }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : runs.length === 0 ? (
           <EmptyState
             title="No Agent Runs Yet"
             description="Trigger an agent above to see execution logs, processing stats, and lead creation results."
