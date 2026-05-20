@@ -90,21 +90,21 @@ export default function WhatsAppInbox() {
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('outreach_threads')
-        .insert({
+      const response = await fetch('/api/outreach/whatsapp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           org_id: 'd3b07384-d113-4e4e-9c8e-5b123d456789',
           company_id: selectedContact.companyId,
-          channel: 'WhatsApp',
-          direction: 'Outbound',
-          sender: 'whatsapp:+14155238886', // Mock Twilio number
-          recipient: `whatsapp:${selectedContact.phone}`,
-          message_content: newMessage,
-          status: 'Sent',
-          language: 'en'
-        });
+          recipient: selectedContact.phone,
+          message_content: newMessage
+        })
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to dispatch Twilio WhatsApp message via server route');
+      }
+
       setNewMessage('');
       fetchMessages();
     } catch (err) {

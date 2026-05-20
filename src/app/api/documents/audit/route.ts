@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { generateJSON } from '@/lib/ai/gemini';
+import { generateJSON, generateMultimodalJSON } from '@/lib/ai/gemini';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,14 +25,18 @@ export async function POST(request: Request) {
       deal_id,
       doc_type_a = 'Letter of Credit',
       text_a,
+      file_a, // { base64: string, mimeType: string, name: string }
       doc_type_b = 'Bill of Lading',
       text_b,
+      file_b, // { base64: string, mimeType: string, name: string }
       org_id = 'd3b07384-d113-4e4e-9c8e-5b123d456789'
     } = body;
 
-    if (!text_a || !text_b) {
+    const hasAttachment = (file_a && file_a.base64) || (file_b && file_b.base64);
+
+    if (!hasAttachment && (!text_a || !text_b)) {
       return NextResponse.json(
-        { success: false, error: 'Both document contents are required to audit.' },
+        { success: false, error: 'Document texts or file attachments are required to audit.' },
         { status: 400 }
       );
     }
@@ -57,16 +61,36 @@ Format your response strictly as a JSON object:
   "summary": "A brief overview summary paragraph of the compliance status."
 }`;
 
-    const prompt = `
+    let auditResult: AuditResponse;
+
+    if (hasAttachment) {
+      const prompt = `Please audit compliance discrepancies between these two uploaded shipping documents.
+Document A is a ${doc_type_a} (represented by File A or text below).
+Document B is a ${doc_type_b} (represented by File B or text below).
+
+Text A: ${text_a || ''}
+Text B: ${text_b || ''}
+`;
+
+      const files = [];
+      if (file_a?.base64) {
+        files.push({ base64: file_a.base64, mimeType: file_a.mimeType });
+      }
+      if (file_b?.base64) {
+        files.push({ base64: file_b.base64, mimeType: file_b.mimeType });
+      }
+
+      auditResult = await generateMultimodalJSON<AuditResponse>(prompt, files, systemPrompt);
+    } else {
+      const prompt = `
 === DOCUMENT A (${doc_type_a}) ===
 ${text_a}
 
 === DOCUMENT B (${doc_type_b}) ===
 ${text_b}
 `;
-
-    // Trigger Gemini structured audit JSON
-    const auditResult = await generateJSON<AuditResponse>(prompt, systemPrompt);
+      auditResult = await generateJSON<AuditResponse>(prompt, systemPrompt);
+    }
 
     // Save to document_audits table
     const { data, error } = await supabase
@@ -75,9 +99,9 @@ ${text_b}
         org_id,
         deal_id: deal_id || null,
         doc_type_a,
-        doc_path_a: 'Text payload input',
+        doc_path_a: file_a ? file_a.name : 'Text payload input',
         doc_type_b,
-        doc_path_b: 'Text payload input',
+        doc_path_b: file_b ? file_b.name : 'Text payload input',
         status: 'Complete',
         discrepancies: auditResult.discrepancies || [],
         summary: auditResult.summary || 'Completed compliance scan.',

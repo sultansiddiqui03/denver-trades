@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import styles from './DocAuditor.module.css';
 
 interface Discrepancy {
@@ -14,6 +14,13 @@ interface AuditData {
   status: string;
   summary: string;
   discrepancies: Discrepancy[];
+}
+
+interface UploadedFile {
+  name: string;
+  size: number;
+  type: string;
+  base64: string;
 }
 
 const SAMPLE_LC_MATCH = `LETTER OF CREDIT (L/C) - ADVICE NO: LC82739102
@@ -62,10 +69,19 @@ ACTUAL SHIPPED ON BOARD DATE: 2026-05-18  <-- MISMATCH (L/C Latest Shipment: May
 export default function DocAuditor() {
   const [textA, setTextA] = useState(SAMPLE_LC_MISMATCH);
   const [textB, setTextB] = useState(SAMPLE_BL_MISMATCH);
+  const [fileA, setFileA] = useState<UploadedFile | null>(null);
+  const [fileB, setFileB] = useState<UploadedFile | null>(null);
+  const [isDragOverA, setIsDragOverA] = useState(false);
+  const [isDragOverB, setIsDragOverB] = useState(false);
   const [loading, setLoading] = useState(false);
   const [auditResult, setAuditResult] = useState<AuditData | null>(null);
 
+  const fileInputRefA = useRef<HTMLInputElement>(null);
+  const fileInputRefB = useRef<HTMLInputElement>(null);
+
   const handlePreFill = (type: 'match' | 'mismatch') => {
+    setFileA(null);
+    setFileB(null);
     if (type === 'match') {
       setTextA(SAMPLE_LC_MATCH);
       setTextB(SAMPLE_BL_MATCH);
@@ -74,6 +90,74 @@ export default function DocAuditor() {
       setTextB(SAMPLE_BL_MISMATCH);
     }
     setAuditResult(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, type: 'a' | 'b') => {
+    e.preventDefault();
+    if (type === 'a') setIsDragOverA(true);
+    else setIsDragOverB(true);
+  };
+
+  const handleDragLeave = (type: 'a' | 'b') => {
+    if (type === 'a') setIsDragOverA(false);
+    else setIsDragOverB(false);
+  };
+
+  const handleDrop = (e: React.DragEvent, type: 'a' | 'b') => {
+    e.preventDefault();
+    if (type === 'a') setIsDragOverA(false);
+    else setIsDragOverB(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processFile(file, type);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'a' | 'b') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processFile(file, type);
+    }
+  };
+
+  const processFile = (file: File, type: 'a' | 'b') => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      const uploaded: UploadedFile = {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        base64
+      };
+      if (type === 'a') {
+        setFileA(uploaded);
+        if (file.type.startsWith('text/') || file.name.endsWith('.txt')) {
+          try {
+            const decoded = atob(base64.split(',')[1]);
+            setTextA(decoded);
+          } catch {
+            setTextA(`[Document File: ${file.name}]`);
+          }
+        } else {
+          setTextA(`[Document File: ${file.name}]`);
+        }
+      } else {
+        setFileB(uploaded);
+        if (file.type.startsWith('text/') || file.name.endsWith('.txt')) {
+          try {
+            const decoded = atob(base64.split(',')[1]);
+            setTextB(decoded);
+          } catch {
+            setTextB(`[Document File: ${file.name}]`);
+          }
+        } else {
+          setTextB(`[Document File: ${file.name}]`);
+        }
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleAudit = async () => {
@@ -85,8 +169,10 @@ export default function DocAuditor() {
         body: JSON.stringify({
           doc_type_a: 'Letter of Credit',
           text_a: textA,
+          file_a: fileA,
           doc_type_b: 'Bill of Lading',
-          text_b: textB
+          text_b: textB,
+          file_b: fileB
         })
       });
 
@@ -128,7 +214,7 @@ export default function DocAuditor() {
           type="button"
           className={styles.primaryBtn}
           onClick={handleAudit}
-          disabled={loading || !textA.trim() || !textB.trim()}
+          disabled={loading || (!textA.trim() && !fileA) || (!textB.trim() && !fileB)}
         >
           {loading ? 'Analyzing Compliance...' : 'Run Compliance Audit'}
         </button>
@@ -136,30 +222,123 @@ export default function DocAuditor() {
 
       {/* Side-by-side editing panel */}
       <div className={styles.splitGrid}>
+        
+        {/* Document A Column */}
         <div className={styles.docColumn}>
           <div className={styles.columnHeader}>
             <span>Document A: Letter of Credit (L/C)</span>
             <span className={styles.typeBadge}>UCP 600 Rules</span>
           </div>
-          <textarea
-            className={styles.textarea}
-            value={textA}
-            onChange={(e) => setTextA(e.target.value)}
-            placeholder="Paste Letter of Credit instructions here..."
-          />
+
+          <div 
+            className={`${styles.dropzone} ${isDragOverA ? styles.dropzoneActive : ''} ${fileA ? styles.dropzoneCompleted : ''}`}
+            onDragOver={(e) => handleDragOver(e, 'a')}
+            onDragLeave={() => handleDragLeave('a')}
+            onDrop={(e) => handleDrop(e, 'a')}
+            onClick={() => fileInputRefA.current?.click()}
+          >
+            <input 
+              type="file" 
+              ref={fileInputRefA} 
+              style={{ display: 'none' }} 
+              accept=".pdf,.png,.jpg,.jpeg,.txt"
+              onChange={(e) => handleFileChange(e, 'a')}
+            />
+            {fileA ? (
+              <div className={styles.fileDetails}>
+                <span className={styles.fileIcon}>📄</span>
+                <div style={{ flex: 1 }}>
+                  <p className={styles.fileName}>{fileA.name}</p>
+                  <p className={styles.fileSize}>{(fileA.size / 1024).toFixed(1)} KB • Attached</p>
+                </div>
+                <button 
+                  type="button" 
+                  className={styles.removeFileBtn} 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFileA(null);
+                    setTextA('');
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div className={styles.dropPrompt}>
+                <span>📥</span>
+                <p>Drag & drop L/C document here, or click to upload</p>
+                <span className={styles.fileSupport}>Supports PDF, images, TXT</span>
+              </div>
+            )}
+          </div>
+
+          {!fileA && (
+            <textarea
+              className={styles.textarea}
+              value={textA}
+              onChange={(e) => setTextA(e.target.value)}
+              placeholder="Or paste Letter of Credit instructions here..."
+            />
+          )}
         </div>
 
+        {/* Document B Column */}
         <div className={styles.docColumn}>
           <div className={styles.columnHeader}>
             <span>Document B: Bill of Lading (B/L)</span>
             <span className={styles.typeBadge}>Carrier Issue</span>
           </div>
-          <textarea
-            className={styles.textarea}
-            value={textB}
-            onChange={(e) => setTextB(e.target.value)}
-            placeholder="Paste Bill of Lading cargo details here..."
-          />
+
+          <div 
+            className={`${styles.dropzone} ${isDragOverB ? styles.dropzoneActive : ''} ${fileB ? styles.dropzoneCompleted : ''}`}
+            onDragOver={(e) => handleDragOver(e, 'b')}
+            onDragLeave={() => handleDragLeave('b')}
+            onDrop={(e) => handleDrop(e, 'b')}
+            onClick={() => fileInputRefB.current?.click()}
+          >
+            <input 
+              type="file" 
+              ref={fileInputRefB} 
+              style={{ display: 'none' }} 
+              accept=".pdf,.png,.jpg,.jpeg,.txt"
+              onChange={(e) => handleFileChange(e, 'b')}
+            />
+            {fileB ? (
+              <div className={styles.fileDetails}>
+                <span className={styles.fileIcon}>📄</span>
+                <div style={{ flex: 1 }}>
+                  <p className={styles.fileName}>{fileB.name}</p>
+                  <p className={styles.fileSize}>{(fileB.size / 1024).toFixed(1)} KB • Attached</p>
+                </div>
+                <button 
+                  type="button" 
+                  className={styles.removeFileBtn} 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFileB(null);
+                    setTextB('');
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div className={styles.dropPrompt}>
+                <span>📥</span>
+                <p>Drag & drop B/L document here, or click to upload</p>
+                <span className={styles.fileSupport}>Supports PDF, images, TXT</span>
+              </div>
+            )}
+          </div>
+
+          {!fileB && (
+            <textarea
+              className={styles.textarea}
+              value={textB}
+              onChange={(e) => setTextB(e.target.value)}
+              placeholder="Or paste Bill of Lading cargo details here..."
+            />
+          )}
         </div>
       </div>
 

@@ -26,6 +26,54 @@ export async function generateText(prompt: string, systemInstruction?: string): 
   }
 }
 
+
+export async function generateMultimodalJSON<T>(
+  prompt: string,
+  files: { base64: string; mimeType: string }[],
+  systemInstruction?: string
+): Promise<T> {
+  if (!apiKey) {
+    console.warn("GEMINI_API_KEY is not defined. Falling back to mock JSON response.");
+    return getMockJSONForPrompt<T>(prompt);
+  }
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      systemInstruction: systemInstruction,
+      generationConfig: {
+        responseMimeType: 'application/json',
+      },
+    });
+
+    // Construct request parts: text prompt + inline media attachments
+    const parts = [
+      prompt,
+      ...files.map((file) => {
+        // Strip data:url prefixes if present (e.g. data:image/png;base64,xxxx)
+        const base64Data = file.base64.includes(';base64,')
+          ? file.base64.split(';base64,')[1]
+          : file.base64;
+        return {
+          inlineData: {
+            data: base64Data,
+            mimeType: file.mimeType,
+          },
+        };
+      }),
+    ];
+
+    const result = await model.generateContent(parts);
+    const response = await result.response;
+    const text = response.text() || '{}';
+    return JSON.parse(text) as T;
+  } catch (error) {
+    console.error("Error calling Gemini Multimodal JSON API:", error);
+    return getMockJSONForPrompt<T>(prompt);
+  }
+}
+
 export async function generateJSON<T>(prompt: string, systemInstruction?: string): Promise<T> {
   if (!apiKey) {
     console.warn("GEMINI_API_KEY is not defined. Falling back to mock JSON response.");

@@ -114,6 +114,107 @@
   outline: none;
 }
 
+.dropzone {
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.01);
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  margin: 15px;
+  transition: all 0.2s ease;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dropzone:hover {
+  background: rgba(204, 255, 0, 0.02);
+  border-color: var(--accent-color);
+}
+
+.dropzoneActive {
+  background: rgba(204, 255, 0, 0.05);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 10px rgba(204, 255, 0, 0.1);
+}
+
+.dropzoneCompleted {
+  border-style: solid;
+  border-color: rgba(204, 255, 0, 0.3);
+  background: rgba(204, 255, 0, 0.02);
+}
+
+.dropPrompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-color);
+}
+
+.dropPrompt span {
+  font-size: 1.5rem;
+}
+
+.dropPrompt p {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.fileSupport {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.fileDetails {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
+  text-align: left;
+}
+
+.fileIcon {
+  font-size: 2rem;
+}
+
+.fileName {
+  margin: 0 0 4px 0;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-color);
+  word-break: break-all;
+}
+
+.fileSize {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.removeFileBtn {
+  background: rgba(255, 50, 50, 0.1);
+  color: #ff5252;
+  border: 1px solid rgba(255, 50, 50, 0.2);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.removeFileBtn:hover {
+  background: rgba(255, 50, 50, 0.2);
+  border-color: #ff5252;
+}
+
 .resultPanel {
   background: rgba(10, 31, 20, 0.4);
   border: 1px solid var(--border-color);
