@@ -1,0 +1,321 @@
+.searchContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.searchHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.searchTitle {
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.searchSubtitle {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* Search Bar Area */
+.searchBoxCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: relative;
+}
+
+.inputGroup {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: var(--space-4);
+  color: var(--text-muted);
+}
+
+.searchInput {
+  width: 100%;
+  padding: var(--space-4) var(--space-4) var(--space-4) calc(var(--space-4) * 3);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: all var(--transition-fast);
+}
+
+.searchInput:focus {
+  border-color: var(--border-focus);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 0 4px rgba(204, 255, 0, 0.08);
+}
+
+.searchBtn {
+  position: absolute;
+  right: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--accent-lime);
+  color: var(--bg-primary);
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.searchBtn:hover {
+  background: var(--accent-lime-hover);
+  box-shadow: var(--shadow-glow);
+}
+
+/* Search Suggestions */
+.suggestionsRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.suggestionLabel {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.suggestionBadge {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-primary);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.suggestionBadge:hover {
+  border-color: var(--accent-lime);
+  color: var(--accent-lime);
+  background: var(--accent-lime-muted);
+}
+
+/* Filters and Results Header */
+.resultsSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.resultsMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.resultsCount {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.filtersRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.filterSelect {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.filterSelect:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+/* Results Grid */
+.resultsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-5);
+}
+
+@media (max-width: 900px) {
+  .resultsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Result Card */
+.resultCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  transition: all var(--transition-base);
+  position: relative;
+}
+
+.resultCard:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.companyTitleWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.companyName {
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.companyGeo {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.scoreBadge {
+  background: rgba(204, 255, 0, 0.1);
+  color: var(--accent-lime);
+  border: 1px solid rgba(204, 255, 0, 0.2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+.productsWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.shipmentsSummary {
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px dashed var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  font-size: 0.8125rem;
+}
+
+.shipmentHeader {
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.shipmentValue {
+  color: var(--text-muted);
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--border-primary);
+  padding-top: var(--space-4);
+  margin-top: auto;
+}
+
+.favoriteBtn {
+  color: var(--text-muted);
+  transition: all var(--transition-fast);
+  padding: var(--space-1);
+}
+
+.favoriteBtn:hover {
+  color: var(--warning);
+}
+
+.favoriteActive {
+  color: var(--warning);
+}
+
+.actionRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+@media (max-width: 600px) {
+  .resultsMeta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .filtersRow {
+    width: 100%;
+  }
+
+  .filterSelect {
+    flex: 1;
+  }
+}
+
+@media (max-width: 500px) {
+  .inputGroup {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: stretch;
+  }
+
+  .searchBtn {
+    position: static;
+    width: 100%;
+    text-align: center;
+  }
+
+  .searchInput {
+    padding-right: var(--space-4);
+  }
+}

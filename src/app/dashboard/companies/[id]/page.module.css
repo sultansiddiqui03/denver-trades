@@ -1,0 +1,350 @@
+.dossierContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  transition: color var(--transition-fast);
+}
+
+.backLink:hover {
+  color: var(--accent-lime);
+}
+
+/* Header grid styling */
+.dossierHeaderCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-6);
+}
+
+@media (max-width: 768px) {
+  .dossierHeaderCard {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.companyMetaInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.titleArea {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.companyName {
+  font-family: var(--font-heading);
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.15;
+}
+
+.detailsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.detailItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.detailsIcon {
+  color: var(--text-muted);
+}
+
+.headerMetrics {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.metricBadge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-5);
+  min-width: 100px;
+}
+
+.metricValue {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent-lime);
+}
+
+.metricLabel {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Layout for Dossier Tabs and Sidebar Info */
+.dossierBodyGrid {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: var(--space-6);
+}
+
+@media (max-width: 1024px) {
+  .dossierBodyGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tabs Bar */
+.tabsContainer {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.tabsList {
+  display: flex;
+  border-bottom: 1px solid var(--border-primary);
+  gap: var(--space-6);
+}
+
+.tabItem {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding-bottom: var(--space-3);
+  position: relative;
+  transition: color var(--transition-fast);
+}
+
+.tabItem:hover {
+  color: var(--text-primary);
+}
+
+.tabActive {
+  color: var(--accent-lime);
+}
+
+.tabActive::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent-lime);
+  box-shadow: 0 0 8px var(--accent-lime);
+}
+
+/* Content inside Tabs */
+.tabPanel {
+  animation: fadeIn var(--transition-base) ease forwards;
+}
+
+.panelTitle {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+
+/* Overview Content */
+.overviewGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.descriptionBox {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.infoCard {
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.infoCardLabel {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: var(--space-1);
+}
+
+.infoCardValue {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+/* Contacts Tab */
+.contactsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.contactRow {
+  display: flex;
+  align-items: center;
+  justify-content: justify;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.contactProfile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+.contactAvatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  color: var(--accent-lime);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-primary);
+}
+
+.contactMeta {
+  display: flex;
+  flex-direction: column;
+}
+
+.contactName {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.contactRole {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.contactActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Shipments Tab */
+.shipmentsTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.shipmentsTable th {
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.shipmentsTable td {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.shipmentsTable tr:last-child td {
+  border-bottom: none;
+}
+
+/* Side Card: Summary / Tools */
+.sideCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  height: fit-content;
+}
+
+.sideTitle {
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sideDetailsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sideDetailRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px dashed var(--border-primary);
+}
+
+.sideDetailRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.sideDetailLabel {
+  color: var(--text-muted);
+}
+
+.sideDetailValue {
+  font-weight: 500;
+}

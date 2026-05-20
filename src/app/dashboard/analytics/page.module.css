@@ -1,0 +1,17 @@
+.analyticsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: 1.6fr 1.4fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .chartGrid {
+    grid-template-columns: 1fr;
+  }
+}
