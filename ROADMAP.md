@@ -297,6 +297,18 @@ Each loader prop renders a `.skeleton` block at the chart's exact footprint so t
 
 ---
 
+## Phase 2.5 — Channels & semantic search (from original plan)
+
+### ✅ Resend email channel · S
+[/api/outreach/email/send](src/app/api/outreach/email/send/route.ts) added — zod-validated body, dispatches via Resend SDK, falls back to `mode:'simulation'` if `RESEND_API_KEY` / `RESEND_FROM_EMAIL` missing (consistent with the Apify token pattern). Logs outbound thread to `outreach_threads` with `channel='Email'`. Supports both new-message send and "send this Draft" (`draft_id` mode).
+**To go live:** add `RESEND_API_KEY` + verified `RESEND_FROM_EMAIL` to Vercel envs.
+
+### ⏳ Embeddings + semantic search
+`companies.embedding` column + pgvector extension already in place; `src/lib/ai/openai.ts` exports `generateEmbedding()` but no caller yet. Needs:
+1. Embedding upsert on company insert/update (Supabase Edge Function or app-level).
+2. `/api/search/semantic` route that does `<-> embedding` similarity + filters.
+3. UI toggle on the search page between keyword and semantic.
+
 ## Phase 4 — Future (when load justifies)
 
 - Multi-tenant org join/invite flow + RBAC beyond `org_id`

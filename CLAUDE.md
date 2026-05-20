@@ -85,6 +85,7 @@ A `.env.example` is **missing** — to be added. Required envs grouped:
 - **AI:** `CLAUDE_API_KEY`, `GEMINI_API_KEY` (`OPENAI_API_KEY` is unused dep)
 - **Apify:** `APIFY_TOKEN` (or `APIFY_API_TOKEN`), `APIFY_ACTOR_ID` (opt), `APIFY_WEBHOOK_SECRET`
 - **Twilio:** `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_NUMBER`
+- **Resend (email):** `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (verified Resend domain sender) — without these, `/api/outreach/email/send` runs in simulation mode
 - **Security:** `CRON_SECRET`
 - **App:** `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_APP_URL`, `DENVER_TRADES_DEFAULT_ORG_ID` (legacy fallback — should be removed)
 
