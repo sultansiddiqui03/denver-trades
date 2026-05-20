@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
+import { parseBody } from '@/lib/validation';
+
+const WhatsAppSendSchema = z.object({
+  recipient: z.string().min(1, 'recipient phone is required'),
+  message_content: z.string().min(1, 'message_content is required'),
+  company_id: z.string().uuid().nullable().optional(),
+  deal_id: z.string().uuid().nullable().optional(),
+  sender: z.string().optional(),
+});
 
 export async function POST(request: Request) {
   try {
@@ -8,21 +18,9 @@ export async function POST(request: Request) {
     if (!context) return response;
 
     const { orgId, supabase } = context;
-    const body = await request.json();
-    const {
-      company_id,
-      deal_id,
-      recipient,
-      message_content,
-      sender // Optional: if provided, otherwise derived from TWILIO_WHATSAPP_NUMBER
-    } = body;
-
-    if (!recipient || !message_content) {
-      return NextResponse.json(
-        { success: false, error: 'Recipient phone number and message content are required.' },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseBody(request, WhatsAppSendSchema);
+    if (!parsed.ok) return parsed.response;
+    const { company_id, deal_id, recipient, message_content, sender } = parsed.data;
 
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;

@@ -25,7 +25,12 @@ Goal: agents actually execute end-to-end; users see real auth state; the worst i
 2. New migration: a `pg_cron` job (or a route called by Vercel cron) every 5 min to fail any run with `status='Running' AND started_at < NOW() - INTERVAL '15 min'`.
 **Accept:** no `Running` rows older than 15 min in `agent_runs`.
 
-### P0-A2 · Audit Vercel env vars · S
+### ✅ P0-A2 · Audit Vercel env vars · S
+Vercel CLI installed; `vercel env ls production` run on 2026-05-21. Findings:
+- **`CLAUDE_API_KEY` MISSING** — critical because the new P1-8 error propagation surfaces this as 500s on outreach/enrich/search. Was previously hidden by the now-removed mock fallback.
+- `OPENAI_API_KEY` present but unused — drop with P2-8.
+- Webhook secrets + cron + app URLs are Production-only; mirror to Preview before opening a PR workflow.
+- Everything else (Supabase, Twilio, Apify, Gemini) is correctly set.
 **Why:** Most agent failures trace to missing/wrong env vars (`APIFY_TOKEN`, `APIFY_WEBHOOK_SECRET`, `CRON_SECRET`, `NEXT_PUBLIC_SITE_URL`). We're guessing what's set.
 **Steps:**
 1. Install Vercel CLI: `npm i -g vercel`
@@ -119,8 +124,8 @@ Dispatch URL contains `&secret=${APIFY_WEBHOOK_SECRET}` ([src/app/api/agents/run
 Apify + WhatsApp webhooks have no timestamp/nonce.
 **Fix:** require a timestamp header (reject > 5 min skew); add unique indexes on `(runId, eventTypeId)` for Apify and `MessageSid` for Twilio.
 
-### P1-5 · Unvalidated request bodies · M
-**Fix:** add `zod`; schema per route; 400 with field errors.
+### ✅ P1-5 · Unvalidated request bodies · M
+`zod` installed; shared [src/lib/validation.ts](src/lib/validation.ts) `parseBody(request, schema)` returns either typed data or a ready-to-return 400 with `{ path, message }` issues. Per-route schemas added to: `/api/agents/run`, `/api/companies/enrich`, `/api/documents/audit`, `/api/outreach/generate`, `/api/outreach/whatsapp/send`, `/api/webhooks/apify`, `/api/webhooks/whatsapp` (JSON test path). Twilio form-data path stays under signature verification.
 
 ### ✅ P1-6 · Generate Supabase TS types · S
 Generated via Supabase MCP into [src/lib/supabase/database.types.ts](src/lib/supabase/database.types.ts); `<Database>` generic wired into [server.ts](src/lib/supabase/server.ts), [client.ts](src/lib/supabase/client.ts), [admin.ts](src/lib/supabase/admin.ts), and `UserContext.supabase`. **Caught 6 real null-safety bugs** in activity feed, document audit insert, WhatsApp webhook contacts parsing, and WhatsApp inbox component — all fixed. Added `npm run db:types` and `npm run typecheck` scripts.

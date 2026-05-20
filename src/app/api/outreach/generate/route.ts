@@ -1,7 +1,18 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { generateText } from '@/lib/ai/router';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
+import { parseBody } from '@/lib/validation';
+
+const OutreachGenerateSchema = z.object({
+  product: z.string().min(1, 'product is required'),
+  company_name: z.string().optional(),
+  channel: z.enum(['Email', 'WhatsApp']).default('Email'),
+  language: z.enum(['en', 'es', 'ar']).default('en'),
+  tone: z.string().default('professional'),
+  deal_value: z.number().nullable().optional(),
+});
 
 export async function POST(request: Request) {
   try {
@@ -10,22 +21,9 @@ export async function POST(request: Request) {
 
     const { orgId, supabase } = context;
 
-    const body = await request.json();
-    const { 
-      company_name, 
-      product, 
-      channel = 'Email', 
-      language = 'en', 
-      tone = 'professional',
-      deal_value
-    } = body;
-
-    if (!product) {
-      return NextResponse.json(
-        { success: false, error: 'Product is required.' },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseBody(request, OutreachGenerateSchema);
+    if (!parsed.ok) return parsed.response;
+    const { company_name, product, channel, language, tone, deal_value } = parsed.data;
 
     const languageNames: Record<string, string> = {
       en: 'English',

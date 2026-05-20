@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { generateJSON } from '@/lib/ai/gemini';
 import { getSupabaseServiceClient } from '@/lib/supabase/admin';
 import { getErrorMessage } from '@/lib/errors';
 import { isWebhookSecretAuthorized } from '@/lib/security/request';
+import { parseBody } from '@/lib/validation';
+
+const ApifyWebhookSchema = z.object({
+  runId: z.string().optional(),
+  event: z.string().min(1, 'event is required'),
+  datasetId: z.string().min(1, 'datasetId is required'),
+});
 
 interface ScrapedPlace {
   title?: string;
@@ -46,8 +54,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'agent_run_id is required' }, { status: 400 });
     }
 
-    const payload = await request.json();
-    const { event, datasetId } = payload;
+    const parsed = await parseBody(request, ApifyWebhookSchema);
+    if (!parsed.ok) return parsed.response;
+    const { event, datasetId } = parsed.data;
 
     console.log(`Apify Webhook triggered for Run ID: ${agentRunId}. Event: ${event}, Dataset ID: ${datasetId}`);
 

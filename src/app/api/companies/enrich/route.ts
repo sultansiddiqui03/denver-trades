@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { generateJSON } from '@/lib/ai/gemini';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
+import { parseBody } from '@/lib/validation';
 
 interface EnrichmentResult {
   description: string;
@@ -12,20 +14,19 @@ interface EnrichmentResult {
   tags: string[];
 }
 
+const EnrichSchema = z.object({
+  companyId: z.string().uuid('companyId must be a UUID'),
+});
+
 export async function POST(request: Request) {
   try {
     const { context, response } = await requireUserContext();
     if (!context) return response;
 
     const { orgId, supabase } = context;
-    const { companyId } = await request.json();
-
-    if (!companyId) {
-      return NextResponse.json(
-        { success: false, error: 'companyId is required' },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseBody(request, EnrichSchema);
+    if (!parsed.ok) return parsed.response;
+    const { companyId } = parsed.data;
 
     // 1. Fetch the company record
     const { data: company, error: fetchError } = await supabase

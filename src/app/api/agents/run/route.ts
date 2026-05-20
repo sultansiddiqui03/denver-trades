@@ -1,9 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
 import { runPriceIngest } from '@/lib/agents/priceIngest';
+import { parseBody } from '@/lib/validation';
 import type { Database } from '@/lib/supabase/database.types';
+
+const RunAgentSchema = z.object({
+  agentName: z.string().min(1, 'agentName is required'),
+  query: z.string().optional(),
+});
 
 const LEAD_SCRAPER = 'Lead Scraper Agent';
 const PRICE_INGEST = 'Price Ingest Agent';
@@ -44,25 +51,11 @@ export async function POST(request: Request) {
     .eq('status', 'Running')
     .lt('started_at', staleCutoff);
 
-  let body: { agentName?: string; query?: string };
-  try {
-    body = (await request.json()) as { agentName?: string; query?: string };
-  } catch {
-    return NextResponse.json(
-      { success: false, error: 'Invalid JSON body' },
-      { status: 400 }
-    );
-  }
+  const parsed = await parseBody(request, RunAgentSchema);
+  if (!parsed.ok) return parsed.response;
 
-  const agentName = body?.agentName?.trim();
-  const query = body?.query?.trim();
-
-  if (!agentName) {
-    return NextResponse.json(
-      { success: false, error: 'agentName is required' },
-      { status: 400 }
-    );
-  }
+  const agentName = parsed.data.agentName.trim();
+  const query = parsed.data.query?.trim();
 
   if (!KNOWN_AGENTS.has(agentName)) {
     return NextResponse.json(

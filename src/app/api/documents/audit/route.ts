@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { generateJSON, generateMultimodalJSON } from '@/lib/ai/gemini';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
+import { parseBody } from '@/lib/validation';
 import type { Json } from '@/lib/supabase/database.types';
 
 interface Discrepancy {
@@ -15,31 +17,41 @@ interface AuditResponse {
   summary: string;
 }
 
+const FileSchema = z.object({
+  base64: z.string().min(1),
+  mimeType: z.string().min(1),
+  name: z.string().min(1),
+});
+
+const DocAuditSchema = z
+  .object({
+    deal_id: z.string().uuid().nullable().optional(),
+    doc_type_a: z.string().default('Letter of Credit'),
+    doc_type_b: z.string().default('Bill of Lading'),
+    text_a: z.string().optional(),
+    text_b: z.string().optional(),
+    file_a: FileSchema.optional(),
+    file_b: FileSchema.optional(),
+  })
+  .refine(
+    (data) =>
+      Boolean(data.file_a?.base64) ||
+      Boolean(data.file_b?.base64) ||
+      (data.text_a && data.text_b),
+    { message: 'Provide at least one file attachment or both document texts.' }
+  );
+
 export async function POST(request: Request) {
   try {
     const { context, response } = await requireUserContext();
     if (!context) return response;
 
     const { orgId, supabase } = context;
-    const body = await request.json();
-    const {
-      deal_id,
-      doc_type_a = 'Letter of Credit',
-      text_a,
-      file_a, // { base64: string, mimeType: string, name: string }
-      doc_type_b = 'Bill of Lading',
-      text_b,
-      file_b, // { base64: string, mimeType: string, name: string }
-    } = body;
+    const parsed = await parseBody(request, DocAuditSchema);
+    if (!parsed.ok) return parsed.response;
+    const { deal_id, doc_type_a, doc_type_b, text_a, text_b, file_a, file_b } = parsed.data;
 
-    const hasAttachment = (file_a && file_a.base64) || (file_b && file_b.base64);
-
-    if (!hasAttachment && (!text_a || !text_b)) {
-      return NextResponse.json(
-        { success: false, error: 'Document texts or file attachments are required to audit.' },
-        { status: 400 }
-      );
-    }
+    const hasAttachment = Boolean(file_a?.base64) || Boolean(file_b?.base64);
 
     const systemPrompt = `You are an expert international trade document auditor specializing in UCP 600 rules for Letters of Credit (L/C) and Bill of Lading (B/L) audits.
 Analyze the provided contents of Document A (${doc_type_a}) and Document B (${doc_type_b}).

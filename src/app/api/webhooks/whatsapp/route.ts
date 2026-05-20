@@ -1,6 +1,21 @@
+import { z } from 'zod';
 import { DEFAULT_ORG_ID } from '@/lib/auth/server';
 import { getSupabaseServiceClient } from '@/lib/supabase/admin';
 import { verifyTwilioRequest, isWebhookSecretAuthorized } from '@/lib/security/request';
+
+const WhatsAppJsonSchema = z
+  .object({
+    From: z.string().optional(),
+    from: z.string().optional(),
+    To: z.string().optional(),
+    to: z.string().optional(),
+    Body: z.string().optional(),
+    body: z.string().optional(),
+  })
+  .refine(
+    (data) => (data.From || data.from) && (data.Body || data.body),
+    { message: 'From and Body are required' }
+  );
 
 export async function POST(request: Request) {
   try {
@@ -38,10 +53,25 @@ export async function POST(request: Request) {
         });
       }
 
-      const json = await request.json();
-      from = json.From || json.from || '';
-      to = json.To || json.to || '';
-      body = json.Body || json.body || '';
+      let json: unknown;
+      try {
+        json = await request.json();
+      } catch {
+        return new Response('<Response><Message>Invalid JSON</Message></Response>', {
+          headers: { 'Content-Type': 'text/xml' },
+          status: 400,
+        });
+      }
+      const validated = WhatsAppJsonSchema.safeParse(json);
+      if (!validated.success) {
+        return new Response('<Response><Message>Invalid JSON payload</Message></Response>', {
+          headers: { 'Content-Type': 'text/xml' },
+          status: 400,
+        });
+      }
+      from = validated.data.From || validated.data.from || '';
+      to = validated.data.To || validated.data.to || '';
+      body = validated.data.Body || validated.data.body || '';
     }
 
     if (!from || !body) {
