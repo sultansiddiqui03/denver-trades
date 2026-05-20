@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { generateJSON, generateMultimodalJSON } from '@/lib/ai/gemini';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
+import type { Json } from '@/lib/supabase/database.types';
 
 interface Discrepancy {
   severity: 'HIGH' | 'WARNING' | 'INFO';
@@ -102,7 +103,7 @@ ${text_b}
         doc_type_b,
         doc_path_b: file_b ? file_b.name : 'Text payload input',
         status: 'Complete',
-        discrepancies: auditResult.discrepancies || [],
+        discrepancies: (auditResult.discrepancies ?? []) as unknown as Json,
         summary: auditResult.summary || 'Completed compliance scan.',
         completed_at: new Date().toISOString()
       })

@@ -29,7 +29,9 @@ export function isAutomationAuthorized(request: Request) {
     return true;
   }
 
-  return hasBearerSecret(request, secret) || hasQuerySecret(request, secret);
+  // Vercel cron sends `Authorization: Bearer ${CRON_SECRET}` natively.
+  // Query-string secrets are rejected because they leak into Vercel access logs.
+  return hasBearerSecret(request, secret);
 }
 
 export function isWebhookSecretAuthorized(request: Request, secretName: string) {

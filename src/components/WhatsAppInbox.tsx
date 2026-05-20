@@ -7,11 +7,11 @@ import styles from './WhatsAppInbox.module.css';
 
 interface Message {
   id: string;
-  sender: string;
-  recipient: string;
+  sender: string | null;
+  recipient: string | null;
   message_content: string;
-  direction: 'Inbound' | 'Outbound';
-  created_at: string;
+  direction: string | null;
+  created_at: string | null;
 }
 
 interface Contact {
@@ -148,12 +148,12 @@ export default function WhatsAppInbox() {
   };
 
   // Filter messages for current contact
-  const currentChatMessages = messages.filter(msg => {
+  const currentChatMessages = messages.filter((msg) => {
     const contactPhoneClean = selectedContact.phone.replace(/[\s\-\+]/g, '');
-    const msgSenderClean = msg.sender.replace(/whatsapp:/, '').replace(/[\s\-\+]/g, '');
-    const msgRecipientClean = msg.recipient.replace(/whatsapp:/, '').replace(/[\s\-\+]/g, '');
+    const msgSenderClean = (msg.sender ?? '').replace(/whatsapp:/, '').replace(/[\s\-\+]/g, '');
+    const msgRecipientClean = (msg.recipient ?? '').replace(/whatsapp:/, '').replace(/[\s\-\+]/g, '');
 
-    return msg.direction === 'Inbound' 
+    return msg.direction === 'Inbound'
       ? msgSenderClean.includes(contactPhoneClean) || contactPhoneClean.includes(msgSenderClean)
       : msgRecipientClean.includes(contactPhoneClean) || contactPhoneClean.includes(msgRecipientClean);
   });
@@ -213,7 +213,12 @@ export default function WhatsAppInbox() {
               >
                 <div className={styles.messageContent}>{msg.message_content}</div>
                 <span className={styles.timestamp}>
-                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {msg.created_at
+                    ? new Date(msg.created_at).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : ''}
                 </span>
               </div>
             ))

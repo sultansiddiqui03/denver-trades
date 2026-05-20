@@ -29,17 +29,19 @@ export async function GET() {
 
     if (agentRuns) {
       for (const run of agentRuns) {
+        const ts = run.completed_at ?? run.started_at;
+        if (!ts) continue;
         activities.push({
           id: `agent-${run.id}`,
           type: 'agent',
           title: run.agent_name,
           description:
             run.status === 'Success'
-              ? `Processed ${run.records_processed} records, created ${run.records_created} new leads.`
+              ? `Processed ${run.records_processed ?? 0} records, created ${run.records_created ?? 0} new leads.`
               : run.status === 'Running'
-              ? 'Currently executing in the background...'
-              : `Run failed: ${run.error_log || 'Unknown error'}`,
-          timestamp: run.completed_at || run.started_at,
+                ? 'Currently executing in the background...'
+                : `Run failed: ${run.error_log || 'Unknown error'}`,
+          timestamp: ts,
           color: run.status === 'Success' ? 'lime' : run.status === 'Running' ? 'blue' : 'purple',
         });
       }
@@ -55,6 +57,7 @@ export async function GET() {
 
     if (recentDeals) {
       for (const deal of recentDeals) {
+        if (!deal.updated_at) continue;
         const valueStr = deal.value_usd
           ? ` worth $${Number(deal.value_usd).toLocaleString()}`
           : '';
@@ -62,7 +65,7 @@ export async function GET() {
           id: `deal-${deal.id}`,
           type: 'deal',
           title: deal.title,
-          description: `Deal${valueStr} moved to "${deal.stage}" stage.`,
+          description: `Deal${valueStr} moved to "${deal.stage ?? 'unknown'}" stage.`,
           timestamp: deal.updated_at,
           color: 'green',
         });
@@ -79,6 +82,8 @@ export async function GET() {
 
     if (recentAudits) {
       for (const audit of recentAudits) {
+        if (!audit.created_at) continue;
+        const statusLabel = (audit.status ?? 'pending').toLowerCase();
         activities.push({
           id: `doc-${audit.id}`,
           type: 'document',
@@ -86,7 +91,7 @@ export async function GET() {
           description:
             audit.status === 'Complete'
               ? audit.summary || 'Audit completed successfully.'
-              : `Audit ${audit.status.toLowerCase()}.`,
+              : `Audit ${statusLabel}.`,
           timestamp: audit.created_at,
           color: audit.status === 'Complete' ? 'green' : 'yellow',
         });

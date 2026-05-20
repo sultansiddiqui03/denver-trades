@@ -69,12 +69,18 @@ export async function POST(request: Request) {
     
     if (companies && !companyError) {
       for (const comp of companies) {
-        const contacts = comp.contacts || [];
-        const matches = contacts.some((c: { phone?: string }) => {
+        const contactsRaw = comp.contacts;
+        const contacts = Array.isArray(contactsRaw)
+          ? (contactsRaw as Array<{ phone?: string }>)
+          : [];
+        const matches = contacts.some((c) => {
           if (!c.phone) return false;
           const cleanedContactPhone = c.phone.replace(/[\s\-\+]/g, '');
           const cleanedInboundPhone = cleanPhone.replace(/[\s\-\+]/g, '');
-          return cleanedInboundPhone.includes(cleanedContactPhone) || cleanedContactPhone.includes(cleanedInboundPhone);
+          return (
+            cleanedInboundPhone.includes(cleanedContactPhone) ||
+            cleanedContactPhone.includes(cleanedInboundPhone)
+          );
         });
 
         if (matches) {

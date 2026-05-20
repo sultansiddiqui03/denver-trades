@@ -189,7 +189,12 @@ CREATE TABLE activity_feed (
 );
 
 -- ═══════════ ROW LEVEL SECURITY ═══════════
+-- NOTE: policies live in supabase/migrations/20260520193000_auth_rls_hardening.sql
+-- and 20260520194500_optimize_rls_auth_calls.sql. Apply those after schema.sql
+-- on a fresh install so policies (not just RLS enable) are in place.
 
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shipments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE deals_pipeline ENABLE ROW LEVEL SECURITY;
@@ -199,6 +204,7 @@ ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE saved_searches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_feed ENABLE ROW LEVEL SECURITY;
+-- commodity_prices is intentionally global market data — no RLS (P1-11).
 
 -- ═══════════ INDEXES ═══════════
 
