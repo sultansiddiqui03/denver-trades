@@ -62,7 +62,7 @@ export async function POST(request: Request) {
 
     const { data: runRecord, error: runFetchError } = await supabase
       .from('agent_runs')
-      .select('id, org_id')
+      .select('id, org_id, status')
       .eq('id', agentRunId)
       .single();
 
@@ -71,6 +71,16 @@ export async function POST(request: Request) {
     }
 
     const orgId = runRecord.org_id;
+
+    // P1-4: idempotent on replay. If the run already reached a terminal state, just
+    // ACK so Apify stops retrying — re-processing would duplicate company rows.
+    if (runRecord.status === 'Success' || runRecord.status === 'Failed') {
+      console.info(`Apify webhook: run ${agentRunId} already ${runRecord.status}; ignoring replay.`);
+      return NextResponse.json({ success: true, message: 'Run already terminal — replay ignored' });
+    }
+
+    // P1-14: never trust an org_id from the payload; use the value joined from the
+    // verified agent_runs record only.
 
     // If the run failed, update agent run and exit
     if (event !== 'ACTOR.RUN.SUCCEEDED') {

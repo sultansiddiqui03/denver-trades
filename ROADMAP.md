@@ -16,6 +16,8 @@ Goal: agents actually execute end-to-end; users see real auth state; the worst i
 - Remaining: **P0-A2** (Vercel env audit — needs CLI install).
 - Bundle 3 (Phase 1 high-leverage): P1-6, P1-9, P1-12 ✅. The typed Supabase clients caught 6 real null-safety bugs on the way in — see [P1-6](#-p1-6--generate-supabase-ts-types--s).
 - Bundle 4 (Phase 1 quick wins): P1-2, P1-8, P1-10 ✅. Cron now Bearer-only; AI calls throw real errors instead of fake outreach copy; schema.sql now a complete RLS-enable snapshot.
+- Bundle 5: P1-5 ✅ (zod on every API body, shared `parseBody` helper).
+- Bundle 6 (webhook hardening): P1-3 + P1-4 + P1-14 ✅. Per-org Twilio routing, replay-proof on MessageSid + `agent_runs.status`, service-role writes always carry a verified `org_id`.
 
 ### ✅ P0-A1 · Unstick zombie agent runs + add server-side timeout · S
 **Why:** A Lead Scraper run from 2026-05-20 21:48 is still `status: Running` in the DB because the Apify webhook callback never arrived. UI shows infinite "Running".
@@ -116,13 +118,13 @@ Dispatch URL contains `&secret=${APIFY_WEBHOOK_SECRET}` ([src/app/api/agents/run
 ### ✅ P1-2 · Cron endpoint accepts secret in query string · S
 `isAutomationAuthorized` in [src/lib/security/request.ts](src/lib/security/request.ts) now requires `Authorization: Bearer ${CRON_SECRET}` only — query-string fallback removed. Vercel cron sends Bearer natively, so no config change needed.
 
-### P1-3 · WhatsApp webhook routes everything to a hardcoded org · M
-[src/app/api/webhooks/whatsapp/route.ts:55](src/app/api/webhooks/whatsapp/route.ts:55) uses `DEFAULT_ORG_ID`.
-**Fix:** add a `org_twilio_numbers(org_id, twilio_number)` table; derive org from the `To` number; reject unknown numbers.
+### ✅ P1-3 · WhatsApp webhook routes everything to a hardcoded org · M
+Migration `webhook_tenancy_and_replay_protection` adds `organizations.twilio_whatsapp_number` (unique partial index). Webhook now derives `orgId` via `resolveOrgIdForTwilioNumber(to)`: match by `twilio_whatsapp_number = to`, single-tenant fallback if exactly one org exists in the table, otherwise 403. Once a second org joins, every org must set its own number. `DEFAULT_ORG_ID` no longer appears in the WhatsApp webhook.
 
-### P1-4 · Webhook replay protection · M
-Apify + WhatsApp webhooks have no timestamp/nonce.
-**Fix:** require a timestamp header (reject > 5 min skew); add unique indexes on `(runId, eventTypeId)` for Apify and `MessageSid` for Twilio.
+### ✅ P1-4 · Webhook replay protection · M
+- **Twilio:** `outreach_threads.twilio_message_sid` column + unique partial index. Insert path checks for Postgres `23505` unique-violation and returns 200 silently on replay so Twilio stops retrying.
+- **Apify:** webhook handler now checks `agent_runs.status` first; if already `Success` / `Failed`, returns 200 idempotently without re-processing the dataset.
+Timestamp/nonce header strategy was considered but rejected — both providers offer stable per-event IDs we can dedupe on directly.
 
 ### ✅ P1-5 · Unvalidated request bodies · M
 `zod` installed; shared [src/lib/validation.ts](src/lib/validation.ts) `parseBody(request, schema)` returns either typed data or a ready-to-return 400 with `{ path, message }` issues. Per-route schemas added to: `/api/agents/run`, `/api/companies/enrich`, `/api/documents/audit`, `/api/outreach/generate`, `/api/outreach/whatsapp/send`, `/api/webhooks/apify`, `/api/webhooks/whatsapp` (JSON test path). Twilio form-data path stays under signature verification.
@@ -151,8 +153,9 @@ No `org_id` but `USING (true)` policy. Confirm intent (global feed? per-org?) an
 ### P1-13 · Enable Supabase leaked-password protection · XS
 One-click in Supabase Auth settings.
 
-### P1-14 · Defense-in-depth on service-role webhook writes · M
-Service role bypasses RLS; never trust org_id from the webhook payload; always derive and assert.
+### ✅ P1-14 · Defense-in-depth on service-role webhook writes · M
+- **WhatsApp**: orgId derived from `organizations.twilio_whatsapp_number` lookup (P1-3) — never from the inbound payload. Every insert specifies that derived `orgId` explicitly.
+- **Apify**: orgId pulled from the joined `agent_runs.org_id` (which was created under an authed request); never trust any `org_id` field in the Apify payload. Idempotency check on `agent_runs.status` (P1-4) means a forged webhook can't re-process or override a terminal run.
 
 ---
 

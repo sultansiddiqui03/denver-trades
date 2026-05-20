@@ -12,8 +12,13 @@ CREATE TABLE organizations (
     logo_url TEXT,
     onboarding_complete BOOLEAN DEFAULT FALSE,
     settings JSONB DEFAULT '{}',
+    twilio_whatsapp_number TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_organizations_twilio_whatsapp_number
+  ON organizations(twilio_whatsapp_number)
+  WHERE twilio_whatsapp_number IS NOT NULL;
 
 CREATE TABLE users (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -107,8 +112,13 @@ CREATE TABLE outreach_threads (
     status VARCHAR(20) DEFAULT 'Draft'
         CHECK (status IN ('Draft','Approved','Sent','Delivered','Read','Replied','Failed')),
     language VARCHAR(10) DEFAULT 'en',
+    twilio_message_sid TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_outreach_threads_twilio_message_sid
+  ON outreach_threads(twilio_message_sid)
+  WHERE twilio_message_sid IS NOT NULL;
 
 CREATE TABLE document_audits (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

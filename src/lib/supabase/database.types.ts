@@ -449,6 +449,7 @@ export type Database = {
           settings: Json | null
           slug: string
           target_markets: string[] | null
+          twilio_whatsapp_number: string | null
         }
         Insert: {
           commodities?: string[] | null
@@ -460,6 +461,7 @@ export type Database = {
           settings?: Json | null
           slug: string
           target_markets?: string[] | null
+          twilio_whatsapp_number?: string | null
         }
         Update: {
           commodities?: string[] | null
@@ -471,6 +473,7 @@ export type Database = {
           settings?: Json | null
           slug?: string
           target_markets?: string[] | null
+          twilio_whatsapp_number?: string | null
         }
         Relationships: []
       }
@@ -492,6 +495,7 @@ export type Database = {
           sender: string | null
           status: string | null
           subject: string | null
+          twilio_message_sid: string | null
         }
         Insert: {
           ai_generated?: boolean | null
@@ -510,6 +514,7 @@ export type Database = {
           sender?: string | null
           status?: string | null
           subject?: string | null
+          twilio_message_sid?: string | null
         }
         Update: {
           ai_generated?: boolean | null
@@ -528,6 +533,7 @@ export type Database = {
           sender?: string | null
           status?: string | null
           subject?: string | null
+          twilio_message_sid?: string | null
         }
         Relationships: [
           {
