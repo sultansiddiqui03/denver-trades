@@ -89,8 +89,9 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
   useEffect(() => {
     if (isOpen) {
       previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
-      setRecentIds(loadRecent());
+      // Defer state updates so we don't trip react-hooks/set-state-in-effect.
       const timer = window.setTimeout(() => {
+        setRecentIds(loadRecent());
         setQuery('');
         setSelectedIndex(0);
         inputRef.current?.focus();

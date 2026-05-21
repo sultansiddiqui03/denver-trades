@@ -105,7 +105,7 @@ This file is orientation. When starting significant work:
 3. Add notable architectural decisions to **Recent decisions** so future-you has the why.
 
 ## Current focus
-**Phase 0 complete (12/12). Phase 1 at 9/14.** Production deployed (`dpl_nNF86Ly4wQUDNVXP2w2TReWh6RW5`). One critical follow-up: **`CLAUDE_API_KEY` is missing in Vercel production envs** — outreach/enrich/search will return 500s until this is added (`vercel env add CLAUDE_API_KEY production`). Phase 1 remaining: P1-3 + P1-4 + P1-14 (WhatsApp tenant routing bundle), P1-5 (zod validation), P1-13 (Supabase dashboard toggle).
+**Phase 0: 12/12 ✅ · Phase 1: 13/14 ✅ · Phase 2: 9/17 + several Phase 3 items ✅ · Phase 3: 14/18 ✅ · Phase 2.5 (plan alignment): Resend ✅, Embeddings + semantic search ✅.** Only P1-13 (Supabase dashboard toggle, your action) is outstanding from the security backlog; remaining items are either infra (AI Gateway, Workflow, Server Components) or low-value polish (View Transitions, deeper microcopy). Production deployed (`dpl_nNF86Ly4wQUDNVXP2w2TReWh6RW5`). One critical follow-up: **`CLAUDE_API_KEY` is missing in Vercel production envs** — outreach/enrich/search will return 500s until this is added (`vercel env add CLAUDE_API_KEY production`). Phase 1 remaining: P1-3 + P1-4 + P1-14 (WhatsApp tenant routing bundle), P1-5 (zod validation), P1-13 (Supabase dashboard toggle).
 
 ## Recent decisions
 - **2026-05-21** — Initial repo audit completed. Findings split between [CLAUDE.md](CLAUDE.md) (orientation) and [ROADMAP.md](ROADMAP.md) (action items). Live state verified against Vercel (8 projects in team, denver-trades on `main`) and Supabase (12 tables, RLS on all, 3 migrations applied, 1 security WARN, 19 unused indexes per advisor).

@@ -215,6 +215,12 @@ Require PR + green CI before merge to `main`.
 
 ---
 
+### ✅ P3-12 · Mobile pass · M
+14 CSS modules updated with `@media (max-width)` blocks: dashboard layout gutter shrink + hide kbd hint on phones; pipeline kanban stacks vertically <768px; AgentDashboard sticky first column on run-history + full-width run button; WhatsApp chat header stacks, input column-flow, bubble width raised; NotificationCenter dropdown becomes fixed top bar <480px; companies/[id], documents, outreach, search, settings page modules: padding reductions, grid collapses, button stacking <600px.
+
+### ✅ P3-16 · Microcopy pass · S
+14 component files harmonized: sentence case, terser, no exclamation, no marketing fluff, trade terms preserved (L/C, B/L, ASTA, UCP, CIF). Notable: "Run Agent Now" → "Run now", "Audit Logs & Run History" → "Run history", "Failed to dispatch Twilio WhatsApp message via server route" → "WhatsApp send failed", "AI Search Workspace" → "AI search", "Configuration & Keys" → "Settings", "Welcome Back, Sultan Trades" → "Welcome back". Empty states all moved to sentence case ("No Agent Runs Yet" → "No agent runs yet"). Added missing `aria-label`s on form inputs + pipeline move buttons + starred-lead toggle.
+
 ## Phase 3 — Deep UI polish (start in parallel with Phase 2)
 
 This is the polish workstream the user flagged. Concrete fixes, not vibes.
@@ -303,11 +309,12 @@ Each loader prop renders a `.skeleton` block at the chart's exact footprint so t
 [/api/outreach/email/send](src/app/api/outreach/email/send/route.ts) added — zod-validated body, dispatches via Resend SDK, falls back to `mode:'simulation'` if `RESEND_API_KEY` / `RESEND_FROM_EMAIL` missing (consistent with the Apify token pattern). Logs outbound thread to `outreach_threads` with `channel='Email'`. Supports both new-message send and "send this Draft" (`draft_id` mode).
 **To go live:** add `RESEND_API_KEY` + verified `RESEND_FROM_EMAIL` to Vercel envs.
 
-### ⏳ Embeddings + semantic search
-`companies.embedding` column + pgvector extension already in place; `src/lib/ai/openai.ts` exports `generateEmbedding()` but no caller yet. Needs:
-1. Embedding upsert on company insert/update (Supabase Edge Function or app-level).
-2. `/api/search/semantic` route that does `<-> embedding` similarity + filters.
-3. UI toggle on the search page between keyword and semantic.
+### ✅ Embeddings + semantic search · M
+- New [src/lib/ai/embedCompany.ts](src/lib/ai/embedCompany.ts) — `buildCompanyEmbeddingText` + `computeAndStoreCompanyEmbedding`. Embeds a company's name/type/country/products/description (~2000-char cap).
+- Wired into [companies/enrich](src/app/api/companies/enrich/route.ts) and the [apify webhook](src/app/api/webhooks/apify/route.ts) per-item loop. Best-effort: an OpenAI failure logs but doesn't poison the success path / trigger webhook retries.
+- New migration `add_semantic_search_function`: Postgres function `match_companies_by_embedding(query_embedding vector, match_org_id uuid, match_count int)` (cosine, RLS-respecting), plus HNSW index `idx_companies_embedding_hnsw` using `vector_cosine_ops`.
+- New [/api/search/semantic](src/app/api/search/semantic/route.ts) — POST with zod schema `{ query, limit }`, embeds the query, calls the RPC, returns ranked results with `similarity` scores in `[0,1]`.
+- **Deferred:** UI toggle on the Search page between keyword and semantic — backend is ready; flipping the input box's request URL is a 10-min follow-up.
 
 ## Phase 4 — Future (when load justifies)
 
