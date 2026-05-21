@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Bot,
+  Building2,
   ChevronLeft,
   FileText,
   KanbanSquare,
@@ -36,6 +37,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', Icon: LayoutDashboard },
   { label: 'Search', path: '/dashboard/search', Icon: Search },
+  { label: 'Companies', path: '/dashboard/companies', Icon: Building2 },
   { label: 'Pipeline', path: '/dashboard/pipeline', Icon: KanbanSquare },
   { label: 'Outreach', path: '/dashboard/outreach', Icon: Mail },
   { label: 'Documents', path: '/dashboard/documents', Icon: FileText },

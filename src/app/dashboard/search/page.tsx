@@ -2,6 +2,14 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import {
+  Download,
+  ExternalLink,
+  MapPin,
+  Search as SearchIcon,
+  Sparkles,
+  Star,
+} from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import EmptyState from '@/components/EmptyState';
 import Button from '@/components/Button';
@@ -17,8 +25,31 @@ interface Company {
   confidence_score: number;
   products_dealt: string[];
   description?: string;
+  website?: string | null;
   is_favorited: boolean;
   is_enriched: boolean;
+}
+
+function typeBadgeClass(type: Company['type']): string {
+  switch (type) {
+    case 'Importer':
+      return 'badge badge-lime';
+    case 'Exporter':
+      return 'badge badge-blue';
+    case 'Broker':
+      return 'badge badge-yellow';
+    default:
+      return 'badge';
+  }
+}
+
+function hostname(url: string | null | undefined): string {
+  if (!url) return '';
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+  }
 }
 
 const suggestions = [
@@ -108,8 +139,27 @@ export default function SearchWorkspace() {
   };
 
   const handleFavoriteToggle = async (id: string, currentVal: boolean) => {
+    const next = !currentVal;
     // Optimistic toggle
-    setCompanies(prev => prev.map(c => c.id === id ? { ...c, is_favorited: !currentVal } : c));
+    setCompanies(prev => prev.map(c => c.id === id ? { ...c, is_favorited: next } : c));
+
+    try {
+      const res = await fetch('/api/companies/favorite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: id, favorited: next }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        // Rollback on failure
+        setCompanies(prev => prev.map(c => c.id === id ? { ...c, is_favorited: currentVal } : c));
+        toast(data.error || 'Failed to save favorite', 'error');
+      }
+    } catch (err) {
+      console.error('Favorite toggle error:', err);
+      setCompanies(prev => prev.map(c => c.id === id ? { ...c, is_favorited: currentVal } : c));
+      toast('Failed to save favorite', 'error');
+    }
   };
 
   const handleEnrich = async (id: string) => {
@@ -145,7 +195,10 @@ export default function SearchWorkspace() {
   });
 
   // Extract unique countries for filter list
-  const uniqueCountries = Array.from(new Set(companies.map(c => c.hq_country))).filter(Boolean);
+  const uniqueCountries = Array.from(new Set(companies.map(c => c.hq_country))).filter(Boolean).sort();
+  const hasActiveFilters = filterCountry !== 'All' || filterType !== 'All';
+  const dbIsEmpty = !loading && companies.length === 0;
+  const filteredOut = !loading && companies.length > 0 && filteredCompanies.length === 0;
 
   return (
     <div className={`${styles.searchContainer} fade-in`}>
@@ -184,10 +237,7 @@ export default function SearchWorkspace() {
       {/* Input box card */}
       <form onSubmit={handleSearchSubmit} className={styles.searchBoxCard}>
         <div className={styles.inputGroup}>
-          <svg className={styles.searchIcon} width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="8.5" cy="8.5" r="5.5" />
-            <path d="M13 13l4 4" />
-          </svg>
+          <SearchIcon className={styles.searchIcon} size={18} strokeWidth={1.6} aria-hidden="true" />
           <input
             type="text"
             className={styles.searchInput}
@@ -224,29 +274,6 @@ export default function SearchWorkspace() {
             {filteredCompanies.length} {filteredCompanies.length === 1 ? 'match' : 'matches'}
           </span>
 
-          <button
-            type="button"
-            className="btn-secondary"
-            style={{ fontSize: '0.75rem', padding: '6px 12px' }}
-            onClick={() => {
-              if (filteredCompanies.length === 0) return;
-              exportToCsv('denver-trades-companies', filteredCompanies.map(c => ({
-                Name: c.name,
-                Type: c.type,
-                Country: c.hq_country,
-                City: c.hq_city,
-                Products: (c.products_dealt || []).join('; '),
-                'Match Score': `${Math.round(c.confidence_score * 100)}%`,
-                Enriched: c.is_enriched ? 'Yes' : 'No',
-                Description: c.description || '',
-              })));
-              toast(`Exported ${filteredCompanies.length} companies to CSV`, 'success');
-            }}
-          >
-            ↓ Export CSV
-          </button>
-
-          {/* Filtering controls */}
           <div className={styles.filtersRow}>
             <select
               className={styles.filterSelect}
@@ -269,96 +296,165 @@ export default function SearchWorkspace() {
               <option value="All">All types</option>
               <option value="Importer">Importer</option>
               <option value="Exporter">Exporter</option>
+              <option value="Broker">Broker</option>
             </select>
+
+            <button
+              type="button"
+              className={styles.exportBtn}
+              disabled={filteredCompanies.length === 0}
+              onClick={() => {
+                if (filteredCompanies.length === 0) return;
+                exportToCsv('denver-trades-companies', filteredCompanies.map(c => ({
+                  Name: c.name,
+                  Type: c.type,
+                  Country: c.hq_country,
+                  City: c.hq_city,
+                  Products: (c.products_dealt || []).join('; '),
+                  Website: c.website || '',
+                  'Match Score': `${Math.round(c.confidence_score * 100)}%`,
+                  Enriched: c.is_enriched ? 'Yes' : 'No',
+                  Description: c.description || '',
+                })));
+                toast(`Exported ${filteredCompanies.length} companies to CSV`, 'success');
+              }}
+            >
+              <Download size={14} strokeWidth={1.8} />
+              Export CSV
+            </button>
           </div>
         </div>
 
         {/* Loading Skeleton */}
         {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <div className="skeleton" style={{ height: '140px', borderRadius: '12px' }}></div>
-            <div className="skeleton" style={{ height: '140px', borderRadius: '12px' }}></div>
+          <div className={styles.skeletonGrid}>
+            <div className="skeleton" style={{ height: '180px', borderRadius: 'var(--radius-lg)' }} />
+            <div className="skeleton" style={{ height: '180px', borderRadius: 'var(--radius-lg)' }} />
+            <div className="skeleton" style={{ height: '180px', borderRadius: 'var(--radius-lg)' }} />
+            <div className="skeleton" style={{ height: '180px', borderRadius: 'var(--radius-lg)' }} />
           </div>
-        ) : filteredCompanies.length === 0 ? (
+        ) : dbIsEmpty ? (
           <EmptyState
-            title="No companies found"
-            description="Try a different query like 'pepper exporters in Vietnam', or run the lead scraper to discover new companies."
-            actionLabel="Run lead scraper"
-            onAction={() => window.location.href = '/dashboard/agents'}
+            icon={<SearchIcon size={48} strokeWidth={1} />}
+            title="No companies in your directory yet"
+            description="Run the Lead Scraper Agent to discover commodity buyers and sellers from Google Maps, or try a broader query."
+            actionLabel="Run Lead Scraper"
+            onAction={() => { window.location.href = '/dashboard/agents'; }}
+          />
+        ) : filteredOut ? (
+          <EmptyState
+            icon={<SearchIcon size={48} strokeWidth={1} />}
+            title="No matches with these filters"
+            description={
+              hasActiveFilters
+                ? 'Clear the country or type filter to widen the result set.'
+                : 'Try a broader query like "spice importers" or run the Lead Scraper Agent to seed new companies.'
+            }
+            actionLabel={hasActiveFilters ? 'Clear filters' : 'Run Lead Scraper'}
+            onAction={() => {
+              if (hasActiveFilters) {
+                setFilterCountry('All');
+                setFilterType('All');
+              } else {
+                window.location.href = '/dashboard/agents';
+              }
+            }}
           />
         ) : (
           /* Company Card Grid */
           <div className={styles.resultsGrid}>
-            {filteredCompanies.map((c) => (
-              <div key={c.id} className={styles.resultCard}>
-                <div className={styles.cardHeader}>
-                  <div className={styles.companyTitleWrap}>
-                    <h3 className={styles.companyName}>{c.name}</h3>
-                    <div className={styles.companyGeo}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                        <circle cx="12" cy="10" r="3" />
-                      </svg>
-                      <span>
-                        {c.hq_city}, {c.hq_country}
-                      </span>
-                    </div>
-                  </div>
-                  <div className={styles.scoreBadge}>
-                    {Math.round(c.confidence_score * 100)}% match
-                  </div>
-                </div>
+            {filteredCompanies.map((c) => {
+              const products = c.products_dealt || [];
+              const visibleProducts = products.slice(0, 3);
+              const extraCount = Math.max(0, products.length - visibleProducts.length);
+              const host = hostname(c.website);
 
-                <div className={styles.cardBody}>
-                  <div className={styles.productsWrap}>
-                    <span className={`badge ${c.type === 'Importer' ? 'badge-lime' : 'badge-blue'}`}>
-                      {c.type}
-                    </span>
-                    {(c.products_dealt || []).map((p) => (
-                      <span key={p} className="badge badge-yellow">
-                        {p}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className={styles.shipmentsSummary}>
-                    <div className={styles.shipmentValue}>
-                      {c.description || 'No dossier details yet — enrich to populate.'}
-                    </div>
-                  </div>
-                </div>
-
-                <div className={styles.cardActions}>
-                  <button
-                    type="button"
-                    className={`${styles.favoriteBtn} ${c.is_favorited ? styles.favoriteActive : ''}`}
-                    onClick={() => handleFavoriteToggle(c.id, c.is_favorited)}
-                    aria-label={c.is_favorited ? 'Unstar lead' : 'Star lead'}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill={c.is_favorited ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                    </svg>
-                  </button>
-
-                  <div className={styles.actionRow}>
-                    {c.is_enriched ? (
-                      <Link href={`/dashboard/companies/${c.id}`} className="btn-secondary">
-                        View dossier
+              return (
+                <div key={c.id} className={styles.resultCard}>
+                  <div className={styles.cardHeader}>
+                    <div className={styles.companyTitleWrap}>
+                      <Link href={`/dashboard/companies/${c.id}`} className={styles.companyNameLink}>
+                        <h3 className={styles.companyName}>{c.name}</h3>
                       </Link>
-                    ) : (
-                      <Button
-                        variant="primary"
-                        loading={enrichingId === c.id}
-                        loadingText="Enriching…"
-                        onClick={() => handleEnrich(c.id)}
+                      <div className={styles.companyGeo}>
+                        <MapPin size={14} strokeWidth={1.6} />
+                        <span>
+                          {[c.hq_city, c.hq_country].filter(Boolean).join(', ') || 'Location unknown'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className={styles.scoreBadge}>
+                      {Math.round(c.confidence_score * 100)}% match
+                    </div>
+                  </div>
+
+                  <div className={styles.cardBody}>
+                    <div className={styles.productsWrap}>
+                      <span className={typeBadgeClass(c.type)}>{c.type}</span>
+                      {visibleProducts.map((p) => (
+                        <span key={p} className={styles.productChip}>
+                          {p}
+                        </span>
+                      ))}
+                      {extraCount > 0 && (
+                        <span className={styles.productChipMore}>+{extraCount} more</span>
+                      )}
+                    </div>
+
+                    {c.description ? (
+                      <p className={styles.summaryText}>{c.description}</p>
+                    ) : null}
+
+                    {host && (
+                      <a
+                        href={c.website || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.websiteLink}
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        Enrich company
-                      </Button>
+                        <ExternalLink size={13} strokeWidth={1.6} />
+                        {host}
+                      </a>
                     )}
                   </div>
+
+                  <div className={styles.cardActions}>
+                    <button
+                      type="button"
+                      className={`${styles.favoriteBtn} ${c.is_favorited ? styles.favoriteActive : ''}`}
+                      onClick={() => handleFavoriteToggle(c.id, c.is_favorited)}
+                      aria-label={c.is_favorited ? 'Unstar lead' : 'Star lead'}
+                      aria-pressed={c.is_favorited}
+                    >
+                      <Star
+                        size={18}
+                        strokeWidth={1.6}
+                        fill={c.is_favorited ? 'currentColor' : 'none'}
+                      />
+                    </button>
+
+                    <div className={styles.actionRow}>
+                      {c.is_enriched ? (
+                        <Link href={`/dashboard/companies/${c.id}`} className="btn-secondary">
+                          View dossier
+                        </Link>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          loading={enrichingId === c.id}
+                          loadingText="Enriching…"
+                          onClick={() => handleEnrich(c.id)}
+                        >
+                          <Sparkles size={14} strokeWidth={1.8} />
+                          Enrich
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

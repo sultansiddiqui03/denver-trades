@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Activity } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 import type { ActivityItem } from '@/lib/dashboard/activityData';
 import styles from './page.module.css';
@@ -41,24 +42,8 @@ export default function DashboardActivityFeed({ initial }: Props) {
     return (
       <EmptyState
         title="No recent activity"
-        description="Run an agent, send a WhatsApp message, or audit a document to see activity here."
-        icon={
-          <svg
-            width="40"
-            height="40"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ opacity: 0.4 }}
-          >
-            <line x1="18" y1="20" x2="18" y2="10" />
-            <line x1="12" y1="20" x2="12" y2="4" />
-            <line x1="6" y1="20" x2="6" y2="14" />
-          </svg>
-        }
+        description="Run an agent, send a WhatsApp message, or audit a document to see activity stream in real-time."
+        icon={<Activity size={40} strokeWidth={1} />}
       />
     );
   }

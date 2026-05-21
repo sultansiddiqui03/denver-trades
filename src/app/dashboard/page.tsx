@@ -1,6 +1,17 @@
 import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import {
+  Activity,
+  Building2,
+  ChevronRight,
+  FileSearch,
+  Mail,
+  Sparkles,
+  Users,
+  Wallet,
+  Zap,
+} from 'lucide-react';
 import { getUserContext } from '@/lib/auth/server';
 import { fetchDashboardStats } from '@/lib/dashboard/statsData';
 import { fetchActivityFeed } from '@/lib/dashboard/activityData';
@@ -44,56 +55,34 @@ async function StatsRow() {
       <StatsCard
         title="Total companies"
         value={stats.totalCompanies.toLocaleString()}
-        change="Live from database"
+        change="In directory"
         changeType="neutral"
         delayIndex={0}
-        icon={
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="2" y1="12" x2="22" y2="12" />
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-          </svg>
-        }
+        icon={<Building2 size={20} strokeWidth={1.6} />}
       />
       <StatsCard
         title="Active deals"
         value={stats.activeDeals.toLocaleString()}
-        change="Live from pipeline"
+        change="In pipeline"
         changeType="neutral"
         delayIndex={1}
-        icon={
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-          </svg>
-        }
+        icon={<Users size={20} strokeWidth={1.6} />}
       />
       <StatsCard
         title="Pipeline value"
         value={stats.pipelineValue}
-        change="Live from deals"
+        change="Open opportunities"
         changeType="neutral"
         delayIndex={2}
-        icon={
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="1" x2="12" y2="23" />
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-          </svg>
-        }
+        icon={<Wallet size={20} strokeWidth={1.6} />}
       />
       <StatsCard
         title="Enriched leads"
         value={stats.enrichedLeads.toLocaleString()}
-        change="AI-enriched companies"
+        change="AI-profiled"
         changeType="neutral"
         delayIndex={3}
-        icon={
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
-        }
+        icon={<Sparkles size={20} strokeWidth={1.6} />}
       />
     </>
   );
@@ -140,11 +129,7 @@ export default async function DashboardOverview() {
         <div>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="20" x2="18" y2="10" />
-                <line x1="12" y1="20" x2="12" y2="4" />
-                <line x1="6" y1="20" x2="6" y2="14" />
-              </svg>
+              <Activity size={18} strokeWidth={1.6} />
               Recent activity
             </h2>
           </div>
@@ -158,42 +143,43 @@ export default async function DashboardOverview() {
         <div>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-              </svg>
+              <Zap size={18} strokeWidth={1.6} />
               Quick tools
             </h2>
           </div>
 
           <div className={styles.quickActionsCard}>
             <Link href="/dashboard/search" className={styles.actionBtn}>
+              <div className={styles.actionIcon}>
+                <Sparkles size={18} strokeWidth={1.6} />
+              </div>
               <div className={styles.actionBtnText}>
                 <span className={styles.actionTitle}>AI buyer search</span>
                 <span className={styles.actionDesc}>Find verified importers using natural language</span>
               </div>
-              <svg className={styles.actionArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
+              <ChevronRight size={16} strokeWidth={2} className={styles.actionArrow} />
             </Link>
 
             <Link href="/dashboard/documents" className={styles.actionBtn}>
+              <div className={styles.actionIcon}>
+                <FileSearch size={18} strokeWidth={1.6} />
+              </div>
               <div className={styles.actionBtnText}>
                 <span className={styles.actionTitle}>Document audit</span>
                 <span className={styles.actionDesc}>Compare B/L against L/C terms</span>
               </div>
-              <svg className={styles.actionArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
+              <ChevronRight size={16} strokeWidth={2} className={styles.actionArrow} />
             </Link>
 
             <Link href="/dashboard/outreach" className={styles.actionBtn}>
+              <div className={styles.actionIcon}>
+                <Mail size={18} strokeWidth={1.6} />
+              </div>
               <div className={styles.actionBtnText}>
                 <span className={styles.actionTitle}>Generate outreach</span>
-                <span className={styles.actionDesc}>Draft emails and WhatsApp messages in the buyer&apos;s language</span>
+                <span className={styles.actionDesc}>Draft emails and WhatsApp in the buyer&apos;s language</span>
               </div>
-              <svg className={styles.actionArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
+              <ChevronRight size={16} strokeWidth={2} className={styles.actionArrow} />
             </Link>
           </div>
         </div>
