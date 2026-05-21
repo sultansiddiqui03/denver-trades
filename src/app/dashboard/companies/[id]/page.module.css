@@ -197,6 +197,13 @@
   color: var(--text-primary);
 }
 
+.favoriteBtn:focus-visible {
+  outline: none;
+  border-color: var(--border-focus);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.08);
+}
+
 .favoriteActive {
   color: var(--warning);
   border-color: rgba(245, 158, 11, 0.32);
@@ -216,6 +223,11 @@
 .outreachBtn:hover {
   background: var(--accent-lime-hover);
   box-shadow: var(--shadow-glow);
+}
+
+.outreachBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.32);
 }
 
 @media (max-width: 768px) {

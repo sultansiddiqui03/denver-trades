@@ -50,6 +50,11 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
+.modeBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.08);
+}
+
 .modeBtnActive {
   background: var(--accent-lime);
   color: var(--text-inverse);
@@ -113,6 +118,16 @@
   box-shadow: var(--shadow-glow);
 }
 
+.searchBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.32);
+}
+
+.searchBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Search Suggestions */
 .suggestionsRow {
   display: flex;
@@ -143,6 +158,14 @@
   border-color: var(--accent-lime);
   color: var(--accent-lime);
   background: var(--accent-lime-muted);
+}
+
+.suggestionBadge:focus-visible {
+  outline: none;
+  border-color: var(--accent-lime);
+  color: var(--accent-lime);
+  background: var(--accent-lime-muted);
+  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.08);
 }
 
 /* Filters and Results Header */
@@ -194,6 +217,13 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
+.exportBtn:focus-visible {
+  outline: none;
+  border-color: var(--border-focus);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.08);
+}
+
 .exportBtn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -201,18 +231,16 @@
 
 .skeletonGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* Same flexible grid as the results grid below so the skeleton placeholder
+     reflows identically to the eventual content. */
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: var(--space-5);
 }
 
-@media (max-width: 900px) {
-  .skeletonGrid {
-    grid-template-columns: 1fr;
-  }
-}
-
 .filterSelect {
-  background: var(--bg-card);
+  /* Solid background so the closed control reads cleanly against the dark
+     dot-grid backdrop. The native dropdown chrome is OS-rendered. */
+  background: var(--bg-tertiary);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
   padding: var(--space-2) var(--space-4);
@@ -228,17 +256,24 @@
   color: var(--text-primary);
 }
 
-/* Results Grid */
-.resultsGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-5);
+.filterSelect:focus-visible {
+  border-color: var(--border-focus);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.08);
 }
 
-@media (max-width: 900px) {
-  .resultsGrid {
-    grid-template-columns: 1fr;
-  }
+.filterSelect option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* Results Grid — auto-fill so we get 2 cols on a laptop, 3 on a wide
+   monitor, and 1 on mobile without media-query gymnastics. Mirrors the
+   companies directory grid. */
+.resultsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: var(--space-5);
 }
 
 /* Result Card */
@@ -401,6 +436,13 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
+.favoriteBtn:focus-visible {
+  outline: none;
+  color: var(--warning);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.08);
+}
+
 .favoriteActive {
   color: var(--warning);
 }
@@ -510,6 +552,11 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
+.intentPill:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.08);
+}
+
 .intentPillActive {
   background: var(--accent-lime);
   color: var(--text-inverse);
@@ -537,48 +584,8 @@
   flex-shrink: 0;
 }
 
-/* — Prominent intent chip on card */
-.intentChip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-1) var(--space-3);
-  font-size: 0.6875rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  white-space: nowrap;
-  line-height: 1;
-  min-height: 22px;
-}
-
-/* Three semantic variants — coral for BUYS so it visually contrasts with
-   the lime accent (which already means "primary action / SELL"). Broker
-   is neutral blue. Unknown is mid-grey to keep layout stable. */
-.intent_buyer {
-  background: rgba(255, 138, 101, 0.12);
-  color: #ff8a65;
-  border-color: rgba(255, 138, 101, 0.32);
-}
-
-.intent_seller {
-  background: var(--accent-lime-muted);
-  color: var(--accent-lime);
-  border-color: rgba(195, 232, 110, 0.32);
-}
-
-.intent_broker {
-  background: rgba(110, 162, 255, 0.12);
-  color: #6ea2ff;
-  border-color: rgba(110, 162, 255, 0.32);
-}
-
-.intent_unknown {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-muted);
-  border-color: var(--border-primary);
-}
+/* Intent chip styling now lives in IntentChip.module.css (shared component).
+   The duplicate classes that used to live here were dead code. */
 
 /* — Trade lanes (SOURCES FROM / SHIPS TO) */
 .tradeLanes {
