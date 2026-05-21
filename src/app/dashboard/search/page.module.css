@@ -22,6 +22,39 @@
   color: var(--text-muted);
 }
 
+/* Search-mode toggle (keyword vs semantic) */
+.modeToggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-full);
+  width: fit-content;
+}
+
+.modeBtn {
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.modeBtn:hover:not(.modeBtnActive) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.modeBtnActive {
+  background: var(--accent-lime);
+  color: var(--text-inverse);
+}
+
 /* Search Bar Area */
 .searchBoxCard {
   background: var(--bg-card);

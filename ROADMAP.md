@@ -173,8 +173,12 @@ Sliding-window middleware backed by Upstash/Vercel KV; per-org caps on `/api/out
 ### P2-4 · Vercel Workflow for long-running Apify dispatch · M
 Make agent runs durable (retriable, cancelable).
 
-### P2-5 · Convert dashboard pages to Server Components · L
-All `src/app/dashboard/*/page.tsx` are `'use client'` with `useEffect(fetch)` patterns. Move data fetching to RSC; keep small client islands for interactivity.
+### ✅ P2-5 · Convert dashboard pages to Server Components · L (partial)
+**Converted (3 pages):** `/dashboard/analytics`, `/dashboard/prices`, `/dashboard` (home). Data fetched server-side via shared helpers in [src/lib/dashboard/](src/lib/dashboard/) (`analyticsData.ts`, `pricesData.ts`, `statsData.ts`, `activityData.ts`); each starts with `import 'server-only'` to prevent client-bundle leakage. API routes still exist for client mutations but now delegate to the same helpers (no SQL duplication). Initial data passed to small client islands (`DashboardClient.tsx`, `AnalyticsClient.tsx`, `PriceChart` via new `initialPrices` prop).
+
+**Kept client (5 pages):** search (form state + mode toggle), agents (realtime subscription), outreach (realtime), pipeline (drag-and-drop), documents (file upload), settings (form state). Each has interactivity that pays the JS-bundle cost.
+
+Net: ~40% of the dashboard's data-fetching now happens server-side, the JS payload shrinks for the converted pages, and the first-paint flash from `useEffect(fetch)` is gone on those routes.
 
 ### P2-6 · Replace self-fetch in Price Ingest (alt path) · S
 Already in P0-A5.
@@ -314,7 +318,7 @@ Each loader prop renders a `.skeleton` block at the chart's exact footprint so t
 - Wired into [companies/enrich](src/app/api/companies/enrich/route.ts) and the [apify webhook](src/app/api/webhooks/apify/route.ts) per-item loop. Best-effort: an OpenAI failure logs but doesn't poison the success path / trigger webhook retries.
 - New migration `add_semantic_search_function`: Postgres function `match_companies_by_embedding(query_embedding vector, match_org_id uuid, match_count int)` (cosine, RLS-respecting), plus HNSW index `idx_companies_embedding_hnsw` using `vector_cosine_ops`.
 - New [/api/search/semantic](src/app/api/search/semantic/route.ts) — POST with zod schema `{ query, limit }`, embeds the query, calls the RPC, returns ranked results with `similarity` scores in `[0,1]`.
-- **Deferred:** UI toggle on the Search page between keyword and semantic — backend is ready; flipping the input box's request URL is a 10-min follow-up.
+- ✅ **UI toggle on the Search page** (keyword ↔ semantic) shipped. Lime-pill segmented control at the top of `/dashboard/search`. Semantic mode POSTs to `/api/search/semantic`; keyword mode keeps the existing GET. Semantic results re-hydrated with `hq_city / is_favorited / is_enriched` (extra DB roundtrip) so the same card UI works for both modes; similarity surfaced as the match-% badge.
 
 ## Phase 4 — Future (when load justifies)
 

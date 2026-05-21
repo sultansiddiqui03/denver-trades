@@ -29,30 +29,64 @@ const suggestions = [
 
 const TOAST_ENRICH_FAIL = 'Enrichment failed — check Claude/Gemini keys';
 
+type SearchMode = 'keyword' | 'semantic';
+
 export default function SearchWorkspace() {
   const { toast } = useToast();
   const [query, setQuery] = useState('');
+  const [mode, setMode] = useState<SearchMode>('keyword');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filterCountry, setFilterCountry] = useState('All');
   const [filterType, setFilterType] = useState('All');
   const [loading, setLoading] = useState(false);
   const [enrichingId, setEnrichingId] = useState<string | null>(null);
 
-  // Fetch initial (unfiltered) list from search API
-  const performSearch = useCallback(async (searchQuery: string = '') => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
-      const data = await response.json();
-      if (data.success) {
-        setCompanies(data.results || []);
+  // Keyword: GET /api/search (Gemini intent extraction → SQL).
+  // Semantic: POST /api/search/semantic (OpenAI embedding → pgvector HNSW).
+  // Semantic requires a non-trivial query; keyword falls back to listing all.
+  const performSearch = useCallback(
+    async (searchQuery: string = '', currentMode: SearchMode = mode) => {
+      setLoading(true);
+      try {
+        let data;
+        if (currentMode === 'semantic') {
+          if (searchQuery.trim().length < 2) {
+            // Semantic with no query is meaningless — fall back to keyword listing.
+            const response = await fetch('/api/search?q=');
+            data = await response.json();
+          } else {
+            const response = await fetch('/api/search/semantic', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: searchQuery, limit: 20 }),
+            });
+            data = await response.json();
+          }
+        } else {
+          const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+          data = await response.json();
+        }
+
+        if (data.success) {
+          setCompanies(data.results || []);
+        } else if (data.error) {
+          toast(data.error, 'error');
+        }
+      } catch (err) {
+        console.error('Error querying search API:', err);
+        toast('Search failed — see console for details', 'error');
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('Error querying search API:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [mode, toast]
+  );
+
+  const handleModeChange = (next: SearchMode) => {
+    setMode(next);
+    // Re-run the current query under the new mode so the UI updates immediately.
+    performSearch(query, next);
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -118,8 +152,32 @@ export default function SearchWorkspace() {
       <div className={styles.searchHeader}>
         <h1 className={styles.searchTitle}>AI search</h1>
         <span className={styles.searchSubtitle}>
-          Query global buyer directories in plain English. Powered by Gemini.
+          {mode === 'semantic'
+            ? 'Vector similarity over embedded company profiles. Powered by OpenAI + pgvector.'
+            : 'Query global buyer directories in plain English. Powered by Gemini.'}
         </span>
+      </div>
+
+      {/* Mode toggle */}
+      <div className={styles.modeToggle} role="tablist" aria-label="Search mode">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'keyword'}
+          className={`${styles.modeBtn} ${mode === 'keyword' ? styles.modeBtnActive : ''}`}
+          onClick={() => handleModeChange('keyword')}
+        >
+          Keyword
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'semantic'}
+          className={`${styles.modeBtn} ${mode === 'semantic' ? styles.modeBtnActive : ''}`}
+          onClick={() => handleModeChange('semantic')}
+        >
+          Semantic
+        </button>
       </div>
 
       {/* Input box card */}

@@ -37,11 +37,41 @@ export async function POST(request: Request) {
 
     if (error) throw error;
 
-    return NextResponse.json({
-      success: true,
-      query,
-      results: data ?? [],
+    // The RPC returns a slim row (id, name, type, hq_country, description,
+    // products_dealt, similarity). Re-hydrate hq_city + is_favorited +
+    // is_enriched so the client can render the same Company card as keyword
+    // search, with similarity surfaced as `confidence_score` for display.
+    const matches = data ?? [];
+    if (matches.length === 0) {
+      return NextResponse.json({ success: true, query, results: [] });
+    }
+
+    const ids = matches.map((m) => m.id);
+    const { data: extra } = await supabase
+      .from('companies')
+      .select('id, hq_city, is_favorited, is_enriched')
+      .in('id', ids);
+
+    const lookup = new Map((extra ?? []).map((c) => [c.id, c]));
+    const results = matches.map((m) => {
+      const extra = lookup.get(m.id);
+      return {
+        id: m.id,
+        name: m.name,
+        type: m.type,
+        hq_country: m.hq_country,
+        hq_city: extra?.hq_city ?? '',
+        description: m.description ?? '',
+        products_dealt: m.products_dealt ?? [],
+        is_favorited: extra?.is_favorited ?? false,
+        is_enriched: extra?.is_enriched ?? false,
+        // Surface cosine similarity as the confidence score so the UI's
+        // existing match-percentage badge "just works".
+        confidence_score: m.similarity ?? 0,
+      };
     });
+
+    return NextResponse.json({ success: true, query, results });
   } catch (error: unknown) {
     console.error('Semantic Search API error:', error);
     return NextResponse.json(
