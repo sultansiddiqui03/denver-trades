@@ -1,7 +1,7 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  z-index: 9998;
+  z-index: var(--z-modal);
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -15,7 +15,10 @@
 .modal {
   width: 100%;
   max-width: 560px;
-  background: rgba(18, 18, 18, 0.95);
+  /* Solid surface — was `rgba(18, 18, 18, 0.95)`, which still let the
+     backdrop blur leak content shadows through enough to read distractingly
+     behind the search input. Solid is calmer. */
+  background: var(--bg-overlay);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-lg);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
@@ -85,6 +88,12 @@
 
 .resultItem.selected {
   border-left: 2px solid var(--accent-lime);
+}
+
+.resultItem:focus-visible {
+  outline: none;
+  background: rgba(204, 255, 0, 0.1);
+  box-shadow: var(--focus-ring);
 }
 
 .resultIcon {

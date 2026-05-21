@@ -570,12 +570,12 @@ export default function AgentDashboard() {
               </thead>
               <tbody>
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <tr key={`skeleton-${i}`}>
+                  <tr key={`skeleton-${i}`} aria-busy="true">
                     {Array.from({ length: 6 }).map((__, j) => (
                       <td key={j}>
                         <span
-                          className="skeleton"
-                          style={{ display: 'block', height: 16, width: j === 0 ? 140 : '60%' }}
+                          className={`skeleton ${j === 0 ? styles.skelCellFirst : styles.skelCell}`}
+                          aria-hidden
                         />
                       </td>
                     ))}

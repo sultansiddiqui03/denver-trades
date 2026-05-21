@@ -3,11 +3,13 @@
   top: 0;
   left: 0;
   height: 100vh;
-  background: #0A0A0A;
+  /* Solid surface — must be opaque so the page body behind doesn't read
+     through when the user scrolls the main column. */
+  background: var(--bg-primary);
   border-right: 1px solid var(--border-primary);
   display: flex;
   flex-direction: column;
-  z-index: 100;
+  z-index: var(--z-sidebar);
   transition: width var(--transition-slow);
   overflow: hidden;
 }
@@ -92,6 +94,13 @@
   color: var(--text-primary);
 }
 
+.collapseBtn:focus-visible {
+  outline: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  box-shadow: var(--focus-ring);
+}
+
 .collapsed .collapseBtn {
   transform: rotate(180deg);
 }
@@ -149,9 +158,21 @@
   color: var(--text-primary);
 }
 
+.navItem:focus-visible {
+  outline: none;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  box-shadow: var(--focus-ring);
+}
+
 .navItem.active {
   background: var(--accent-lime-muted);
   color: var(--accent-lime);
+}
+
+.navItem.active:focus-visible {
+  color: var(--accent-lime);
+  box-shadow: var(--focus-ring);
 }
 
 .navItem.active::before {

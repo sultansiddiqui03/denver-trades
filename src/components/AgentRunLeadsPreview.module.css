@@ -200,6 +200,25 @@
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
 }
 
+.skelCard {
+  height: 132px;
+  border-radius: var(--radius-md);
+}
+
+.card:focus-visible {
+  outline: none;
+  border-color: var(--border-focus);
+  background: var(--bg-tertiary);
+  box-shadow: var(--focus-ring);
+}
+
+.allLeadsLink:focus-visible {
+  outline: none;
+  color: var(--accent-lime-hover);
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-2px); }
   to { opacity: 1; transform: translateY(0); }

@@ -98,10 +98,11 @@
 
 .title {
   font-family: var(--font-heading);
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .description {
@@ -119,11 +120,11 @@
 }
 
 .queryLabel {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
 }
 
 .queryInput {
@@ -248,11 +249,11 @@
   padding: var(--space-1);
   /* Solid background — `--bg-card` is 85% opacity which let the lime
      "Run now" button + the next agent card bleed through the dropdown. */
-  background: #141414;
+  background: var(--bg-overlay);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-  z-index: 100;
+  z-index: var(--z-dropdown);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -353,6 +354,11 @@
   transform: translateY(-1px);
 }
 
+.runBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring), var(--shadow-glow);
+}
+
 .runBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -425,10 +431,11 @@
 
 .historyHeader h3 {
   font-family: var(--font-heading);
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   font-weight: 700;
   margin: 0;
   color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
 .refreshBtn {
@@ -452,6 +459,13 @@
   color: var(--text-primary);
 }
 
+.refreshBtn:focus-visible {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: var(--focus-ring);
+  color: var(--text-primary);
+}
+
 .tableWrapper {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -467,9 +481,9 @@
 .table th {
   color: var(--text-muted);
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-primary);
   white-space: nowrap;
@@ -530,6 +544,21 @@
   color: var(--text-muted);
   font-size: 0.8125rem;
   white-space: nowrap;
+}
+
+/* Skeleton placeholders for the run history table. First column is wider
+   (agent name) so it gets a fixed pixel width; the rest are percentage-based
+   so they flow inside the column. */
+.skelCellFirst {
+  display: block;
+  height: 16px;
+  width: 140px;
+}
+
+.skelCell {
+  display: block;
+  height: 16px;
+  width: 60%;
 }
 
 .detailCell {
@@ -647,6 +676,12 @@
   color: var(--accent-lime);
 }
 
+.replayBtn:focus-visible {
+  outline: none;
+  border-color: rgba(204, 255, 0, 0.5);
+  box-shadow: var(--focus-ring);
+}
+
 .replayBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -738,7 +773,7 @@
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  z-index: 1000;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -749,6 +784,8 @@
 .modalCard {
   width: 100%;
   max-width: 440px;
+  /* Solid surface — `--bg-tertiary` is opaque `#1A1A1A`, but defending here
+     against future drift to a translucent token. */
   background: var(--bg-tertiary);
   border: 1px solid var(--border-hover);
   border-radius: var(--radius-lg);
@@ -825,6 +862,12 @@
   color: var(--text-primary);
 }
 
+.modalCancelBtn:focus-visible {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: var(--focus-ring);
+}
+
 .modalConfirmBtn {
   padding: var(--space-2) var(--space-4);
   background: var(--accent-lime);
@@ -840,4 +883,9 @@
 .modalConfirmBtn:hover {
   background: var(--accent-lime-hover);
   box-shadow: var(--shadow-glow);
+}
+
+.modalConfirmBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring), var(--shadow-glow);
 }

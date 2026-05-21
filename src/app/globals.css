@@ -13,6 +13,15 @@
   --bg-card-hover: rgba(28, 28, 28, 0.95);
   --bg-input: rgba(255, 255, 255, 0.04);
   --bg-input-focus: rgba(255, 255, 255, 0.06);
+  /*
+   * SOLID overlay surface — use this for dropdowns, popovers, modals, and any
+   * floating menu that must visually separate from content underneath.
+   * `--bg-card` is only 85 % opaque (intentional glassmorphism on cards), and
+   * if you reach for it on a dropdown, the lime "Run now" button or the next
+   * card bleeds through. This token is what those should pull instead.
+   */
+  --bg-overlay: #141414;
+  --bg-overlay-hover: #1c1c1c;
   
   /* Borders */
   --border-primary: rgba(255, 255, 255, 0.06);
@@ -86,6 +95,26 @@
   /* Sidebar */
   --sidebar-expanded: 260px;
   --sidebar-collapsed: 72px;
+
+  /*
+   * Z-INDEX SCALE
+   * Documented ladder so every overlay knows where it sits. Higher numbers
+   * win. Past chaos: 90, 95, 100, 120, 1000, 9996, 9997, 9998, 9999, 99999.
+   * Use these tokens. If you need a new tier, add it here.
+   *
+   * Sidebar > topbar so the mobile drawer naturally covers the topbar — the
+   * scrim sits between (above topbar, below the slid-in drawer).
+   */
+  --z-topbar: 90;
+  --z-sidebar-overlay: 95;     /* mobile drawer scrim */
+  --z-sidebar: 100;
+  --z-dropdown: 1000;          /* notification, profile, source picker */
+  --z-modal: 2000;             /* dialogs, command palette */
+  --z-toast: 3000;             /* always on top of modals */
+  --z-progress: 9999;          /* route-change indicator */
+
+  /* Focus ring — lime, used everywhere for keyboard focus consistency. */
+  --focus-ring: 0 0 0 3px rgba(204, 255, 0, 0.18);
 }
 
 /* ═══════ CSS RESET ═══════ */

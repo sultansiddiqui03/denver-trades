@@ -119,11 +119,11 @@ export default function ActiveDemandFeed() {
 
   if (items === null) {
     return (
-      <div className={styles.demandCard}>
+      <div className={styles.demandCard} aria-busy="true">
         <div className={styles.skeletonRow}>
-          <div className="skeleton" style={{ height: '92px', borderRadius: '12px' }} />
-          <div className="skeleton" style={{ height: '92px', borderRadius: '12px' }} />
-          <div className="skeleton" style={{ height: '92px', borderRadius: '12px' }} />
+          <div className={`skeleton ${styles.skeletonCard}`} aria-hidden />
+          <div className={`skeleton ${styles.skeletonCard}`} aria-hidden />
+          <div className={`skeleton ${styles.skeletonCard}`} aria-hidden />
         </div>
       </div>
     );

@@ -25,10 +25,10 @@ export const dynamic = 'force-dynamic';
 function StatsSkeleton() {
   return (
     <>
-      <div className="skeleton" style={{ height: '110px', borderRadius: '16px' }} />
-      <div className="skeleton" style={{ height: '110px', borderRadius: '16px' }} />
-      <div className="skeleton" style={{ height: '110px', borderRadius: '16px' }} />
-      <div className="skeleton" style={{ height: '110px', borderRadius: '16px' }} />
+      <div className={`skeleton ${styles.statsSkeletonCard}`} />
+      <div className={`skeleton ${styles.statsSkeletonCard}`} />
+      <div className={`skeleton ${styles.statsSkeletonCard}`} />
+      <div className={`skeleton ${styles.statsSkeletonCard}`} />
     </>
   );
 }
@@ -36,10 +36,10 @@ function StatsSkeleton() {
 function ActivitySkeleton() {
   return (
     <div className={styles.activityCard}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div className="skeleton" style={{ height: '48px', borderRadius: '8px' }} />
-        <div className="skeleton" style={{ height: '48px', borderRadius: '8px' }} />
-        <div className="skeleton" style={{ height: '48px', borderRadius: '8px' }} />
+      <div className={styles.activitySkeletonStack}>
+        <div className={`skeleton ${styles.activitySkeletonRow}`} />
+        <div className={`skeleton ${styles.activitySkeletonRow}`} />
+        <div className={`skeleton ${styles.activitySkeletonRow}`} />
       </div>
     </div>
   );
