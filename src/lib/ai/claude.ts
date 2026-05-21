@@ -10,7 +10,13 @@ if (apiKey && !process.env.ANTHROPIC_API_KEY) {
   process.env.ANTHROPIC_API_KEY = apiKey;
 }
 
-const MODEL_ID = 'claude-3-5-sonnet-latest';
+// Claude 3.5 Sonnet was retired in late 2025. Current models (2026):
+//   - claude-opus-4-7    (top tier reasoning, expensive)
+//   - claude-sonnet-4-6  (balanced — default for outreach + audit reasoning)
+//   - claude-haiku-4-5   (fast/cheap)
+// Override via switching this constant; when AI Gateway is enabled, swap to
+// the gateway string form like "anthropic/claude-sonnet-4-6".
+const MODEL_ID = 'claude-sonnet-4-6';
 
 /**
  * Logs the rich error surface from AI SDK v6 calls. Default `console.error`

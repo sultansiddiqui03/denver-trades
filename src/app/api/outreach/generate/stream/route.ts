@@ -70,7 +70,9 @@ Strict Formatting rules:
 `;
 
   const result = streamText({
-    model: anthropic('claude-3-5-sonnet-latest'),
+    // Bumped from retired claude-3-5-sonnet-latest. See claude.ts for the
+    // model lineup. Swap to "anthropic/claude-sonnet-4-6" once AI Gateway is on.
+    model: anthropic('claude-sonnet-4-6'),
     system: systemPrompt,
     prompt: userPrompt,
     maxOutputTokens: 4000,

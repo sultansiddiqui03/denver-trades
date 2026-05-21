@@ -8,7 +8,7 @@ B2B lead-gen / CRM for commodity-trade companies (spice/agri exports & imports).
 ## Stack
 - **Framework:** Next.js 16.2.6 (App Router, Turbopack) + React 19.2.4 + TS 5
 - **DB / Auth:** Supabase (Postgres 17.6, RLS, region `ap-south-1`, project `edahefbttohwmdokptoc`)
-- **AI:** Vercel AI SDK v6 (`ai` + `@ai-sdk/anthropic` + `@ai-sdk/google`); router at [src/lib/ai/router.ts](src/lib/ai/router.ts). `openai` package retained for embeddings only (`src/lib/ai/openai.ts`). Env: `CLAUDE_API_KEY` and `GEMINI_API_KEY` are mirrored into `ANTHROPIC_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` on module load.
+- **AI:** Vercel AI SDK v6 (`ai` + `@ai-sdk/anthropic` + `@ai-sdk/google`); router at [src/lib/ai/router.ts](src/lib/ai/router.ts). Default Claude model: `claude-sonnet-4-6` (3.5 retired). Default Gemini model: `gemini-2.5-flash`. JSON / multimodal-JSON paths use AI SDK v6's `Output.object({ schema })` with a zod schema per call. `openai` package retained for embeddings only. Env: `CLAUDE_API_KEY` and `GEMINI_API_KEY` are mirrored into `ANTHROPIC_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` on module load.
 - **Scraping:** Apify (`apify~google-maps-scraper`) with webhook callback
 - **Messaging:** Twilio WhatsApp
 - **Charts:** Recharts 3
