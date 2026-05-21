@@ -246,11 +246,13 @@
   list-style: none;
   margin: 0;
   padding: var(--space-1);
-  background: var(--bg-card);
+  /* Solid background — `--bg-card` is 85% opacity which let the lime
+     "Run now" button + the next agent card bleed through the dropdown. */
+  background: #141414;
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  z-index: 50;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  z-index: 100;
   display: flex;
   flex-direction: column;
   gap: 2px;
