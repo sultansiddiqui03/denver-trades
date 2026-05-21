@@ -7,6 +7,18 @@ import { runPriceIngest } from '@/lib/agents/priceIngest';
 import { parseBody } from '@/lib/validation';
 import type { Database } from '@/lib/supabase/database.types';
 
+// APIFY_ACTOR_ID format: <username>~<actor-name> (the Apify "technical name").
+// Default is `compass~crawler-google-places` — the de-facto Google Maps scraper
+// on Apify (200k+ users, free tier available). The legacy `apify~google-maps-scraper`
+// alias was retired and now returns a 404 from the Apify dispatch API.
+// Other valid examples for lead scraping:
+//   - `compass~crawler-google-places`       (default — Google Maps, full fields)
+//   - `compass~google-maps-scraper`          (alt Google Maps actor)
+//   - `apify~linkedin-company-scraper`       (LinkedIn companies)
+// If overriding, make sure the actor's input schema accepts `searchStringsArray`
+// + `maxCrawledPlacesPerSearch` (see the dispatch body below) or update the
+// payload to match the new actor's schema.
+
 const RunAgentSchema = z.object({
   agentName: z.string().min(1, 'agentName is required'),
   query: z.string().optional(),
@@ -231,7 +243,7 @@ async function dispatchLeadScraper(params: {
   }
 
   // Live Apify dispatch
-  const actorId = process.env.APIFY_ACTOR_ID || 'apify~google-maps-scraper';
+  const actorId = process.env.APIFY_ACTOR_ID || 'compass~crawler-google-places';
   const apifyUrl = `https://api.apify.com/v2/acts/${actorId}/runs?token=${token}`;
   const webhookSecret = process.env.APIFY_WEBHOOK_SECRET;
   const webhookUrl = `${publicBaseUrl()}/api/webhooks/apify?agent_run_id=${runRecordId}`;
@@ -240,7 +252,11 @@ async function dispatchLeadScraper(params: {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      searchStrings: [searchQuery],
+      // `compass/crawler-google-places` expects `searchStringsArray` (not
+      // `searchStrings`). Output fields (title, categoryName, website, phone,
+      // street, city, countryCode, description) align with the ScrapedPlace
+      // interface in /api/webhooks/apify, so no mapping is required.
+      searchStringsArray: [searchQuery],
       maxCrawledPlacesPerSearch: 5,
       webhooks: [
         {
@@ -262,6 +278,11 @@ async function dispatchLeadScraper(params: {
 
   if (!apifyResponse.ok) {
     const errText = await apifyResponse.text();
+    if (apifyResponse.status === 404) {
+      throw new Error(
+        `Apify actor not found (404) — check APIFY_ACTOR_ID env var. Default is compass~crawler-google-places. Tried "${actorId}". Raw: ${errText}`
+      );
+    }
     throw new Error(`Apify dispatch failed (${apifyResponse.status}): ${errText}`);
   }
 
