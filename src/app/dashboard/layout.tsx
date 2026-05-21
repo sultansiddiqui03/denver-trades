@@ -1,91 +1,54 @@
-'use client';
+import React from 'react';
+import { redirect } from 'next/navigation';
+import { getOnboardingContext } from '@/lib/auth/server';
+import { getSupabaseServiceClient } from '@/lib/supabase/admin';
+import DashboardShell from './DashboardShell';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Menu, Search } from 'lucide-react';
-import Sidebar from '@/components/Sidebar';
-import { ToastProvider } from '@/components/Toast';
-import CommandPalette from '@/components/CommandPalette';
-import ProgressBar from '@/components/ProgressBar';
-import NotificationCenter from '@/components/NotificationCenter';
-import TopBarUser from '@/components/TopBarUser';
-import styles from './layout.module.css';
-
-export default function DashboardLayout({
+/**
+ * Server-component gate for the authenticated app. Resolves the signed-in
+ * user, then routes them based on onboarding state:
+ *
+ *   - no session                              → `/`
+ *   - signed in, no `users.org_id`            → `/onboarding`
+ *   - signed in, has org but `onboarding_complete` is false
+ *                                              → `/onboarding`
+ *   - signed in + org complete                → render the dashboard chrome
+ *
+ * Kept in the Server Component layer (not the proxy) so it can read user
+ * context cleanly via the existing auth helpers. The proxy still handles
+ * Supabase session refresh and pure auth redirects.
+ */
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [cmdkOpen, setCmdkOpen] = useState(false);
+  const context = await getOnboardingContext();
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-      e.preventDefault();
-      setCmdkOpen((prev) => !prev);
-    }
-  }, []);
+  if (!context) {
+    redirect('/');
+  }
 
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+  const { profile } = context;
 
-  return (
-    <ToastProvider>
-      <div className={styles.dashboardContainer}>
-        <ProgressBar />
-        <CommandPalette isOpen={cmdkOpen} onClose={() => setCmdkOpen(false)} />
+  if (!profile.org_id) {
+    redirect('/onboarding');
+  }
 
-        {mobileOpen && (
-          <div
-            className={styles.sidebarOverlay}
-            onClick={() => setMobileOpen(false)}
-            role="presentation"
-          />
-        )}
+  const admin = getSupabaseServiceClient();
+  const { data: org } = await admin
+    .from('organizations')
+    .select('onboarding_complete')
+    .eq('id', profile.org_id)
+    .maybeSingle();
 
-        <Sidebar
-          collapsed={collapsed}
-          setCollapsed={setCollapsed}
-          mobileOpen={mobileOpen}
-          setMobileOpen={setMobileOpen}
-        />
+  // Treat a missing row defensively — if the user's org pointer dangles
+  // (FK should prevent this but belt-and-braces), force them back through
+  // onboarding. Treat `null` onboarding_complete as incomplete; only an
+  // explicit `true` lets them in.
+  if (!org || org.onboarding_complete !== true) {
+    redirect('/onboarding');
+  }
 
-        <div
-          className={`${styles.mainContent} ${
-            collapsed ? styles.contentCollapsed : styles.contentExpanded
-          }`}
-        >
-          <header className={styles.topBar}>
-            <button
-              className={styles.hamburgerBtn}
-              onClick={() => setMobileOpen(!mobileOpen)}
-              aria-label="Toggle navigation menu"
-            >
-              <Menu size={22} strokeWidth={1.8} />
-            </button>
-
-            <button
-              className={styles.searchPlaceholder}
-              onClick={() => setCmdkOpen(true)}
-              type="button"
-              aria-label="Open command palette"
-            >
-              <Search size={18} strokeWidth={1.6} />
-              <span className={styles.searchText}>Search anything…</span>
-              <kbd className={styles.searchKbd}>⌘K</kbd>
-            </button>
-
-            <div className={styles.topBarActions}>
-              <NotificationCenter />
-              <TopBarUser />
-            </div>
-          </header>
-
-          <div className={`${styles.pageBody} dot-grid`}>{children}</div>
-        </div>
-      </div>
-    </ToastProvider>
-  );
+  return <DashboardShell>{children}</DashboardShell>;
 }

@@ -5,8 +5,9 @@ export async function proxy(request: NextRequest) {
   const { response, user } = await updateSupabaseSession(request);
   const path = request.nextUrl.pathname;
   const isDashboardRoute = path.startsWith('/dashboard');
+  const isOnboardingRoute = path === '/onboarding' || path.startsWith('/onboarding/');
 
-  if (isDashboardRoute && !user) {
+  if ((isDashboardRoute || isOnboardingRoute) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     url.searchParams.set('next', `${path}${request.nextUrl.search}`);
@@ -14,6 +15,9 @@ export async function proxy(request: NextRequest) {
   }
 
   if (path === '/' && user) {
+    // Onboarding-aware routing happens in the dashboard layout — bouncing
+    // to /dashboard is fine, that layout will redirect to /onboarding if
+    // the user hasn't finished setting up an org yet.
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
@@ -21,5 +25,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/dashboard/:path*'],
+  matcher: ['/', '/dashboard/:path*', '/onboarding', '/onboarding/:path*'],
 };
