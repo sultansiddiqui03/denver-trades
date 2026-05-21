@@ -37,12 +37,15 @@ function PriceLineChart({ data }: PriceLineChartProps) {
         />
         <Tooltip
           contentStyle={{
-            background: 'var(--bg-primary)',
-            border: '1px solid var(--border-primary)',
+            background: '#0a0a0a',
+            border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '8px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            padding: '8px 12px',
           }}
-          labelStyle={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}
-          itemStyle={{ color: 'var(--accent-lime)', fontSize: '0.9rem', fontWeight: 600 }}
+          labelStyle={{ color: '#A0A0A0', fontSize: '0.75rem' }}
+          itemStyle={{ color: '#CCFF00', fontSize: '0.9rem', fontWeight: 600 }}
+          cursor={{ stroke: 'rgba(204, 255, 0, 0.25)', strokeWidth: 1 }}
         />
         <Line
           type="monotone"

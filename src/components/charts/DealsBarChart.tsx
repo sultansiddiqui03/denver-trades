@@ -36,12 +36,15 @@ function DealsBarChart({ data }: DealsBarChartProps) {
         />
         <Tooltip
           contentStyle={{
-            background: 'rgba(10,10,10,0.95)',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: '#0a0a0a',
+            border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '8px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            padding: '8px 12px',
           }}
-          labelStyle={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}
-          itemStyle={{ color: 'var(--accent-lime)', fontSize: '0.85rem', fontWeight: 600 }}
+          labelStyle={{ color: '#A0A0A0', fontSize: '0.75rem' }}
+          itemStyle={{ color: '#CCFF00', fontSize: '0.85rem', fontWeight: 600 }}
+          cursor={{ fill: 'rgba(204, 255, 0, 0.06)' }}
         />
         <Bar dataKey="count" name="Deals" fill="var(--accent-lime)" radius={[4, 4, 0, 0]}>
           {data.map((entry, index) => (

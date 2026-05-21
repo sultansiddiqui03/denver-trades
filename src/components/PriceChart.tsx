@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { Activity, LineChart, RefreshCw, TrendingUp } from 'lucide-react';
 import styles from './PriceChart.module.css';
 import type { PriceLinePoint } from './charts/PriceLineChart';
 
@@ -153,7 +154,14 @@ export default function PriceChart({ initialPrices }: PriceChartProps = {}) {
           className={styles.tickBtn}
           onClick={triggerPriceTick}
           disabled={updating || loading}
+          aria-busy={updating || undefined}
         >
+          <RefreshCw
+            size={14}
+            strokeWidth={2}
+            aria-hidden
+            className={updating ? styles.spinning : undefined}
+          />
           {updating ? 'Pulling prices…' : 'Simulate price tick'}
         </button>
       </div>
@@ -173,7 +181,13 @@ export default function PriceChart({ initialPrices }: PriceChartProps = {}) {
         </div>
       ) : chartData.length === 0 ? (
         <div className={styles.chartFallback}>
-          <p>No price records yet for {selectedCommodity || 'this commodity'}. Trigger a price tick or wait for the next cron.</p>
+          <LineChart size={28} strokeWidth={1.2} aria-hidden />
+          <p style={{ margin: 0 }}>
+            No price records yet for <strong>{selectedCommodity || 'this commodity'}</strong>.
+          </p>
+          <p style={{ margin: 0, fontSize: '0.8125rem' }}>
+            Trigger a price tick or wait for the next cron sync (02:00 UTC daily).
+          </p>
         </div>
       ) : (
         <div className={styles.dashboardGrid}>
@@ -199,7 +213,10 @@ export default function PriceChart({ initialPrices }: PriceChartProps = {}) {
           {latestRecord && (
             <div className={styles.infoCol}>
               <div className={styles.card}>
-                <span className={styles.cardLabel}>Latest value</span>
+                <span className={styles.cardLabel}>
+                  <TrendingUp size={12} strokeWidth={2} aria-hidden style={{ display: 'inline', marginRight: 4, verticalAlign: '-2px' }} />
+                  Latest value
+                </span>
                 <div className={styles.priceVal}>
                   ${Number(latestRecord.price_usd).toLocaleString()} <span className={styles.unit}>USD / {latestRecord.unit}</span>
                 </div>
@@ -209,7 +226,10 @@ export default function PriceChart({ initialPrices }: PriceChartProps = {}) {
               </div>
 
               <div className={styles.card}>
-                <span className={styles.cardLabel}>Feed status</span>
+                <span className={styles.cardLabel}>
+                  <Activity size={12} strokeWidth={2} aria-hidden style={{ display: 'inline', marginRight: 4, verticalAlign: '-2px' }} />
+                  Feed status
+                </span>
                 <div className={styles.statusVal}>
                   <span className={styles.pulseDot}></span> Live feed syncing
                 </div>

@@ -38,11 +38,15 @@ function CountriesPieChart({ data }: CountriesPieChartProps) {
         </Pie>
         <Tooltip
           contentStyle={{
-            background: 'rgba(10,10,10,0.95)',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: '#0a0a0a',
+            border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '8px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            padding: '8px 12px',
           }}
-          itemStyle={{ fontSize: '0.85rem', fontWeight: 600 }}
+          itemStyle={{ fontSize: '0.8125rem', fontWeight: 600, color: '#FAFAFA' }}
+          labelStyle={{ color: '#A0A0A0', fontSize: '0.75rem' }}
+          cursor={{ fill: 'rgba(204, 255, 0, 0.04)' }}
         />
         <Legend
           verticalAlign="bottom"

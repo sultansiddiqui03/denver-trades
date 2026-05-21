@@ -50,6 +50,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-2);
   background: transparent;
   color: var(--accent-lime);
   border: 1px solid var(--accent-lime);
@@ -62,9 +63,27 @@
   transition: all var(--transition-fast);
 }
 
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .tickBtn:hover:not(:disabled) {
   background: var(--accent-lime-muted);
   box-shadow: var(--shadow-glow);
+}
+
+.tickBtn:focus-visible {
+  outline: 2px solid var(--accent-lime);
+  outline-offset: 2px;
 }
 
 .tickBtn:disabled {
@@ -85,9 +104,7 @@
 }
 
 .chartArea {
-  background: var(--bg-card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: #141414;
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
@@ -140,21 +157,18 @@
 }
 
 .card {
-  background: var(--bg-card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: #141414;
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  transition: all var(--transition-base);
+  transition: border-color var(--transition-base);
 }
 
 .card:hover {
   border-color: var(--border-hover);
-  background: var(--bg-card-hover);
 }
 
 .cardLabel {
@@ -224,16 +238,19 @@
 }
 
 .chartFallback {
-  background: var(--bg-card);
+  background: #141414;
   border: 1px dashed var(--border-primary);
   border-radius: var(--radius-lg);
   height: 250px;
   display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
   text-align: center;
   padding: 0 var(--space-6);
+  font-size: 0.875rem;
 }
 
 @media (max-width: 500px) {

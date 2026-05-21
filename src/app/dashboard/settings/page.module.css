@@ -18,24 +18,68 @@
   color: var(--text-primary);
 }
 
+.infoBanner {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4) var(--space-5);
+  background: rgba(59, 130, 246, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+}
+
+.infoBannerIcon {
+  color: var(--info);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.infoBannerTitle {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: var(--text-primary);
+}
+
+.infoBannerDesc {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
+}
+
 .settingsCard {
-  background: var(--bg-card);
+  background: #121212;
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-xl);
   padding: var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-6);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 .cardSectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font-family: var(--font-heading);
   font-size: 1.125rem;
   font-weight: 700;
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-primary);
-  padding-bottom: var(--space-2);
-  margin-bottom: var(--space-1);
+  padding-bottom: var(--space-3);
+  margin-bottom: 0;
+}
+
+.cardSectionTitle svg {
+  color: var(--accent-lime);
 }
 
 .formGrid {
@@ -54,29 +98,38 @@
   font-size: 0.8125rem;
   color: var(--text-secondary);
   font-weight: 600;
-}
-
-.submitRow {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
-}
-
-.alert {
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
-.alertSuccess {
-  background: var(--success-muted);
-  color: var(--success);
-  border: 1px solid rgba(34, 197, 94, 0.2);
+.envBadge {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-primary);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.readOnlyInput {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  cursor: not-allowed;
+}
+
+.readOnlyInput:focus {
+  outline: none;
+  border-color: var(--border-hover);
 }
 
 @media (max-width: 600px) {
@@ -88,8 +141,9 @@
     padding: var(--space-4);
   }
 
-  .submitRow {
-    flex-direction: column-reverse;
-    align-items: stretch;
+  .formLabel {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
   }
 }

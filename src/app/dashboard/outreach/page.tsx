@@ -2,6 +2,13 @@
 
 import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import {
+  Check,
+  Copy,
+  Mail,
+  MessageCircle,
+  Sparkles,
+} from 'lucide-react';
 import WhatsAppInbox from '@/components/WhatsAppInbox';
 import Button from '@/components/Button';
 import styles from './page.module.css';
@@ -152,19 +159,23 @@ function OutreachCenter() {
           {/* Channel Selector */}
           <div className={styles.formGroup}>
             <span className={styles.formLabel}>Channel</span>
-            <div className={styles.toggleRow}>
+            <div className={styles.toggleRow} role="group" aria-label="Output channel">
               <button
                 type="button"
                 className={`${styles.toggleBtn} ${channel === 'WhatsApp' ? styles.toggleActive : ''}`}
                 onClick={() => setChannel('WhatsApp')}
+                aria-pressed={channel === 'WhatsApp'}
               >
+                <MessageCircle size={16} strokeWidth={1.8} aria-hidden />
                 WhatsApp
               </button>
               <button
                 type="button"
                 className={`${styles.toggleBtn} ${channel === 'Email' ? styles.toggleActive : ''}`}
                 onClick={() => setChannel('Email')}
+                aria-pressed={channel === 'Email'}
               >
+                <Mail size={16} strokeWidth={1.8} aria-hidden />
                 Email
               </button>
             </div>
@@ -226,45 +237,77 @@ function OutreachCenter() {
 
         {/* Output Card */}
         <div className={styles.outputCard}>
-          <div className={styles.cardTitle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className={styles.cardTitle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--space-3)' }}>
             <span>Generated copy</span>
-            {generatedDraft && (
+            {(generatedDraft || isGenerating) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 {draftId && (
                   <span className="badge badge-yellow">
                     Saved for review
                   </span>
                 )}
-                <button type="button" className="btn-ghost" onClick={handleCopy} style={{ fontSize: '0.8125rem' }}>
-                {copied ? (
-                  <span className={styles.copySuccess}>
-                    ✓ Copied
-                  </span>
-                ) : (
-                  'Copy to clipboard'
+                {!isGenerating && generatedDraft && (
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={handleCopy}
+                    style={{ fontSize: '0.8125rem' }}
+                    aria-label="Copy generated copy to clipboard"
+                  >
+                    {copied ? (
+                      <span className={styles.copySuccess}>
+                        <Check size={14} strokeWidth={2.4} aria-hidden /> Copied
+                      </span>
+                    ) : (
+                      <>
+                        <Copy size={14} strokeWidth={1.8} aria-hidden /> Copy
+                      </>
+                    )}
+                  </button>
                 )}
-                </button>
               </div>
             )}
           </div>
 
           <div className={styles.outputBody}>
-            {isGenerating ? (
-              <div className="skeleton" style={{ flex: 1, borderRadius: 'var(--radius-md)' }}></div>
-            ) : generatedDraft ? (
+            {(generatedDraft || isGenerating) && (
               <div className={styles.outputHeader}>
                 <span className={`badge ${channel === 'WhatsApp' ? 'badge-lime' : 'badge-blue'} ${styles.channelBadge}`}>
+                  {channel === 'WhatsApp' ? (
+                    <MessageCircle size={12} strokeWidth={2} aria-hidden />
+                  ) : (
+                    <Mail size={12} strokeWidth={2} aria-hidden />
+                  )}
                   {channel}
                 </span>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                   Language: {language.toUpperCase()}
                 </span>
               </div>
-            ) : null}
+            )}
+
+            {isGenerating && (
+              <>
+                <div className={styles.streamingHint} aria-live="polite">
+                  <span className={styles.streamingDot} aria-hidden />
+                  Claude is drafting…
+                </div>
+                <pre className={styles.streamingDraft} aria-busy>
+                  {generatedDraft}
+                  <span className={styles.streamingCursor} aria-hidden />
+                </pre>
+              </>
+            )}
 
             {!isGenerating && !generatedDraft && (
-              <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                Fill in the fields and click Generate to draft an outreach message.
+              <div className={styles.outputEmpty}>
+                <span className={styles.outputEmptyIcon} aria-hidden>
+                  <Sparkles size={22} strokeWidth={1.6} />
+                </span>
+                <p style={{ margin: 0 }}>
+                  Fill in the fields and click <strong>Generate pitch</strong> to draft an
+                  outreach message tailored to this buyer.
+                </p>
               </div>
             )}
 
@@ -278,11 +321,11 @@ function OutreachCenter() {
       </div>
 
       {/* WhatsApp Thread Inbox underneath */}
-      <div style={{ marginTop: '40px' }}>
-        <h2 className={styles.sectionTitle} style={{ marginBottom: '15px' }}>
+      <div className={styles.sandboxSection}>
+        <h2 className={styles.sectionTitle}>
           WhatsApp sandbox
         </h2>
-        <p className="text-secondary" style={{ fontSize: '0.875rem', marginBottom: '20px' }}>
+        <p className={styles.sandboxSubtitle}>
           Read live threads and post simulated replies through the Twilio webhook.
         </p>
         <WhatsAppInbox />

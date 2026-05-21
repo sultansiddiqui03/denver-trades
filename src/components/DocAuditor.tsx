@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { CheckCircle2, FlaskConical, ScanLine } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import DocColumn, { type UploadedFile } from './docAudit/DocColumn';
 import DocAuditResult, { type AuditData } from './docAudit/DocAuditResult';
@@ -147,19 +148,27 @@ export default function DocAuditor() {
     <div className={styles.container}>
       <div className={styles.actionBar}>
         <div className={styles.preFillGroup}>
+          <span className={styles.preFillLabel} aria-hidden>
+            <FlaskConical
+              size={12}
+              strokeWidth={1.8}
+              style={{ display: 'inline', marginRight: 4, verticalAlign: '-2px' }}
+            />
+            Demo
+          </span>
           <button
             type="button"
             className={styles.secondaryBtn}
             onClick={() => handlePreFill('mismatch')}
           >
-            Pre-fill mismatched docs (fails audit)
+            Mismatched (fails)
           </button>
           <button
             type="button"
             className={styles.secondaryBtn}
             onClick={() => handlePreFill('match')}
           >
-            Pre-fill clean docs (passes audit)
+            Clean (passes)
           </button>
         </div>
 
@@ -168,7 +177,9 @@ export default function DocAuditor() {
           className={styles.primaryBtn}
           onClick={handleAudit}
           disabled={loading || (!textA.trim() && !fileA) || (!textB.trim() && !fileB)}
+          aria-busy={loading || undefined}
         >
+          <ScanLine size={16} strokeWidth={2} aria-hidden />
           {loading ? 'Analyzing compliance…' : 'Run compliance audit'}
         </button>
       </div>
@@ -255,7 +266,22 @@ export default function DocAuditor() {
         />
       </div>
 
-      {auditResult && <DocAuditResult result={auditResult} />}
+      {auditResult ? (
+        <DocAuditResult result={auditResult} />
+      ) : (
+        <div className={styles.preAuditHint} role="note">
+          <span className={styles.preAuditIcon} aria-hidden>
+            <CheckCircle2 size={20} strokeWidth={1.6} />
+          </span>
+          <div>
+            <p className={styles.preAuditTitle}>Ready to audit</p>
+            <p className={styles.preAuditDesc}>
+              Drop in a Letter of Credit and a Bill of Lading — or use a demo set — then run
+              the audit to flag UCP 600 discrepancies between the two.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
