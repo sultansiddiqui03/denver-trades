@@ -3,6 +3,7 @@ import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
 import { isAutomationAuthorized } from '@/lib/security/request';
 import { runPriceIngest } from '@/lib/agents/priceIngest';
+import { fetchPrices } from '@/lib/dashboard/pricesData';
 
 export async function GET(request: Request) {
   try {
@@ -22,19 +23,11 @@ export async function GET(request: Request) {
     const { context, response } = await requireUserContext();
     if (!context) return response;
 
-    const { supabase } = context;
-
-    const { data: prices, error } = await supabase
-      .from('commodity_prices')
-      .select('*')
-      .order('commodity', { ascending: true })
-      .order('recorded_at', { ascending: false });
-
-    if (error) throw error;
+    const prices = await fetchPrices(context);
 
     return NextResponse.json({
       success: true,
-      prices
+      prices,
     });
   } catch (error: unknown) {
     console.error('Prices API error:', error);
