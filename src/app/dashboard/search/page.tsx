@@ -1,8 +1,12 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  CheckCircle2,
   Download,
   ExternalLink,
   MapPin,
@@ -14,6 +18,7 @@ import { useToast } from '@/components/Toast';
 import EmptyState from '@/components/EmptyState';
 import Button from '@/components/Button';
 import { exportToCsv } from '@/lib/exportCsv';
+import { getIntent, intentSlugToType, type CompanyType } from '@/lib/intent';
 import styles from './page.module.css';
 
 interface Company {
@@ -21,26 +26,23 @@ interface Company {
   name: string;
   hq_country: string;
   hq_city: string;
-  type: 'Importer' | 'Exporter' | 'Broker';
+  type: CompanyType;
   confidence_score: number;
   products_dealt: string[];
+  origin_countries?: string[] | null;
+  destination_countries?: string[] | null;
   description?: string;
   website?: string | null;
   is_favorited: boolean;
   is_enriched: boolean;
+  enriched_at?: string | null;
 }
 
-function typeBadgeClass(type: Company['type']): string {
-  switch (type) {
-    case 'Importer':
-      return 'badge badge-lime';
-    case 'Exporter':
-      return 'badge badge-blue';
-    case 'Broker':
-      return 'badge badge-yellow';
-    default:
-      return 'badge';
-  }
+function formatEnrichedDate(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function hostname(url: string | null | undefined): string {
@@ -63,13 +65,37 @@ const TOAST_ENRICH_FAIL = 'Enrichment failed — check Claude/Gemini keys';
 
 type SearchMode = 'keyword' | 'semantic';
 
-export default function SearchWorkspace() {
+type IntentFilter = 'All' | CompanyType;
+
+const INTENT_FILTERS: { value: IntentFilter; label: string }[] = [
+  { value: 'All', label: 'All' },
+  { value: 'Importer', label: 'Buyers' },
+  { value: 'Exporter', label: 'Sellers' },
+  { value: 'Broker', label: 'Brokers' },
+];
+
+// Next 16 prerender step disallows useSearchParams() outside a Suspense
+// boundary — wrap the body in Suspense so the static shell prerenders, then
+// the search params hook activates client-side on hydration.
+export default function SearchWorkspacePage() {
+  return (
+    <Suspense fallback={null}>
+      <SearchWorkspace />
+    </Suspense>
+  );
+}
+
+function SearchWorkspace() {
   const { toast } = useToast();
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<SearchMode>('keyword');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filterCountry, setFilterCountry] = useState('All');
-  const [filterType, setFilterType] = useState('All');
+  // intent filter (Buyers / Sellers / Brokers) reads ?intent=buyers etc. from
+  // the URL so the sidebar's Find Buyers / Find Sellers links land here pre-set.
+  const initialIntent: IntentFilter = intentSlugToType(searchParams.get('intent')) ?? 'All';
+  const [filterType, setFilterType] = useState<IntentFilter>(initialIntent);
   const [loading, setLoading] = useState(false);
   const [enrichingId, setEnrichingId] = useState<string | null>(null);
 
@@ -127,6 +153,18 @@ export default function SearchWorkspace() {
 
     return () => window.clearTimeout(timer);
   }, [performSearch]);
+
+  // Sync the intent filter when the URL changes (e.g. sidebar nav clicks).
+  // The project's react-hooks/set-state-in-effect rule disallows direct
+  // setState inside effects — defer into a microtask the same way
+  // CommandPalette does for its localStorage rehydrate.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const next = intentSlugToType(searchParams.get('intent')) ?? 'All';
+      setFilterType(next);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [searchParams]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,14 +240,52 @@ export default function SearchWorkspace() {
 
   return (
     <div className={`${styles.searchContainer} fade-in`}>
-      {/* Header */}
+      {/* Header — intent-aware title so Find Buyers / Find Sellers feel native */}
       <div className={styles.searchHeader}>
-        <h1 className={styles.searchTitle}>AI search</h1>
+        <h1 className={styles.searchTitle}>
+          {filterType === 'Importer'
+            ? 'Find buyers'
+            : filterType === 'Exporter'
+              ? 'Find sellers'
+              : filterType === 'Broker'
+                ? 'Find brokers'
+                : 'AI search'}
+        </h1>
         <span className={styles.searchSubtitle}>
-          {mode === 'semantic'
-            ? 'Vector similarity over embedded company profiles. Powered by OpenAI + pgvector.'
-            : 'Query global buyer directories in plain English. Powered by Gemini.'}
+          {filterType === 'Importer'
+            ? 'Discover importers who are actually buying what you sell. Powered by Gemini intent parsing.'
+            : filterType === 'Exporter'
+              ? 'Surface exporters and producers with the goods you want to source. Powered by Gemini.'
+              : mode === 'semantic'
+                ? 'Vector similarity over embedded company profiles. Powered by OpenAI + pgvector.'
+                : 'Query global buyer & seller directories in plain English. Powered by Gemini.'}
         </span>
+      </div>
+
+      {/* Intent pills — Tradyon-style Buyers / Sellers / Brokers split. Each
+          pill drives the same state the country filter uses. */}
+      <div className={styles.intentPills} role="tablist" aria-label="Filter by trade intent">
+        {INTENT_FILTERS.map((f) => (
+          <button
+            key={f.value}
+            type="button"
+            role="tab"
+            aria-selected={filterType === f.value}
+            className={`${styles.intentPill} ${filterType === f.value ? styles.intentPillActive : ''} ${
+              f.value !== 'All' ? styles[`intentPill_${f.value.toLowerCase()}`] || '' : ''
+            }`}
+            onClick={() => setFilterType(f.value)}
+          >
+            {f.label}
+            {filterType === f.value && companies.length > 0 ? (
+              <span className={styles.intentPillCount}>
+                {f.value === 'All'
+                  ? companies.length
+                  : companies.filter((c) => c.type === f.value).length}
+              </span>
+            ) : null}
+          </button>
+        ))}
       </div>
 
       {/* Mode toggle */}
@@ -287,18 +363,6 @@ export default function SearchWorkspace() {
               ))}
             </select>
 
-            <select
-              className={styles.filterSelect}
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              aria-label="Filter by company type"
-            >
-              <option value="All">All types</option>
-              <option value="Importer">Importer</option>
-              <option value="Exporter">Exporter</option>
-              <option value="Broker">Broker</option>
-            </select>
-
             <button
               type="button"
               className={styles.exportBtn}
@@ -368,6 +432,10 @@ export default function SearchWorkspace() {
               const visibleProducts = products.slice(0, 3);
               const extraCount = Math.max(0, products.length - visibleProducts.length);
               const host = hostname(c.website);
+              const intent = getIntent(c.type);
+              const origin = (c.origin_countries || []).filter(Boolean);
+              const dest = (c.destination_countries || []).filter(Boolean);
+              const enrichedAt = formatEnrichedDate(c.enriched_at);
 
               return (
                 <div key={c.id} className={styles.resultCard}>
@@ -383,14 +451,48 @@ export default function SearchWorkspace() {
                         </span>
                       </div>
                     </div>
-                    <div className={styles.scoreBadge}>
-                      {Math.round(c.confidence_score * 100)}% match
+                    <div className={styles.cardHeaderRight}>
+                      <span
+                        className={`${styles.intentChip} ${styles[`intent_${intent.variant}`]}`}
+                        title={intent.description}
+                      >
+                        {intent.label}
+                      </span>
+                      <div className={styles.scoreBadge}>
+                        {Math.round(c.confidence_score * 100)}% match
+                      </div>
                     </div>
                   </div>
 
                   <div className={styles.cardBody}>
+                    {/* Trade lanes — the bit Tradyon leads with. Hidden when
+                        neither side has any countries (un-enriched leads). */}
+                    {(origin.length > 0 || dest.length > 0) && (
+                      <div className={styles.tradeLanes}>
+                        {origin.length > 0 && (
+                          <div className={styles.tradeLane}>
+                            <ArrowDownToLine size={13} strokeWidth={1.8} className={styles.tradeLaneIconIn} aria-hidden="true" />
+                            <span className={styles.tradeLaneLabel}>Sources from</span>
+                            <span className={styles.tradeLaneCountries}>
+                              {origin.slice(0, 3).join(', ')}
+                              {origin.length > 3 ? ` +${origin.length - 3}` : ''}
+                            </span>
+                          </div>
+                        )}
+                        {dest.length > 0 && (
+                          <div className={styles.tradeLane}>
+                            <ArrowUpFromLine size={13} strokeWidth={1.8} className={styles.tradeLaneIconOut} aria-hidden="true" />
+                            <span className={styles.tradeLaneLabel}>Ships to</span>
+                            <span className={styles.tradeLaneCountries}>
+                              {dest.slice(0, 3).join(', ')}
+                              {dest.length > 3 ? ` +${dest.length - 3}` : ''}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className={styles.productsWrap}>
-                      <span className={typeBadgeClass(c.type)}>{c.type}</span>
                       {visibleProducts.map((p) => (
                         <span key={p} className={styles.productChip}>
                           {p}
@@ -405,18 +507,26 @@ export default function SearchWorkspace() {
                       <p className={styles.summaryText}>{c.description}</p>
                     ) : null}
 
-                    {host && (
-                      <a
-                        href={c.website || '#'}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={styles.websiteLink}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink size={13} strokeWidth={1.6} />
-                        {host}
-                      </a>
-                    )}
+                    <div className={styles.cardMeta}>
+                      {c.is_enriched && (
+                        <span className={styles.enrichedBadge} title="Enriched by AI">
+                          <CheckCircle2 size={13} strokeWidth={2} />
+                          Enriched{enrichedAt ? ` · ${enrichedAt}` : ''}
+                        </span>
+                      )}
+                      {host && (
+                        <a
+                          href={c.website || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.websiteLink}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink size={13} strokeWidth={1.6} />
+                          {host}
+                        </a>
+                      )}
+                    </div>
                   </div>
 
                   <div className={styles.cardActions}>

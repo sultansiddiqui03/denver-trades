@@ -11,8 +11,9 @@ import {
   LayoutDashboard,
   LineChart,
   Mail,
-  Search,
+  Send,
   Settings,
+  ShoppingCart,
   TrendingUp,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -34,16 +35,42 @@ interface NavItem {
   Icon: LucideIcon;
 }
 
-const navItems: NavItem[] = [
-  { label: 'Dashboard', path: '/dashboard', Icon: LayoutDashboard },
-  { label: 'Search', path: '/dashboard/search', Icon: Search },
-  { label: 'Companies', path: '/dashboard/companies', Icon: Building2 },
-  { label: 'Pipeline', path: '/dashboard/pipeline', Icon: KanbanSquare },
-  { label: 'Outreach', path: '/dashboard/outreach', Icon: Mail },
-  { label: 'Documents', path: '/dashboard/documents', Icon: FileText },
-  { label: 'Analytics', path: '/dashboard/analytics', Icon: TrendingUp },
-  { label: 'Agents', path: '/dashboard/agents', Icon: Bot },
-  { label: 'Prices', path: '/dashboard/prices', Icon: LineChart },
+interface NavGroup {
+  heading?: string;
+  items: NavItem[];
+}
+
+// Grouped sections mirror the vertical-trade-CRM convention (Tradyon et al.):
+// Market Research (find buyers/sellers) → CRM (deal motion) → Tools (everything
+// that powers the pipeline). Active highlight is per-link.
+const navGroups: NavGroup[] = [
+  {
+    items: [{ label: 'Dashboard', path: '/dashboard', Icon: LayoutDashboard }],
+  },
+  {
+    heading: 'Market research',
+    items: [
+      { label: 'Find Buyers', path: '/dashboard/search?intent=buyers', Icon: ShoppingCart },
+      { label: 'Find Sellers', path: '/dashboard/search?intent=sellers', Icon: Send },
+      { label: 'Companies', path: '/dashboard/companies', Icon: Building2 },
+    ],
+  },
+  {
+    heading: 'CRM',
+    items: [
+      { label: 'Pipeline', path: '/dashboard/pipeline', Icon: KanbanSquare },
+      { label: 'Outreach', path: '/dashboard/outreach', Icon: Mail },
+    ],
+  },
+  {
+    heading: 'Tools',
+    items: [
+      { label: 'Documents', path: '/dashboard/documents', Icon: FileText },
+      { label: 'Analytics', path: '/dashboard/analytics', Icon: TrendingUp },
+      { label: 'Agents', path: '/dashboard/agents', Icon: Bot },
+      { label: 'Prices', path: '/dashboard/prices', Icon: LineChart },
+    ],
+  },
 ];
 
 const settingsItem: NavItem = {
@@ -59,10 +86,25 @@ export default function Sidebar({
   setMobileOpen,
 }: SidebarProps) {
   const pathname = usePathname();
+  // Active highlighting honours the ?intent= query so Find Buyers vs Find
+  // Sellers can both share /dashboard/search without lighting up together.
+  const search = typeof window !== 'undefined' ? window.location.search : '';
 
-  const isActive = (path: string) => {
-    if (path === '/dashboard') return pathname === '/dashboard';
-    return pathname.startsWith(path);
+  const isActive = (linkPath: string) => {
+    const [target, targetQuery] = linkPath.split('?');
+    if (target === '/dashboard') return pathname === '/dashboard';
+    if (!pathname.startsWith(target)) return false;
+    if (!targetQuery) {
+      // Plain link wins only when there's no competing query-discriminated link
+      // (Find Buyers / Find Sellers both live at /dashboard/search).
+      if (target === '/dashboard/search' && search.includes('intent=')) return false;
+      return true;
+    }
+    // Crude match — fine because we only discriminate by `intent` today.
+    const targetParams = new URLSearchParams(targetQuery);
+    const intent = targetParams.get('intent');
+    if (!intent) return true;
+    return search.includes(`intent=${intent}`);
   };
 
   const handleLinkClick = () => {
@@ -95,19 +137,26 @@ export default function Sidebar({
       </div>
 
       <nav className={styles.nav}>
-        {navItems.map(({ label, path, Icon }) => (
-          <Link
-            key={path}
-            href={path}
-            onClick={handleLinkClick}
-            className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
-            title={collapsed ? label : undefined}
-          >
-            <span className={styles.navIcon}>
-              <Icon size={20} strokeWidth={1.6} />
-            </span>
-            <span className={styles.navLabel}>{label}</span>
-          </Link>
+        {navGroups.map((group, gi) => (
+          <div key={group.heading ?? `group-${gi}`} className={styles.navGroup}>
+            {group.heading ? (
+              <div className={styles.navGroupHeading}>{group.heading}</div>
+            ) : null}
+            {group.items.map(({ label, path, Icon }) => (
+              <Link
+                key={path}
+                href={path}
+                onClick={handleLinkClick}
+                className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
+                title={collapsed ? label : undefined}
+              >
+                <span className={styles.navIcon}>
+                  <Icon size={20} strokeWidth={1.6} />
+                </span>
+                <span className={styles.navLabel}>{label}</span>
+              </Link>
+            ))}
+          </div>
         ))}
       </nav>
 

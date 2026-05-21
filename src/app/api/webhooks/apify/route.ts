@@ -120,7 +120,16 @@ export async function POST(request: Request) {
     }
 
     // 2. Enrich + insert the top 5 scraped items (shared with /api/admin/apify/replay).
-    const { processed, created } = await enrichAndInsertScrapedItems(supabase, orgId, items);
+    // Passing datasetId here tags each inserted company with
+    // `enrichment_source = 'apify:<datasetId>'` so the agents dashboard can
+    // look up the exact companies created by this run.
+    const { processed, created } = await enrichAndInsertScrapedItems(
+      supabase,
+      orgId,
+      items,
+      5,
+      datasetId,
+    );
 
     // 3. Mark the agent run as Success in Supabase
     await supabase

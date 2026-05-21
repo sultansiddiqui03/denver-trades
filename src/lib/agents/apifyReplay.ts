@@ -104,15 +104,20 @@ export async function fetchApifyDatasetItems(datasetId: string): Promise<Scraped
  *   webhook behaviour (Apify would otherwise retry and we'd risk duplicates).
  * - `processed` reflects ALL items fetched from the dataset (not just the
  *   sliced top-N), so the agent run row records the true scrape volume.
+ * - When `datasetId` is supplied, each inserted company is tagged with
+ *   `enrichment_source = 'apify:<datasetId>'` so the agent-run-leads-preview
+ *   on /dashboard/agents can look up exactly which companies belong to a run.
  */
 export async function enrichAndInsertScrapedItems(
   supabase: SupabaseClient<Database>,
   orgId: string,
   items: ScrapedPlace[],
   limit = 5,
+  datasetId?: string,
 ): Promise<EnrichDatasetResult> {
   const itemsToProcess = items.slice(0, limit);
   let createdCount = 0;
+  const enrichmentSource = datasetId ? `apify:${datasetId}` : 'apify-lead-scraper';
 
   for (const item of itemsToProcess) {
     try {
@@ -142,6 +147,7 @@ export async function enrichAndInsertScrapedItems(
           contacts: contacts,
           is_enriched: true,
           enriched_at: new Date().toISOString(),
+          enrichment_source: enrichmentSource,
           confidence_score: 0.92,
         })
         .select('id')

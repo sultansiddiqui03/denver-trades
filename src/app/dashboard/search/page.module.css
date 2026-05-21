@@ -468,3 +468,183 @@
     justify-content: flex-end;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Trade-aware additions (Wave 1, 2026-05-21)
+   ──────────────────────────────────────────────────────────────────────
+   Intent pills (Buyers / Sellers / Brokers), intent chip in card header,
+   SOURCES FROM / SHIPS TO trade-lane rows, and the green Enriched · date
+   badge — all to mirror Tradyon's exporter-CRM framing while staying on
+   our dark theme + lime accent.
+   ═════════════════════════════════════════════════════════════════════ */
+
+/* — Intent pill row */
+.intentPills {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-full);
+  width: fit-content;
+}
+
+.intentPill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.intentPill:hover:not(.intentPillActive) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.intentPillActive {
+  background: var(--accent-lime);
+  color: var(--text-inverse);
+}
+
+.intentPillCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  padding: 0 6px;
+  height: 18px;
+  background: rgba(0, 0, 0, 0.18);
+  color: inherit;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+}
+
+/* — Card header right cluster — intent chip + score */
+.cardHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* — Prominent intent chip on card */
+.intentChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  line-height: 1;
+  min-height: 22px;
+}
+
+/* Three semantic variants — coral for BUYS so it visually contrasts with
+   the lime accent (which already means "primary action / SELL"). Broker
+   is neutral blue. Unknown is mid-grey to keep layout stable. */
+.intent_buyer {
+  background: rgba(255, 138, 101, 0.12);
+  color: #ff8a65;
+  border-color: rgba(255, 138, 101, 0.32);
+}
+
+.intent_seller {
+  background: var(--accent-lime-muted);
+  color: var(--accent-lime);
+  border-color: rgba(195, 232, 110, 0.32);
+}
+
+.intent_broker {
+  background: rgba(110, 162, 255, 0.12);
+  color: #6ea2ff;
+  border-color: rgba(110, 162, 255, 0.32);
+}
+
+.intent_unknown {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  border-color: var(--border-primary);
+}
+
+/* — Trade lanes (SOURCES FROM / SHIPS TO) */
+.tradeLanes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+}
+
+.tradeLane {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.8125rem;
+  min-width: 0;
+}
+
+.tradeLaneIconIn {
+  color: #ff8a65;
+  flex-shrink: 0;
+}
+
+.tradeLaneIconOut {
+  color: var(--accent-lime);
+  flex-shrink: 0;
+}
+
+.tradeLaneLabel {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.tradeLaneCountries {
+  color: var(--text-primary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* — Card meta row (enriched badge + website link) */
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.enrichedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px var(--space-2);
+  background: var(--accent-lime-muted);
+  color: var(--accent-lime);
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+

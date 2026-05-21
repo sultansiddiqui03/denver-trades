@@ -1,9 +1,17 @@
 import React from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Building2, MapPin, ExternalLink, Sparkles } from 'lucide-react';
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Building2,
+  CheckCircle2,
+  ExternalLink,
+  MapPin,
+} from 'lucide-react';
 import { getUserContext } from '@/lib/auth/server';
 import EmptyState from '@/components/EmptyState';
+import { getIntent, type CompanyType } from '@/lib/intent';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -11,26 +19,23 @@ export const dynamic = 'force-dynamic';
 interface CompanyRow {
   id: string;
   name: string;
-  type: 'Importer' | 'Exporter' | 'Broker' | null;
+  type: CompanyType | null;
   hq_city: string | null;
   hq_country: string | null;
   website: string | null;
   products_dealt: string[] | null;
+  origin_countries: string[] | null;
+  destination_countries: string[] | null;
   is_enriched: boolean | null;
+  enriched_at: string | null;
   created_at: string | null;
 }
 
-function typeBadgeClass(type: CompanyRow['type']): string {
-  switch (type) {
-    case 'Importer':
-      return 'badge badge-lime';
-    case 'Exporter':
-      return 'badge badge-blue';
-    case 'Broker':
-      return 'badge badge-yellow';
-    default:
-      return 'badge';
-  }
+function formatEnrichedDate(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function hostname(url: string | null): string {
@@ -50,7 +55,9 @@ export default async function CompaniesDirectory() {
 
   const { data: companies } = await supabase
     .from('companies')
-    .select('id, name, type, hq_city, hq_country, website, products_dealt, is_enriched, created_at')
+    .select(
+      'id, name, type, hq_city, hq_country, website, products_dealt, origin_countries, destination_countries, is_enriched, enriched_at, created_at'
+    )
     .eq('org_id', orgId)
     .order('created_at', { ascending: false })
     .limit(200);
@@ -96,6 +103,10 @@ export default async function CompaniesDirectory() {
             const visibleProducts = products.slice(0, 3);
             const extraCount = Math.max(0, products.length - visibleProducts.length);
             const host = hostname(c.website);
+            const intent = getIntent(c.type);
+            const origin = (c.origin_countries ?? []).filter(Boolean);
+            const dest = (c.destination_countries ?? []).filter(Boolean);
+            const enrichedAt = formatEnrichedDate(c.enriched_at);
 
             return (
               <Link
@@ -114,8 +125,38 @@ export default async function CompaniesDirectory() {
                       </span>
                     </div>
                   </div>
-                  <span className={typeBadgeClass(c.type)}>{c.type ?? 'Unknown'}</span>
+                  <span
+                    className={`${styles.intentChip} ${styles[`intent_${intent.variant}`]}`}
+                    title={intent.description}
+                  >
+                    {intent.label}
+                  </span>
                 </div>
+
+                {(origin.length > 0 || dest.length > 0) && (
+                  <div className={styles.tradeLanes}>
+                    {origin.length > 0 && (
+                      <div className={styles.tradeLane}>
+                        <ArrowDownToLine size={13} strokeWidth={1.8} className={styles.tradeLaneIconIn} aria-hidden="true" />
+                        <span className={styles.tradeLaneLabel}>Sources from</span>
+                        <span className={styles.tradeLaneCountries}>
+                          {origin.slice(0, 3).join(', ')}
+                          {origin.length > 3 ? ` +${origin.length - 3}` : ''}
+                        </span>
+                      </div>
+                    )}
+                    {dest.length > 0 && (
+                      <div className={styles.tradeLane}>
+                        <ArrowUpFromLine size={13} strokeWidth={1.8} className={styles.tradeLaneIconOut} aria-hidden="true" />
+                        <span className={styles.tradeLaneLabel}>Ships to</span>
+                        <span className={styles.tradeLaneCountries}>
+                          {dest.slice(0, 3).join(', ')}
+                          {dest.length > 3 ? ` +${dest.length - 3}` : ''}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {products.length > 0 && (
                   <div className={styles.chipRow}>
@@ -141,8 +182,8 @@ export default async function CompaniesDirectory() {
                   )}
                   {c.is_enriched ? (
                     <span className={styles.enrichedTag}>
-                      <Sparkles size={12} strokeWidth={1.8} />
-                      Enriched
+                      <CheckCircle2 size={12} strokeWidth={2} />
+                      Enriched{enrichedAt ? ` · ${enrichedAt}` : ''}
                     </span>
                   ) : (
                     <span className={styles.unenrichedTag}>Not enriched</span>

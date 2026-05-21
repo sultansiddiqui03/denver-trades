@@ -94,7 +94,13 @@ export async function POST(request: Request) {
       });
     }
 
-    const { processed, created } = await enrichAndInsertScrapedItems(supabase, orgId, items);
+    const { processed, created } = await enrichAndInsertScrapedItems(
+      supabase,
+      orgId,
+      items,
+      5,
+      datasetId,
+    );
 
     await supabase
       .from('agent_runs')

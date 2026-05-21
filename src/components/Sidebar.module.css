@@ -102,9 +102,33 @@
   padding: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-3);
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+.navGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.navGroupHeading {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  opacity: 1;
+  transition: opacity var(--transition-fast);
+}
+
+.collapsed .navGroupHeading {
+  opacity: 0;
+  height: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 .navItem {
