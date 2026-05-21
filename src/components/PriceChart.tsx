@@ -30,10 +30,25 @@ interface PriceRecord {
   recorded_at: string;
 }
 
-export default function PriceChart() {
-  const [prices, setPrices] = useState<PriceRecord[]>([]);
-  const [commodities, setCommodities] = useState<string[]>([]);
-  const [selectedCommodity, setSelectedCommodity] = useState<string>('');
+interface PriceChartProps {
+  /**
+   * Optional Server-Component-fetched prices. When provided the chart
+   * skips its initial fetch and avoids a first-paint waterfall. Mutating
+   * actions (Simulate Tick) still refetch via the JSON API.
+   */
+  initialPrices?: PriceRecord[];
+}
+
+export default function PriceChart({ initialPrices }: PriceChartProps = {}) {
+  const [prices, setPrices] = useState<PriceRecord[]>(initialPrices ?? []);
+  const initialCommodities = useMemo(
+    () => Array.from(new Set((initialPrices ?? []).map((r) => r.commodity))) as string[],
+    [initialPrices]
+  );
+  const [commodities, setCommodities] = useState<string[]>(initialCommodities);
+  const [selectedCommodity, setSelectedCommodity] = useState<string>(
+    initialCommodities[0] ?? ''
+  );
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
 
@@ -58,13 +73,16 @@ export default function PriceChart() {
     }
   }, []);
 
+  // Only fetch on mount if the server didn't pre-populate us.
   useEffect(() => {
+    if (initialPrices && initialPrices.length > 0) return;
+
     const timer = window.setTimeout(() => {
       void fetchPrices();
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, [fetchPrices]);
+  }, [fetchPrices, initialPrices]);
 
   const triggerPriceTick = async () => {
     setUpdating(true);
