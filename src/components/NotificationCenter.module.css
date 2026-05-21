@@ -13,10 +13,19 @@
   color: var(--text-secondary);
   transition: all 150ms ease;
   cursor: pointer;
+  border: 1px solid transparent;
 }
 
 .bellBtn:hover {
   background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  border-color: var(--border-primary);
+}
+
+.bellBtn:focus-visible {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: var(--focus-ring);
   color: var(--text-primary);
 }
 
@@ -29,7 +38,7 @@
   padding: 0 4px;
   border-radius: 8px;
   background: var(--danger);
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.5625rem;
   font-weight: 700;
   display: flex;
@@ -45,13 +54,13 @@
   right: 0;
   width: 380px;
   max-height: 480px;
-  background: rgba(18, 18, 18, 0.96);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  /* Solid surface — was `rgba(18, 18, 18, 0.96)`. The blur was hiding the
+     truth that 4% transparency over a busy topbar still showed through. */
+  background: var(--bg-overlay);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-lg);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
-  z-index: 9997;
+  z-index: var(--z-dropdown);
   overflow: hidden;
   animation: dropdownSlide 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
@@ -77,10 +86,18 @@
   font-weight: 600;
   cursor: pointer;
   transition: opacity 150ms ease;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
 }
 
 .markReadBtn:hover {
   opacity: 0.7;
+}
+
+.markReadBtn:focus-visible {
+  outline: none;
+  opacity: 1;
+  box-shadow: var(--focus-ring);
 }
 
 .dropdownBody {
@@ -146,6 +163,21 @@
   font-size: 0.6875rem;
   color: var(--text-muted);
   margin-top: 2px;
+}
+
+/* Skeleton placeholders — keep layout footprint identical to populated rows
+   so hydration doesn't shift the dropdown height. */
+.skelTitle {
+  display: block;
+  width: 60%;
+  height: 12px;
+}
+
+.skelDesc {
+  display: block;
+  width: 85%;
+  height: 10px;
+  margin-top: 6px;
 }
 
 @keyframes dropdownSlide {

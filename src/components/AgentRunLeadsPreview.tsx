@@ -27,7 +27,6 @@ interface AgentRunLeadsPreviewProps {
   completedAt: string | null;
 }
 
-const SKELETON_HEIGHT = 132;
 const SKELETON_COUNT = 5;
 // Anything outside this window is almost certainly from another run. Padding
 // the upper bound covers race-y inserts that ran just after `completed_at`
@@ -152,13 +151,12 @@ export default function AgentRunLeadsPreview({
 
   if (companies === null) {
     return (
-      <div className={styles.previewWrapper} data-agent-run-id={agentRunId}>
+      <div className={styles.previewWrapper} data-agent-run-id={agentRunId} aria-busy="true">
         <div className={styles.cardGrid}>
           {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
             <div
               key={`lead-skel-${i}`}
-              className="skeleton"
-              style={{ height: SKELETON_HEIGHT }}
+              className={`skeleton ${styles.skelCard}`}
               aria-hidden
             />
           ))}

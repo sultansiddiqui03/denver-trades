@@ -94,11 +94,8 @@ export default function TopBarUser() {
             <UserIcon size={16} />
           </div>
           <div className={styles.profileText}>
-            <span className="skeleton" style={{ width: 96, height: 12, display: 'block' }} />
-            <span
-              className="skeleton"
-              style={{ width: 64, height: 10, display: 'block', marginTop: 6 }}
-            />
+            <span className={`skeleton ${styles.profileSkelName}`} aria-hidden />
+            <span className={`skeleton ${styles.profileSkelRole}`} aria-hidden />
           </div>
         </div>
       </div>

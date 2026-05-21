@@ -117,8 +117,11 @@ export default function NotificationCenter() {
   return (
     <div className={styles.container} ref={ref}>
       <button
+        type="button"
         className={styles.bellBtn}
         onClick={handleToggle}
+        aria-haspopup="menu"
+        aria-expanded={open}
         aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
       >
         {unread > 0 && (
@@ -142,17 +145,11 @@ export default function NotificationCenter() {
             {!hasFetched ? (
               <>
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={`notif-skel-${i}`} className={styles.notifItem}>
-                    <div className={styles.notifDot} />
+                  <div key={`notif-skel-${i}`} className={styles.notifItem} aria-busy="true">
+                    <div className={styles.notifDot} aria-hidden />
                     <div className={styles.notifContent}>
-                      <span
-                        className="skeleton"
-                        style={{ width: '60%', height: 12, display: 'block' }}
-                      />
-                      <span
-                        className="skeleton"
-                        style={{ width: '85%', height: 10, display: 'block', marginTop: 6 }}
-                      />
+                      <span className={`skeleton ${styles.skelTitle}`} aria-hidden />
+                      <span className={`skeleton ${styles.skelDesc}`} aria-hidden />
                     </div>
                   </div>
                 ))}

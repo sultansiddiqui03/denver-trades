@@ -190,11 +190,23 @@
   transform: translateX(2px);
 }
 
+.cta:focus-visible {
+  outline: none;
+  background: rgba(204, 255, 0, 0.22);
+  border-color: rgba(204, 255, 0, 0.5);
+  box-shadow: var(--focus-ring);
+}
+
 /* Skeleton (loading) */
 .skeletonRow {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.skeletonCard {
+  height: 92px;
+  border-radius: var(--radius-md);
 }
 
 /* Empty state */
