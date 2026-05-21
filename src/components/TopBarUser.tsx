@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { User as UserIcon } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { LogOut, Settings, User as UserIcon } from 'lucide-react';
+import { signOut } from '@/app/auth/actions';
 import { createClient } from '@/lib/supabase/client';
 import styles from '@/app/dashboard/layout.module.css';
 
@@ -26,6 +28,8 @@ function titleCase(s: string) {
 export default function TopBarUser() {
   const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,18 +74,32 @@ export default function TopBarUser() {
     };
   }, [supabase]);
 
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
+
   if (!profile) {
     return (
-      <div className={styles.profileSummary} aria-busy="true">
-        <div className={styles.avatar} aria-hidden="true">
-          <UserIcon size={16} />
-        </div>
-        <div className={styles.profileText}>
-          <span className="skeleton" style={{ width: 96, height: 12, display: 'block' }} />
-          <span
-            className="skeleton"
-            style={{ width: 64, height: 10, display: 'block', marginTop: 6 }}
-          />
+      <div className={styles.profileWrap}>
+        <div className={styles.profileSummary} aria-busy="true">
+          <div className={styles.avatar} aria-hidden="true">
+            <UserIcon size={16} />
+          </div>
+          <div className={styles.profileText}>
+            <span className="skeleton" style={{ width: 96, height: 12, display: 'block' }} />
+            <span
+              className="skeleton"
+              style={{ width: 64, height: 10, display: 'block', marginTop: 6 }}
+            />
+          </div>
         </div>
       </div>
     );
@@ -92,12 +110,51 @@ export default function TopBarUser() {
     : titleCase(profile.role);
 
   return (
-    <div className={styles.profileSummary} title={profile.email || undefined}>
-      <div className={styles.avatar}>{initialsFor(profile.fullName)}</div>
-      <div className={styles.profileText}>
-        <span className={styles.profileName}>{profile.fullName}</span>
-        <span className={styles.profileRole}>{subline}</span>
-      </div>
+    <div className={styles.profileWrap} ref={containerRef}>
+      <button
+        type="button"
+        className={styles.profileSummary}
+        onClick={() => setMenuOpen((prev) => !prev)}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        title={profile.email || undefined}
+      >
+        <div className={styles.avatar}>{initialsFor(profile.fullName)}</div>
+        <div className={styles.profileText}>
+          <span className={styles.profileName}>{profile.fullName}</span>
+          <span className={styles.profileRole}>{subline}</span>
+        </div>
+      </button>
+
+      {menuOpen && (
+        <div className={styles.profileMenu} role="menu">
+          <div className={styles.profileMenuHeader}>
+            <span className={styles.profileMenuName}>{profile.fullName}</span>
+            {profile.email && (
+              <span className={styles.profileMenuEmail}>{profile.email}</span>
+            )}
+          </div>
+          <Link
+            href="/dashboard/settings"
+            role="menuitem"
+            className={styles.profileMenuItem}
+            onClick={() => setMenuOpen(false)}
+          >
+            <Settings size={15} strokeWidth={1.6} />
+            <span>Settings</span>
+          </Link>
+          <form action={signOut} className={styles.profileMenuForm}>
+            <button
+              type="submit"
+              role="menuitem"
+              className={`${styles.profileMenuItem} ${styles.profileMenuItemDanger}`}
+            >
+              <LogOut size={15} strokeWidth={1.6} />
+              <span>Sign out</span>
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

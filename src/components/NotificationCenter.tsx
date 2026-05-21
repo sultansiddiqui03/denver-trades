@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Bell } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import styles from './NotificationCenter.module.css';
+
+const SEEN_STORAGE_KEY = 'denver:notif-last-seen';
 
 interface NotificationItem {
   id: string;
@@ -40,10 +43,19 @@ export default function NotificationCenter() {
       const res = await fetch('/api/dashboard/activity');
       const data = await res.json();
       if (data.success) {
-        setItems(data.activities || []);
-        setUnread((prev) =>
-          prev === 0 && data.activities.length > 0 ? data.activities.length : prev
-        );
+        const activities = data.activities || [];
+        setItems(activities);
+        // Compare timestamps against the "last seen" mark in localStorage.
+        // Anything newer than that mark counts as unread.
+        const lastSeen =
+          typeof window !== 'undefined'
+            ? Number(window.localStorage.getItem(SEEN_STORAGE_KEY) || 0)
+            : 0;
+        const count = activities.filter((a: NotificationItem) => {
+          const ts = new Date(a.timestamp).getTime();
+          return Number.isFinite(ts) && ts > lastSeen;
+        }).length;
+        setUnread(count);
       }
     } catch {
       /* silent */
@@ -90,26 +102,38 @@ export default function NotificationCenter() {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
+  const markAllSeen = useCallback(() => {
+    setUnread(0);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(SEEN_STORAGE_KEY, String(Date.now()));
+    }
+  }, []);
+
   const handleToggle = () => {
     setOpen(prev => !prev);
-    if (!open) setUnread(0);
+    if (!open) markAllSeen();
   };
 
   return (
     <div className={styles.container} ref={ref}>
-      <button className={styles.bellBtn} onClick={handleToggle} aria-label="Notifications">
-        {unread > 0 && <span className={styles.badge}>{unread > 9 ? '9+' : unread}</span>}
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-        </svg>
+      <button
+        className={styles.bellBtn}
+        onClick={handleToggle}
+        aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
+      >
+        {unread > 0 && (
+          <span className={styles.badge} aria-hidden="true">
+            {unread > 9 ? '9+' : unread}
+          </span>
+        )}
+        <Bell size={20} strokeWidth={1.6} aria-hidden="true" />
       </button>
 
       {open && (
         <div className={styles.dropdown}>
           <div className={styles.dropdownHeader}>
             <h4 className={styles.dropdownTitle}>Notifications</h4>
-            <button className={styles.markReadBtn} onClick={() => setUnread(0)} type="button">
+            <button className={styles.markReadBtn} onClick={markAllSeen} type="button">
               Mark all as read
             </button>
           </div>

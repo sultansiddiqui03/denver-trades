@@ -226,7 +226,7 @@
 .contactRow {
   display: flex;
   align-items: center;
-  justify-content: justify;
+  justify-content: space-between;
   background: rgba(255, 255, 255, 0.01);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);

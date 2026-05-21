@@ -168,7 +168,7 @@
 .actionBtn {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--space-3);
   width: 100%;
   padding: var(--space-3) var(--space-4);
   background: rgba(255, 255, 255, 0.02);
@@ -176,6 +176,7 @@
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
   text-align: left;
+  text-decoration: none;
 }
 
 .actionBtn:hover {
@@ -184,10 +185,24 @@
   transform: translateX(4px);
 }
 
+.actionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--accent-lime-muted);
+  color: var(--accent-lime);
+  flex-shrink: 0;
+}
+
 .actionBtnText {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
 .actionTitle {
