@@ -448,6 +448,7 @@ export type Database = {
         Row: {
           commodities: string[] | null
           created_at: string | null
+          deal_code_prefix: string
           id: string
           logo_url: string | null
           name: string
@@ -461,6 +462,7 @@ export type Database = {
         Insert: {
           commodities?: string[] | null
           created_at?: string | null
+          deal_code_prefix?: string
           id?: string
           logo_url?: string | null
           name: string
@@ -474,6 +476,7 @@ export type Database = {
         Update: {
           commodities?: string[] | null
           created_at?: string | null
+          deal_code_prefix?: string
           id?: string
           logo_url?: string | null
           name?: string

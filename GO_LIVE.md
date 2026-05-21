@@ -14,7 +14,7 @@ Quick map of what your product does today, organized the way a trader would thin
 | `/dashboard/search` | Sidebar splits into **Find Buyers** + **Find Sellers**. Buyer/Seller/Broker filter pills, AI typeahead suggestions, semantic (pgvector) and keyword modes | ✅ feature parity + semantic |
 | `/dashboard/companies` | Directory with BUYS/SELLS/BROKER chips, SOURCES FROM / SHIPS TO trade lanes, enriched checkmark + date | ✅ feature parity |
 | `/dashboard/companies/[id]` | 4-tab dossier: Overview · Shipment History · Commodities · Contacts. Generate-outreach deep-links | ✅ feature parity |
-| `/dashboard/pipeline` | 9-stage kanban (New Lead → … → Closed Won/Lost), `LEAD-OPP-2026-NNNNN` deal IDs, dnd-kit drag-drop | Their 5-stage; we go further |
+| `/dashboard/pipeline` | 9-stage kanban (New Lead → … → Closed Won/Lost), `<PREFIX>-2026-NNNNN` deal IDs (per-org sequence, default prefix `LEAD-OPP`, configurable via `PATCH /api/org`), dnd-kit drag-drop | Their 5-stage; we go further |
 | `/dashboard/outreach` | Streaming AI generation, EN/ES/AR multi-lingual, WhatsApp + Email channels, prefilled from dossier or Active Demand | They have templates; we stream |
 | `/dashboard/documents` | L/C vs B/L compliance audit via Gemini multimodal | They don't have this |
 | `/dashboard/prices` | 10 commodities, daily Vercel cron `0 2 * * *` | They don't have this |
@@ -25,6 +25,7 @@ Quick map of what your product does today, organized the way a trader would thin
 **Architecture facts** worth knowing when something breaks:
 - Webhook secret on Apify dispatch is in the `x-denver-webhook-secret` HEADER (not query string). Default payload (no custom `payloadTemplate`) — Apify's `?webhooks=` ad-hoc form doesn't interpolate custom templates.
 - Every domain table carries `org_id` and is RLS-scoped except `commodity_prices` (intentionally global).
+- `deal_code` is per-org-scoped (`deals_pipeline_deal_code_org_uidx` on `(org_id, deal_code)`). Two orgs can both hold `LEAD-OPP-2026-00001` independently. Prefix is configurable per-org via `PATCH /api/org` with body `{"deal_code_prefix": "ACME"}` (owner-only, 2-12 uppercase letters/digits/dashes).
 - Inbound WhatsApp messages are Gemini-extracted on the webhook path (sync, ~2s, inside Twilio's 15s budget). Extraction writes `outreach_threads.extracted_demand` (JSONB).
 - Backfill endpoints (Bearer `CRON_SECRET`): `/api/admin/apify/replay`, `/api/admin/embeddings/backfill`, `/api/admin/whatsapp/extract-backfill`.
 
