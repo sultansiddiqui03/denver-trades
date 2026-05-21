@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useCallback, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -17,6 +17,7 @@ import {
 import { useToast } from '@/components/Toast';
 import EmptyState from '@/components/EmptyState';
 import Button from '@/components/Button';
+import SearchSuggestions from '@/components/SearchSuggestions';
 import { exportToCsv } from '@/lib/exportCsv';
 import { getIntent, intentSlugToType, type CompanyType } from '@/lib/intent';
 import styles from './page.module.css';
@@ -98,6 +99,9 @@ function SearchWorkspace() {
   const [filterType, setFilterType] = useState<IntentFilter>(initialIntent);
   const [loading, setLoading] = useState(false);
   const [enrichingId, setEnrichingId] = useState<string | null>(null);
+  // Typeahead state — the dropdown component listens to these via refs/props.
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   // Keyword: GET /api/search (Gemini intent extraction → SQL).
   // Semantic: POST /api/search/semantic (OpenAI embedding → pgvector HNSW).
@@ -169,12 +173,23 @@ function SearchWorkspace() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     performSearch(query);
+    // Close the typeahead so the dropdown doesn't sit on top of fresh results.
+    setIsInputFocused(false);
+    inputRef.current?.blur();
   };
 
   const handleSuggestionClick = (sug: string) => {
     setQuery(sug);
     performSearch(sug);
+    setIsInputFocused(false);
+    inputRef.current?.blur();
   };
+
+  // Stable handler reference so SearchSuggestions can subscribe to keydowns
+  // without re-binding on every parent render.
+  const handleSuggestionsClose = useCallback(() => {
+    setIsInputFocused(false);
+  }, []);
 
   const handleFavoriteToggle = async (id: string, currentVal: boolean) => {
     const next = !currentVal;
@@ -315,32 +330,55 @@ function SearchWorkspace() {
         <div className={styles.inputGroup}>
           <SearchIcon className={styles.searchIcon} size={18} strokeWidth={1.6} aria-hidden="true" />
           <input
+            ref={inputRef}
             type="text"
             className={styles.searchInput}
             placeholder="Describe who you want to find — e.g. pepper buyers in Jebel Ali"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setIsInputFocused(true)}
+            onBlur={() => {
+              // Defer so a click inside the dropdown can land before the blur
+              // closes it — the SearchSuggestions handler also calls onClose
+              // when the user clicks fully outside.
+              window.setTimeout(() => setIsInputFocused(false), 120);
+            }}
             aria-label="Search query"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls="search-suggestions-listbox"
+            aria-expanded={isInputFocused && query.trim().length > 0}
           />
           <button type="submit" className={styles.searchBtn} disabled={loading}>
             {loading ? 'Searching…' : 'Search'}
           </button>
+          <SearchSuggestions
+            query={query}
+            onSelect={handleSuggestionClick}
+            inputRef={inputRef}
+            isInputFocused={isInputFocused}
+            onClose={handleSuggestionsClose}
+          />
         </div>
 
-        {/* Suggestions */}
-        <div className={styles.suggestionsRow}>
-          <span className={styles.suggestionLabel}>Try</span>
-          {suggestions.map((sug) => (
-            <button
-              key={sug}
-              type="button"
-              className={styles.suggestionBadge}
-              onClick={() => handleSuggestionClick(sug)}
-            >
-              {sug}
-            </button>
-          ))}
-        </div>
+        {/* Suggestions — static "Try" row stays for the empty-query state.
+            Once the user starts typing, the typeahead dropdown above takes
+            over (it only renders when there's a non-empty query + focus). */}
+        {query.trim().length === 0 && (
+          <div className={styles.suggestionsRow}>
+            <span className={styles.suggestionLabel}>Try</span>
+            {suggestions.map((sug) => (
+              <button
+                key={sug}
+                type="button"
+                className={styles.suggestionBadge}
+                onClick={() => handleSuggestionClick(sug)}
+              >
+                {sug}
+              </button>
+            ))}
+          </div>
+        )}
       </form>
 
       {/* Results Workspace */}
