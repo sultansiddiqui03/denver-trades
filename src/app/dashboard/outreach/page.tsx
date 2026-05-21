@@ -1,12 +1,44 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import WhatsAppInbox from '@/components/WhatsAppInbox';
 import Button from '@/components/Button';
 import styles from './page.module.css';
 
-export default function OutreachCenter() {
-  const [recipientName, setRecipientName] = useState('Al-Rashid Foodstuff Trading LLC');
+// Next 16 prerender step requires `useSearchParams()` to be inside a Suspense
+// boundary. Wrap the body so the static shell prerenders, then the search
+// params hook activates client-side on hydration.
+export default function OutreachCenterPage() {
+  return (
+    <Suspense fallback={null}>
+      <OutreachCenter />
+    </Suspense>
+  );
+}
+
+function OutreachCenter() {
+  const searchParams = useSearchParams();
+  // Dossier "Generate outreach" button lands here with ?companyName=... so
+  // the recipient field is pre-filled. companyId is round-tripped via the
+  // URL for future use (e.g. attaching the draft to a deal).
+  const initialName =
+    searchParams.get('companyName') ?? 'Al-Rashid Foodstuff Trading LLC';
+  const [recipientName, setRecipientName] = useState(initialName);
+
+  // Sync the recipient input when the URL changes (e.g. user navigates from
+  // a different dossier). The project's react-hooks/set-state-in-effect
+  // rule disallows direct setState inside effects — defer into a microtask
+  // the same way SearchWorkspace does for its intent-filter rehydrate.
+  useEffect(() => {
+    const next = searchParams.get('companyName');
+    if (!next) return;
+    const timer = window.setTimeout(() => {
+      setRecipientName(next);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [searchParams]);
+
   const [product, setProduct] = useState('Black Pepper 550g/l ASTA');
   const [channel, setChannel] = useState<'WhatsApp' | 'Email'>('WhatsApp');
   const [language, setLanguage] = useState<'en' | 'ar' | 'es'>('en');

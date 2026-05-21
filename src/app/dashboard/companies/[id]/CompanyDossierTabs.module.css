@@ -1,0 +1,300 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Dossier tabs — Tradyon-style 4-tab bar with lime underline + lime
+   active text. Owns its own background card so it stacks cleanly below
+   the hero.
+   ═════════════════════════════════════════════════════════════════════ */
+
+.tabsCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.tabsBar {
+  display: flex;
+  border-bottom: 1px solid var(--border-primary);
+  gap: var(--space-6);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabItem {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding-bottom: var(--space-3);
+  position: relative;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.tabItem:hover {
+  color: var(--text-primary);
+}
+
+.tabActive {
+  color: var(--accent-lime);
+}
+
+.tabActive::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent-lime);
+  box-shadow: 0 0 8px var(--accent-lime);
+}
+
+.tabPanel {
+  animation: fadeIn var(--transition-base) ease forwards;
+}
+
+.panelTitle {
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+
+/* ── Overview tab — 2-column data grid (Tradyon parity) */
+.overviewGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.fieldLabel {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fieldValue {
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.fieldMuted {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.fieldRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.fieldIconIn {
+  color: #ff8a65;
+  flex-shrink: 0;
+}
+
+.fieldIconOut {
+  color: var(--accent-lime);
+  flex-shrink: 0;
+}
+
+.productSection {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.productChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.productChip {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-primary);
+  padding: 6px var(--space-3);
+  border-radius: var(--radius-full);
+}
+
+/* ── Commodities tab — bigger clickable chips */
+.commodityChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.commodityChip {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-primary);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.commodityChip:hover {
+  border-color: var(--accent-lime);
+  color: var(--accent-lime);
+  background: var(--accent-lime-muted);
+  transform: translateY(-1px);
+}
+
+.commodityHelp {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin-bottom: var(--space-3);
+}
+
+/* ── Shipment history — empty stub */
+.shipmentStub {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.shipmentStubBars {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  opacity: 0.4;
+  align-items: flex-end;
+  height: 96px;
+}
+
+.shipmentStubBar {
+  flex: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(204, 255, 0, 0.18) 0%,
+    rgba(204, 255, 0, 0.04) 100%
+  );
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border: 1px solid var(--border-primary);
+  border-bottom: none;
+}
+
+/* ── Contacts tab */
+.contactsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.contactCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.contactAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  color: var(--accent-lime);
+  font-weight: 700;
+  font-size: 0.9375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-primary);
+  flex-shrink: 0;
+}
+
+.contactDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 160px;
+  flex: 1;
+}
+
+.contactName {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.contactRole {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.contactLinks {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.contactLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.contactLink:hover {
+  color: var(--accent-lime);
+}
+
+@media (max-width: 768px) {
+  .tabsCard {
+    padding: var(--space-4);
+  }
+
+  .overviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tabsBar {
+    gap: var(--space-4);
+  }
+
+  .tabItem {
+    font-size: 0.875rem;
+  }
+
+  .contactCard {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

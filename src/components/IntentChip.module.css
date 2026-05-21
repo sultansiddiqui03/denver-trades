@@ -1,0 +1,58 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   IntentChip — shared BUYS / SELLS / BROKER pill, used across the search
+   page, the companies directory, and the company dossier hero. Variants
+   match the Tradyon-style framing: buyer (coral), seller (lime), broker
+   (blue), unknown (neutral). Keep this in lock-step with the duplicate
+   classes in `search/page.module.css` and `companies/page.module.css`
+   while we migrate every consumer.
+   ═════════════════════════════════════════════════════════════════════ */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+/* Sizes */
+.sizeSm {
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.6875rem;
+  min-height: 22px;
+}
+
+.sizeMd {
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.8125rem;
+  min-height: 30px;
+}
+
+/* Semantic variants */
+.intent_buyer {
+  background: rgba(255, 138, 101, 0.12);
+  color: #ff8a65;
+  border-color: rgba(255, 138, 101, 0.32);
+}
+
+.intent_seller {
+  background: var(--accent-lime-muted);
+  color: var(--accent-lime);
+  border-color: rgba(195, 232, 110, 0.32);
+}
+
+.intent_broker {
+  background: rgba(110, 162, 255, 0.12);
+  color: #6ea2ff;
+  border-color: rgba(110, 162, 255, 0.32);
+}
+
+.intent_unknown {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  border-color: var(--border-primary);
+}

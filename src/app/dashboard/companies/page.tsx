@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 import { getUserContext } from '@/lib/auth/server';
 import EmptyState from '@/components/EmptyState';
-import { getIntent, type CompanyType } from '@/lib/intent';
+import IntentChip from '@/components/IntentChip';
+import { type CompanyType } from '@/lib/intent';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -103,7 +104,6 @@ export default async function CompaniesDirectory() {
             const visibleProducts = products.slice(0, 3);
             const extraCount = Math.max(0, products.length - visibleProducts.length);
             const host = hostname(c.website);
-            const intent = getIntent(c.type);
             const origin = (c.origin_countries ?? []).filter(Boolean);
             const dest = (c.destination_countries ?? []).filter(Boolean);
             const enrichedAt = formatEnrichedDate(c.enriched_at);
@@ -125,12 +125,7 @@ export default async function CompaniesDirectory() {
                       </span>
                     </div>
                   </div>
-                  <span
-                    className={`${styles.intentChip} ${styles[`intent_${intent.variant}`]}`}
-                    title={intent.description}
-                  >
-                    {intent.label}
-                  </span>
+                  <IntentChip type={c.type} />
                 </div>
 
                 {(origin.length > 0 || dest.length > 0) && (

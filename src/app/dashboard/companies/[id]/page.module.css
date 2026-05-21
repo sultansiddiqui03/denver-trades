@@ -1,9 +1,16 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Company dossier — Tradyon-style buyer/seller profile.
+   Hero (intent chip + meta) → tabs → tab content.
+   Layout fits above the fold on a 1280-wide laptop.
+   ═════════════════════════════════════════════════════════════════════ */
+
 .dossierContainer {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
 }
 
+/* Back link */
 .backLink {
   display: inline-flex;
   align-items: center;
@@ -11,42 +18,38 @@
   color: var(--text-muted);
   font-size: 0.875rem;
   transition: color var(--transition-fast);
+  width: fit-content;
 }
 
 .backLink:hover {
   color: var(--accent-lime);
 }
 
-/* Header grid styling */
-.dossierHeaderCard {
+/* — Hero card */
+.hero {
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-xl);
   padding: var(--space-6);
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.heroTopRow {
+  display: flex;
   align-items: flex-start;
-  gap: var(--space-6);
+  justify-content: space-between;
+  gap: var(--space-5);
+  flex-wrap: wrap;
 }
 
-@media (max-width: 768px) {
-  .dossierHeaderCard {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-
-.companyMetaInfo {
+.heroIdentity {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-}
-
-.titleArea {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  flex-wrap: wrap;
+  min-width: 0;
+  flex: 1;
 }
 
 .companyName {
@@ -55,342 +58,166 @@
   font-weight: 800;
   color: var(--text-primary);
   line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
-.detailsList {
+.heroMetaRow {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-4);
-}
-
-.detailItem {
-  display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-4);
   font-size: 0.875rem;
   color: var(--text-secondary);
 }
 
-.detailsIcon {
-  color: var(--text-muted);
-}
-
-.headerMetrics {
-  display: flex;
+.metaItem {
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-2);
 }
 
-.metricBadge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--space-3) var(--space-5);
-  min-width: 100px;
-}
-
-.metricValue {
-  font-family: var(--font-mono);
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--accent-lime);
-}
-
-.metricLabel {
-  font-size: 0.75rem;
+.metaIcon {
   color: var(--text-muted);
-  font-weight: 600;
-  text-transform: uppercase;
+  flex-shrink: 0;
 }
 
-/* Layout for Dossier Tabs and Sidebar Info */
-.dossierBodyGrid {
-  display: grid;
-  grid-template-columns: 3fr 1fr;
-  gap: var(--space-6);
-}
-
-@media (max-width: 1024px) {
-  .dossierBodyGrid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Tabs Bar */
-.tabsContainer {
-  background: var(--bg-card);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-xl);
-  padding: var(--space-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-}
-
-.tabsList {
-  display: flex;
-  border-bottom: 1px solid var(--border-primary);
-  gap: var(--space-6);
-}
-
-.tabItem {
-  font-size: 0.9375rem;
-  font-weight: 600;
+.websiteLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   color: var(--text-secondary);
-  padding-bottom: var(--space-3);
-  position: relative;
+  text-decoration: none;
   transition: color var(--transition-fast);
 }
 
-.tabItem:hover {
-  color: var(--text-primary);
-}
-
-.tabActive {
+.websiteLink:hover {
   color: var(--accent-lime);
 }
 
-.tabActive::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--accent-lime);
-  box-shadow: 0 0 8px var(--accent-lime);
-}
-
-/* Content inside Tabs */
-.tabPanel {
-  animation: fadeIn var(--transition-base) ease forwards;
-}
-
-.panelTitle {
-  font-family: var(--font-heading);
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: var(--space-4);
-}
-
-/* Overview Content */
-.overviewGrid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-}
-
-.descriptionBox {
+.description {
   font-size: 0.9375rem;
-  line-height: 1.7;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  font-style: italic;
+  max-width: 70ch;
+  /* Clamp to keep the hero above the fold; full text shows on the
+     Overview tab as well. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.infoGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-4);
-}
-
-.infoCard {
-  background: rgba(255, 255, 255, 0.01);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-}
-
-.infoCardLabel {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-weight: 600;
-  text-transform: uppercase;
-  margin-bottom: var(--space-1);
-}
-
-.infoCardValue {
-  font-size: 0.875rem;
-  color: var(--text-primary);
-}
-
-/* Contacts Tab */
-.contactsList {
+/* Right cluster — intent chip + enriched stamp + action buttons */
+.heroRight {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-shrink: 0;
 }
 
-.contactRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(255, 255, 255, 0.01);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  gap: var(--space-4);
-  flex-wrap: wrap;
-}
-
-.contactProfile {
-  display: flex;
+.heroChips {
+  display: inline-flex;
   align-items: center;
   gap: var(--space-3);
-  flex: 1;
 }
 
-.contactAvatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: var(--bg-tertiary);
-  color: var(--accent-lime);
-  font-weight: 700;
-  display: flex;
+.enrichedStamp {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border-primary);
-}
-
-.contactMeta {
-  display: flex;
-  flex-direction: column;
-}
-
-.contactName {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.contactRole {
+  gap: 6px;
+  padding: 6px var(--space-3);
+  background: var(--accent-lime-muted);
+  color: var(--accent-lime);
   font-size: 0.75rem;
-  color: var(--text-muted);
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
 }
 
-.contactActions {
-  display: flex;
+.unenrichedStamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px var(--space-3);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.actionRow {
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-/* Shipments Tab */
-.shipmentsTable {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 560px;
-}
-
-.shipmentsTable th {
-  text-align: left;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-primary);
-  white-space: nowrap;
-}
-
-.shipmentsTable td {
+.favoriteBtn,
+.outreachBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
   font-size: 0.875rem;
-  color: var(--text-secondary);
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--border-primary);
-}
-
-.shipmentsTable tr:last-child td {
-  border-bottom: none;
-}
-
-@media (max-width: 768px) {
-  .dossierHeaderCard {
-    padding: var(--space-5);
-    gap: var(--space-4);
-  }
-
-  .companyName {
-    font-size: 1.75rem;
-  }
-
-  .headerMetrics {
-    width: 100%;
-  }
-
-  .metricBadge {
-    flex: 1;
-  }
-
-  .tabsContainer,
-  .sideCard {
-    padding: var(--space-4);
-  }
-
-  .tabsList {
-    overflow-x: auto;
-    gap: var(--space-4);
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .tabItem {
-    white-space: nowrap;
-    font-size: 0.875rem;
-  }
-
-  .infoGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .contactRow {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
-/* Side Card: Summary / Tools */
-.sideCard {
-  background: var(--bg-card);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
   border: 1px solid var(--border-primary);
-  border-radius: var(--radius-xl);
-  padding: var(--space-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-  height: fit-content;
 }
 
-.sideTitle {
-  font-family: var(--font-heading);
-  font-size: 1.125rem;
-  font-weight: 700;
+.favoriteBtn {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+}
+
+.favoriteBtn:hover {
+  border-color: var(--border-hover);
   color: var(--text-primary);
 }
 
-.sideDetailsList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+.favoriteActive {
+  color: var(--warning);
+  border-color: rgba(245, 158, 11, 0.32);
+  background: var(--warning-muted);
 }
 
-.sideDetailRow {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.8125rem;
-  padding-bottom: var(--space-2);
-  border-bottom: 1px dashed var(--border-primary);
+.favoriteActive:hover {
+  color: var(--warning);
 }
 
-.sideDetailRow:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
+.outreachBtn {
+  background: var(--accent-lime);
+  color: var(--text-inverse);
+  border-color: var(--accent-lime);
 }
 
-.sideDetailLabel {
-  color: var(--text-muted);
+.outreachBtn:hover {
+  background: var(--accent-lime-hover);
+  box-shadow: var(--shadow-glow);
 }
 
-.sideDetailValue {
-  font-weight: 500;
+@media (max-width: 768px) {
+  .companyName {
+    font-size: 1.65rem;
+  }
+
+  .hero {
+    padding: var(--space-5);
+  }
+
+  .heroTopRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .heroRight {
+    align-items: flex-start;
+  }
 }
