@@ -8,6 +8,7 @@ import {
   enrichAndInsertScrapedItems,
   fetchApifyDatasetItems,
 } from '@/lib/agents/apifyReplay';
+import { DEFAULT_SCRAPER_ACTOR_ID } from '@/lib/agents/scraperActors';
 
 // Apify's default webhook payload shape (when no custom payloadTemplate is
 // set in the ad-hoc webhook config). The dispatch in /api/agents/run is
@@ -46,6 +47,12 @@ export async function POST(request: Request) {
     if (!agentRunId) {
       return NextResponse.json({ success: false, error: 'agent_run_id is required' }, { status: 400 });
     }
+
+    // Actor id is round-tripped through the callback URL by /api/agents/run.
+    // We never trust an actor id from the webhook body — Apify's payload uses
+    // an opaque internal id (`resource.actId`) rather than the username~name
+    // form we register actors with.
+    const callbackActorId = searchParams.get('actor_id') || DEFAULT_SCRAPER_ACTOR_ID;
 
     const parsed = await parseBody(request, ApifyWebhookSchema);
     if (!parsed.ok) return parsed.response;
@@ -120,15 +127,19 @@ export async function POST(request: Request) {
     }
 
     // 2. Enrich + insert the top 5 scraped items (shared with /api/admin/apify/replay).
-    // Passing datasetId here tags each inserted company with
-    // `enrichment_source = 'apify:<datasetId>'` so the agents dashboard can
-    // look up the exact companies created by this run.
+    // Passing datasetId + actorId tags each inserted company with
+    // `enrichment_source = 'apify:<datasetId>:<actorId>'` so the agents
+    // dashboard can look up the exact companies created by this run AND the
+    // dossier can show the originating data source ("ImportYeti — customs").
     const { processed, created } = await enrichAndInsertScrapedItems(
       supabase,
       orgId,
       items,
-      5,
-      datasetId,
+      {
+        limit: 5,
+        datasetId,
+        actorId: callbackActorId,
+      },
     );
 
     // 3. Mark the agent run as Success in Supabase

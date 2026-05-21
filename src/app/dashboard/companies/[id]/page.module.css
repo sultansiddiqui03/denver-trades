@@ -151,6 +151,21 @@
   letter-spacing: 0.06em;
 }
 
+/* Data-source chip shown alongside the enriched stamp.
+   "Source: Customs data — ImportYeti" / "Source: Directory — Google Maps". */
+.sourceStamp {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px var(--space-3);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  border: 1px solid var(--border-primary);
+}
+
 .actionRow {
   display: inline-flex;
   align-items: center;

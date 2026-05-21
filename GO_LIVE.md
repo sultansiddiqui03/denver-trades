@@ -204,7 +204,7 @@ Open `/dashboard/agents`, change the query, click Run, repeat. Each run yields ~
 Share the columns and we can write a one-shot SQL importer.
 
 ### Option C — best long-term: add a second Apify actor for ImportYeti / Panjiva / customs data
-Update `APIFY_ACTOR_ID` to point at a real trade-data actor. Many available on Apify.
+Update `APIFY_ACTOR_ID` to point at a real trade-data actor. See section 9 below for the matrix and the exact env values.
 
 ---
 
@@ -257,6 +257,81 @@ Open the production URL in an **incognito window**. Sign in with a different Goo
 24. Bell badge tracks unread vs your `denver:notif-last-seen` localStorage timestamp
 
 If every step lands, **you're live**.
+
+---
+
+## 9. Switching to customs-data enrichment
+
+The Lead Scraper agent dispatches an Apify actor. Out of the box it uses `compass~crawler-google-places` — Google Maps. That's **business-directory data**: name, website, phone, city, country. Good for bootstrapping a directory; not provably-true buyer intent.
+
+For provably-true intent ("This US importer brought in 47 containers of black pepper from Vietnam in the last 12 months") you want a **customs-data actor**. Two are pre-wired into the dispatch — flip a single env var, no code change.
+
+### How to flip
+
+```bash
+# Pick one of the supported actor ids and paste into the prompt:
+vercel env add APIFY_ACTOR_ID production
+
+#   compass~crawler-google-places       (DEFAULT — Google Maps directory)
+#   zen-studio~importyeti-scraper       (Customs data — primary upgrade)
+#   lulzasaur~importyeti-scraper        (Customs data — budget alternative)
+
+vercel redeploy --prod
+```
+
+Anything outside that list falls back to the default. The actor id is round-tripped through the webhook callback URL, so dataset items get mapped by the correct adapter on the way back in and stored with `enrichment_source = apify:<dataset>:<actor>`. The dossier page reads that string and shows the source as a chip ("Source: Customs data — ImportYeti").
+
+### Trade-off matrix
+
+#### `compass~crawler-google-places` — Google Maps (directory)
+**Default.** Free tier on Apify, ~200k+ users on the actor page, very stable. Returns business listings: company name, website, phone, city, country, address, category. **No shipment data.** Best for: bootstrapping a fresh directory in a region, finding businesses by city ("Spice exporters in Vietnam"), warm-up before you know what HS codes to chase. Cost: ~$0.005 per result on Apify's pay-per-result tier. Geographic coverage: anywhere Google Maps has a presence (i.e. everywhere).
+
+Example queries:
+- `"Black pepper importers Dubai"`
+- `"Cardamom exporters Sri Lanka"`
+- `"Tea brokers Mombasa Kenya"`
+
+#### `zen-studio~importyeti-scraper` — ImportYeti customs data (recommended upgrade)
+**The strategic upgrade.** Scrapes ImportYeti's customs index. Pulls 60+ fields per record: total shipments, most recent shipment date, top trading partners (with country breakdown), HS-coded products, shipping lanes, carriers, bills of lading. Data is sourced from US Customs declarations + public business databases, so coverage is strongest for **US imports** and the foreign suppliers shipping into the US. Cost: $6.99 per 1,000 results on free tier, down to $4.99 on Business. Last updated within the past month. ~51 monthly active users on the actor.
+
+Use this when you want a buyer-intent signal you can actually quote at a sales call: *"I see you imported 12 containers of black pepper from Vietnam last quarter — here's a quote that beats your last landed cost by 4%."*
+
+Example queries:
+- `"black pepper"` (product keyword — surfaces top US importers buying it)
+- `"organic cardamom"`
+- `"PEPPER FACTORY"` (specific supplier name — pulls their shipment history)
+- `"Atlanta"` (location — pulls importers in that metro)
+
+#### `lulzasaur~importyeti-scraper` — ImportYeti customs data (budget alternative)
+Same data source as the zen-studio actor, cheaper at $5/1k results, fewer fields per record (no shipping-lane breakdown, no notify-party table). Supports `mode: company | shipments | search` so you can do focused per-company shipment pulls later — useful when you already have a company name from another source and want their customs history without re-searching. Lower usage (~8 monthly active) so the maintenance signal is weaker; consider zen-studio first unless cost is the bottleneck.
+
+Example queries: same shape as zen-studio (the query field is named `searchQuery` here but you send the same strings).
+
+### What to expect after the flip
+
+1. Next time you click **Run now** on Lead Scraper, the Apify dispatch goes to the new actor.
+2. The Apify console run page shows the actor name — confirm before paying.
+3. Within ~2 min the webhook fires and the agent run flips to Success.
+4. New company cards on `/dashboard/search` show richer products (real HS-coded items, not generic categories) and the dossier hero shows a "Source: Customs data — ImportYeti …" chip.
+5. Existing companies created under the old actor keep working — the `enrichment_source` lookup is `like 'apify:<dataset>%'` so the agents-dashboard drill-down matches both formats.
+
+### Rollback
+
+```bash
+vercel env rm APIFY_ACTOR_ID production
+vercel redeploy --prod
+```
+
+…and you're back to Google Maps. No data migration needed — old rows stay, new rows go to the new default.
+
+### Why no Panjiva / Tridge actor in the matrix?
+
+I evaluated the Apify store on 2026-05-22:
+- **Panjiva** — no first-party or community actor exists. Panjiva's data is gated behind an S&P Global subscription and the site enforces aggressive anti-bot measures; community actors that tried have been abandoned (last activity > 12 months). Recommendation: if you need Panjiva specifically, get a paid Panjiva API key directly from S&P Global Market Intelligence and write a custom enrichment actor.
+- **Tridge** — no Apify actor. Tridge has their own developer portal; integration would be a custom REST adapter, not an Apify actor swap.
+- **Other "customs scraper" actors** (`saswave/capitol-trades-scraper` etc.) — focused on political trading (US congressional disclosures), not commercial trade.
+- **`parseforge/importyeti-scraper`** — viable third option but at $30/1k it's 4–6× the cost of the picked actors for the same data source. Not added to the registry to keep the matrix decisive.
+- **`jungle_synthesizer/importyeti-bill-of-lading-scraper`** — a deeper drill-down ($0.001/record) requiring company **slugs** as input rather than a free-text search. Better suited for a future "load shipment history for company X" feature than the current Lead Scraper. Not in the registry yet — when we add per-company shipment pulls we'll wire this in.
 
 ---
 

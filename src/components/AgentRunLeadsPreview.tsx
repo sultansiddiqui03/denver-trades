@@ -80,12 +80,16 @@ export default function AgentRunLeadsPreview({
     async function load() {
       setError(null);
 
-      // Primary path: companies created with enrichment_source = 'apify:<dataset>'.
+      // Primary path: companies created with enrichment_source starting with
+      // `apify:<dataset>`. We use `like` instead of `eq` so the lookup matches
+      // both pre-refactor rows (`apify:<dataset>`) and post-refactor rows that
+      // append an actor id (`apify:<dataset>:<actorId>`). See
+      // [src/lib/agents/scraperActors.ts](../lib/agents/scraperActors.ts).
       if (datasetId) {
         const { data, error: fetchError } = await supabase
           .from('companies')
           .select('id, name, type, hq_city, hq_country, products_dealt')
-          .eq('enrichment_source', `apify:${datasetId}`)
+          .like('enrichment_source', `apify:${datasetId}%`)
           .order('created_at', { ascending: false })
           .limit(5)
           .abortSignal(signal);

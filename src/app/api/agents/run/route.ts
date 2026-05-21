@@ -6,18 +6,17 @@ import { getErrorMessage } from '@/lib/errors';
 import { runPriceIngest } from '@/lib/agents/priceIngest';
 import { parseBody } from '@/lib/validation';
 import type { Database } from '@/lib/supabase/database.types';
+import { pickActor } from '@/lib/agents/scraperActors';
 
 // APIFY_ACTOR_ID format: <username>~<actor-name> (the Apify "technical name").
-// Default is `compass~crawler-google-places` — the de-facto Google Maps scraper
-// on Apify (200k+ users, free tier available). The legacy `apify~google-maps-scraper`
-// alias was retired and now returns a 404 from the Apify dispatch API.
-// Other valid examples for lead scraping:
-//   - `compass~crawler-google-places`       (default — Google Maps, full fields)
-//   - `compass~google-maps-scraper`          (alt Google Maps actor)
-//   - `apify~linkedin-company-scraper`       (LinkedIn companies)
-// If overriding, make sure the actor's input schema accepts `searchStringsArray`
-// + `maxCrawledPlacesPerSearch` (see the dispatch body below) or update the
-// payload to match the new actor's schema.
+// The actor-specific input/output contracts live in scraperActors.ts so
+// adding a new actor is a one-file change. Supported keys (paste into Vercel
+// env `APIFY_ACTOR_ID`):
+//   - `compass~crawler-google-places`     (DEFAULT — Google Maps directory)
+//   - `zen-studio~importyeti-scraper`     (customs-grade shipment data, richer)
+//   - `lulzasaur~importyeti-scraper`      (customs-grade, budget alternative)
+// Anything else falls back to the default — see GO_LIVE.md "Switching to
+// customs-data enrichment" for the trade-off matrix.
 
 const RunAgentSchema = z.object({
   agentName: z.string().min(1, 'agentName is required'),
@@ -242,10 +241,18 @@ async function dispatchLeadScraper(params: {
     });
   }
 
-  // Live Apify dispatch
-  const actorId = process.env.APIFY_ACTOR_ID || 'compass~crawler-google-places';
+  // Live Apify dispatch — actor + input shape are now data-driven via
+  // scraperActors.ts. APIFY_ACTOR_ID picks the entry; default is Google Maps.
+  const actor = pickActor(process.env.APIFY_ACTOR_ID);
   const webhookSecret = process.env.APIFY_WEBHOOK_SECRET;
-  const webhookUrl = `${publicBaseUrl()}/api/webhooks/apify?agent_run_id=${runRecordId}`;
+  // Thread the actor id back to the webhook receiver via the callback URL so
+  // it can run the correct `mapItem` adapter against the dataset. We never
+  // trust an actor id from the webhook body — Apify's `resource.actId` field
+  // is an opaque internal id, not the `username~name` form we register with.
+  const callbackUrl =
+    `${publicBaseUrl()}/api/webhooks/apify` +
+    `?agent_run_id=${runRecordId}` +
+    `&actor_id=${encodeURIComponent(actor.id)}`;
 
   // Apify ad-hoc webhooks must be passed as a URL-safe base64-encoded JSON
   // array in the `webhooks` QUERY PARAMETER, not in the request body.
@@ -262,7 +269,7 @@ async function dispatchLeadScraper(params: {
   const webhooksConfig = [
     {
       eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.FAILED'],
-      requestUrl: webhookUrl,
+      requestUrl: callbackUrl,
       // P1-1: pass secret via header, not query string
       headersTemplate: webhookSecret
         ? JSON.stringify({ 'x-denver-webhook-secret': webhookSecret })
@@ -274,26 +281,22 @@ async function dispatchLeadScraper(params: {
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '');
-  const apifyUrl = `https://api.apify.com/v2/acts/${actorId}/runs?token=${token}&webhooks=${webhooksParam}`;
+  const apifyUrl = `https://api.apify.com/v2/acts/${actor.id}/runs?token=${token}&webhooks=${webhooksParam}`;
 
   const apifyResponse = await fetch(apifyUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      // `compass/crawler-google-places` expects `searchStringsArray` (not
-      // `searchStrings`). Output fields (title, categoryName, website, phone,
-      // street, city, countryCode, description) align with the ScrapedPlace
-      // interface in /api/webhooks/apify, so no mapping is required.
-      searchStringsArray: [searchQuery],
-      maxCrawledPlacesPerSearch: 5,
-    }),
+    body: JSON.stringify(actor.buildInput(searchQuery, 5)),
   });
 
   if (!apifyResponse.ok) {
     const errText = await apifyResponse.text();
     if (apifyResponse.status === 404) {
       throw new Error(
-        `Apify actor not found (404) — check APIFY_ACTOR_ID env var. Default is compass~crawler-google-places. Tried "${actorId}". Raw: ${errText}`
+        `Apify actor not found (404) — check APIFY_ACTOR_ID env var. ` +
+        `Supported: compass~crawler-google-places (default), ` +
+        `zen-studio~importyeti-scraper, lulzasaur~importyeti-scraper. ` +
+        `Tried "${actor.id}" (${actor.label}). Raw: ${errText}`
       );
     }
     throw new Error(`Apify dispatch failed (${apifyResponse.status}): ${errText}`);
@@ -306,7 +309,9 @@ async function dispatchLeadScraper(params: {
     success: true,
     mode: 'live',
     apifyRunId: apifyRunData.data?.id,
-    message: 'Apify scrape dispatched. Webhook will update the run when it completes.',
+    apifyActorId: actor.id,
+    apifyActorLabel: actor.label,
+    message: `Apify scrape dispatched (${actor.label}). Webhook will update the run when it completes.`,
     run: {
       id: runRecordId,
       org_id: orgId,

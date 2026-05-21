@@ -10,6 +10,7 @@ import {
 import { getUserContext } from '@/lib/auth/server';
 import IntentChip from '@/components/IntentChip';
 import { type CompanyType } from '@/lib/intent';
+import { parseEnrichmentSource } from '@/lib/agents/scraperActors';
 import CompanyDossierTabs, {
   HeroActions,
   type DossierCompany,
@@ -33,6 +34,7 @@ interface CompanyRow {
   is_enriched: boolean | null;
   is_favorited: boolean | null;
   enriched_at: string | null;
+  enrichment_source: string | null;
 }
 
 function formatEnrichedDate(iso: string | null): string {
@@ -93,7 +95,7 @@ export default async function CompanyDossierPage({ params }: PageProps) {
   const { data, error } = await supabase
     .from('companies')
     .select(
-      'id, name, type, hq_city, hq_country, website, description, origin_countries, destination_countries, products_dealt, contacts, is_enriched, is_favorited, enriched_at',
+      'id, name, type, hq_city, hq_country, website, description, origin_countries, destination_countries, products_dealt, contacts, is_enriched, is_favorited, enriched_at, enrichment_source',
     )
     .eq('id', id)
     .eq('org_id', orgId)
@@ -108,6 +110,10 @@ export default async function CompanyDossierPage({ params }: PageProps) {
   const type = normaliseType(company.type);
   const host = hostname(company.website);
   const enrichedAt = formatEnrichedDate(company.enriched_at);
+  const sourceInfo = parseEnrichmentSource(company.enrichment_source);
+  const sourceLabel = sourceInfo?.actor
+    ? `Source: ${sourceInfo.actor.dataKind === 'customs' ? 'Customs data' : 'Directory'} — ${sourceInfo.actor.label}`
+    : null;
 
   const dossierCompany: DossierCompany = {
     id: company.id,
@@ -179,6 +185,14 @@ export default async function CompanyDossierPage({ params }: PageProps) {
               ) : (
                 <span className={styles.unenrichedStamp}>Not enriched</span>
               )}
+              {sourceLabel ? (
+                <span
+                  className={styles.sourceStamp}
+                  title={sourceInfo?.raw ?? undefined}
+                >
+                  {sourceLabel}
+                </span>
+              ) : null}
             </div>
 
             <HeroActions

@@ -3,11 +3,24 @@ import { z } from 'zod';
 import { generateJSON } from '@/lib/ai/gemini';
 import { computeAndStoreCompanyEmbedding } from '@/lib/ai/embedCompany';
 import type { Database } from '@/lib/supabase/database.types';
+import {
+  buildEnrichmentSource,
+  DEFAULT_SCRAPER_ACTOR_ID,
+  mapItems,
+} from '@/lib/agents/scraperActors';
 
 /**
- * Shape of a single Google-Maps-Scraper result we actually consume. The Apify
- * actor returns many more fields; we pluck only what the enrichment prompt
- * uses so the contract is explicit.
+ * Normalised shape of one scraped business record that the enrichment prompt
+ * consumes. Different Apify actors return wildly different fields — the
+ * adapter layer in [src/lib/agents/scraperActors.ts](./scraperActors.ts) maps
+ * each actor's raw record into this shape so downstream code (the Gemini
+ * enrichment prompt, the companies insert, the embedding job) only sees one
+ * stable contract.
+ *
+ * Treat this as a presentation-layer DTO: optional fields are filled when the
+ * source actor has them, omitted when it doesn't. Don't add fields that only
+ * one actor produces — push that into the actor's `mapItem` description text
+ * instead so the LLM gets the signal without coupling the schema.
  */
 export interface ScrapedPlace {
   title?: string;
@@ -74,11 +87,16 @@ Country Code: ${item.countryCode || 'N/A'}`;
 }
 
 /**
- * Fetch the items of a finished Apify dataset using the configured token.
+ * Fetch the raw items of a finished Apify dataset using the configured token.
  * Centralised so the webhook receiver and the admin replay endpoint share the
  * same auth + error surface.
+ *
+ * Returns `unknown[]` deliberately: each registered actor in
+ * [scraperActors.ts](./scraperActors.ts) produces a different per-record
+ * shape, so the caller MUST pass these through `mapItems(rawItems, actorId)`
+ * before feeding them to the enrichment pass.
  */
-export async function fetchApifyDatasetItems(datasetId: string): Promise<ScrapedPlace[]> {
+export async function fetchApifyDatasetItems(datasetId: string): Promise<unknown[]> {
   const token = process.env.APIFY_TOKEN || process.env.APIFY_API_TOKEN;
   if (!token) {
     throw new Error('APIFY_TOKEN is missing in environment variables');
@@ -90,34 +108,60 @@ export async function fetchApifyDatasetItems(datasetId: string): Promise<Scraped
     throw new Error(`Failed to fetch Apify dataset items: ${await datasetResponse.text()}`);
   }
 
-  return (await datasetResponse.json()) as ScrapedPlace[];
+  const parsed = (await datasetResponse.json()) as unknown;
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+export interface EnrichAndInsertOptions {
+  /** Maximum number of scraped items to enrich + persist (default 5). */
+  limit?: number;
+  /** Apify dataset id — used to build the `enrichment_source` tag. */
+  datasetId?: string;
+  /**
+   * Apify actor id used to produce these items. Drives:
+   *   - which `ScraperActor.mapItem` is applied to each record
+   *   - the `:<actorId>` suffix on `enrichment_source` so the dossier can
+   *     show "Source: Customs data — ImportYeti".
+   * Defaults to the registry default (Google Maps) for backward compatibility
+   * with pre-refactor replays that don't carry an actor id.
+   */
+  actorId?: string;
 }
 
 /**
- * Take a raw list of scraped places, enrich the first N of them via Gemini,
- * insert them as companies under the supplied org, and compute embeddings.
+ * Take a raw list of Apify dataset records, enrich the first N of them via
+ * Gemini, insert them as companies under the supplied org, and compute
+ * embeddings.
  *
  * - Used by the webhook receiver (POST /api/webhooks/apify) and the manual
  *   replay endpoint (POST /api/admin/apify/replay).
+ * - Raw items are mapped to {@link ScrapedPlace} via the actor adapter in
+ *   {@link scraperActors}. Items whose `mapItem` returns `null` are dropped
+ *   silently and don't count toward `processed`.
  * - Per-item errors (enrichment OR insert OR embedding) are logged and skipped
  *   so a single bad record cannot poison the whole batch — matches existing
  *   webhook behaviour (Apify would otherwise retry and we'd risk duplicates).
- * - `processed` reflects ALL items fetched from the dataset (not just the
- *   sliced top-N), so the agent run row records the true scrape volume.
+ * - `processed` reflects ALL mapped items (not just the sliced top-N), so the
+ *   agent run row records the true scrape volume.
  * - When `datasetId` is supplied, each inserted company is tagged with
- *   `enrichment_source = 'apify:<datasetId>'` so the agent-run-leads-preview
- *   on /dashboard/agents can look up exactly which companies belong to a run.
+ *   `enrichment_source = 'apify:<datasetId>:<actorId>'` so the
+ *   agent-run-leads-preview on /dashboard/agents can look up exactly which
+ *   companies belong to a run AND the dossier can show the data source.
  */
 export async function enrichAndInsertScrapedItems(
   supabase: SupabaseClient<Database>,
   orgId: string,
-  items: ScrapedPlace[],
-  limit = 5,
-  datasetId?: string,
+  rawItems: unknown[],
+  options: EnrichAndInsertOptions = {},
 ): Promise<EnrichDatasetResult> {
+  const { limit = 5, datasetId, actorId } = options;
+  const effectiveActorId = actorId ?? DEFAULT_SCRAPER_ACTOR_ID;
+  const items = mapItems(rawItems, effectiveActorId);
   const itemsToProcess = items.slice(0, limit);
   let createdCount = 0;
-  const enrichmentSource = datasetId ? `apify:${datasetId}` : 'apify-lead-scraper';
+  const enrichmentSource = datasetId
+    ? buildEnrichmentSource(datasetId, effectiveActorId)
+    : `apify-lead-scraper:${effectiveActorId}`;
 
   for (const item of itemsToProcess) {
     try {

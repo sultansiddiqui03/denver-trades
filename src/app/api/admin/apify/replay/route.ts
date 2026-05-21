@@ -25,6 +25,13 @@ import {
 const ReplaySchema = z.object({
   agentRunId: z.string().uuid(),
   datasetId: z.string().min(1),
+  /**
+   * Apify actor id (`username~name`) the dataset came from. Optional — if
+   * omitted we fall back to the registry default. Set this when replaying a
+   * dataset produced by a non-default actor (e.g. ImportYeti) so the per-item
+   * mapping uses the correct adapter.
+   */
+  actorId: z.string().min(1).optional(),
 });
 
 export async function POST(request: Request) {
@@ -42,9 +49,11 @@ export async function POST(request: Request) {
     const parsed = await parseBody(request, ReplaySchema);
     if (!parsed.ok) return parsed.response;
     agentRunId = parsed.data.agentRunId;
-    const { datasetId } = parsed.data;
+    const { datasetId, actorId } = parsed.data;
 
-    console.info(`Apify replay: target run=${agentRunId}, dataset=${datasetId}`);
+    console.info(
+      `Apify replay: target run=${agentRunId}, dataset=${datasetId}, actor=${actorId ?? '(default)'}`
+    );
 
     const { data: runRecord, error: runFetchError } = await supabase
       .from('agent_runs')
@@ -98,8 +107,11 @@ export async function POST(request: Request) {
       supabase,
       orgId,
       items,
-      5,
-      datasetId,
+      {
+        limit: 5,
+        datasetId,
+        actorId,
+      },
     );
 
     await supabase
