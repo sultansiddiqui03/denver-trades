@@ -7,16 +7,32 @@
 
 .simulationBanner {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-3);
   align-items: center;
   padding: var(--space-3) var(--space-4);
   background: var(--warning-muted);
-  border: 1px solid rgba(245, 158, 11, 0.25);
+  border: 1px solid rgba(245, 158, 11, 0.3);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: 0.875rem;
   line-height: 1.5;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.08), 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.bannerIcon {
+  flex-shrink: 0;
+  color: var(--warning);
+}
+
+.bannerCopy {
+  flex: 1;
+  min-width: 0;
+}
+
+.bannerCopy strong {
+  color: var(--text-primary);
+  font-weight: 700;
+  margin-right: 4px;
 }
 
 .simulationBanner code {
@@ -25,6 +41,26 @@
   padding: 1px 6px;
   background: rgba(0, 0, 0, 0.4);
   border-radius: var(--radius-sm);
+}
+
+.bannerDismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.bannerDismiss:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
 }
 
 .deckGrid {
@@ -234,6 +270,9 @@
 }
 
 .refreshBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   background: transparent;
   color: var(--text-secondary);
   border: 1px solid var(--border-primary);
@@ -340,4 +379,229 @@
   font-size: 0.8125rem;
   font-family: var(--font-mono);
   cursor: help;
+}
+
+/* ───── Run history row extras ───── */
+
+.agentNameStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.datasetChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.failedDetail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 360px;
+}
+
+.errorDetails {
+  display: block;
+  border: 1px solid rgba(239, 68, 68, 0.18);
+  background: rgba(239, 68, 68, 0.06);
+  border-radius: var(--radius-sm);
+  padding: 0;
+  overflow: hidden;
+}
+
+.errorSummary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  cursor: pointer;
+  padding: 4px var(--space-2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--danger);
+  user-select: none;
+  transition: background var(--transition-fast);
+  width: 100%;
+}
+
+.errorSummary::-webkit-details-marker {
+  display: none;
+}
+
+.errorSummary:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.errorSummaryIcon {
+  flex-shrink: 0;
+}
+
+.errorBlock {
+  margin: 0;
+  padding: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--danger);
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid rgba(239, 68, 68, 0.18);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.replayBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 4px var(--space-3);
+  background: rgba(204, 255, 0, 0.08);
+  color: var(--accent-lime);
+  border: 1px solid rgba(204, 255, 0, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.replayBtn:hover:not(:disabled) {
+  background: rgba(204, 255, 0, 0.15);
+  border-color: rgba(204, 255, 0, 0.35);
+  color: var(--accent-lime);
+}
+
+.replayBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.replaySpin {
+  animation: spin 1s linear infinite;
+}
+
+/* ───── Replay confirmation modal ───── */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  animation: fadeIn 150ms ease forwards;
+}
+
+.modalCard {
+  width: 100%;
+  max-width: 440px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-xl);
+  animation: scaleIn var(--transition-spring) forwards;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.modalTitle {
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.modalDismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.modalDismiss:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+
+.modalBody {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 var(--space-5) 0;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.modalCancelBtn {
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.modalCancelBtn:hover {
+  border-color: var(--border-hover);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+}
+
+.modalConfirmBtn {
+  padding: var(--space-2) var(--space-4);
+  background: var(--accent-lime);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.modalConfirmBtn:hover {
+  background: var(--accent-lime-hover);
+  box-shadow: var(--shadow-glow);
 }

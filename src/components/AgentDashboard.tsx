@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { AlertCircle, RefreshCw, RotateCw, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
 import EmptyState from '@/components/EmptyState';
@@ -37,6 +38,16 @@ interface AgentRunResponse {
   message?: string;
   error?: string;
   runId?: string;
+  navigateTo?: string;
+}
+
+interface ReplayResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  created?: number;
+  processed?: number;
+  notDeployed?: boolean;
 }
 
 const INITIAL_AGENTS: Agent[] = [
@@ -74,6 +85,24 @@ const INITIAL_AGENTS: Agent[] = [
   },
 ];
 
+const SIM_BANNER_DISMISSED_KEY = 'denver-trades.agents.sim-banner-dismissed';
+const ERROR_LOG_TRUNCATE_AT = 400;
+// Matches "dataset ffeKO5Oq7meoNAXLf" or "dataset: ffeKO5Oq7meoNAXLf"
+const DATASET_ID_RE = /dataset(?:\s+|:\s*)([a-zA-Z0-9_-]{10,})/i;
+
+function extractDatasetId(errorLog: string | null | undefined): string | null {
+  if (!errorLog) return null;
+  const match = errorLog.match(DATASET_ID_RE);
+  return match?.[1] ?? null;
+}
+
+function truncateErrorLog(message: string): { text: string; truncated: boolean } {
+  if (message.length <= ERROR_LOG_TRUNCATE_AT) {
+    return { text: message, truncated: false };
+  }
+  return { text: `${message.slice(0, ERROR_LOG_TRUNCATE_AT)}…`, truncated: true };
+}
+
 export default function AgentDashboard() {
   const supabase = useMemo(() => createClient(), []);
   const { toast } = useToast();
@@ -83,6 +112,27 @@ export default function AgentDashboard() {
   const [triggering, setTriggering] = useState<string | null>(null);
   const [scraperQuery, setScraperQuery] = useState('Spice exporters in Vietnam');
   const [simulationActive, setSimulationActive] = useState(false);
+  // Lazy initializer reads localStorage on the first client render so we don't
+  // need an extra effect (which the codebase's lint rule rejects).
+  const [simBannerDismissed, setSimBannerDismissed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return window.localStorage.getItem(SIM_BANNER_DISMISSED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [replayingRunId, setReplayingRunId] = useState<string | null>(null);
+  const [pendingReplay, setPendingReplay] = useState<AgentRun | null>(null);
+
+  const dismissSimBanner = useCallback(() => {
+    setSimBannerDismissed(true);
+    try {
+      window.localStorage.setItem(SIM_BANNER_DISMISSED_KEY, '1');
+    } catch {
+      // Ignore.
+    }
+  }, []);
 
   const fetchRuns = useCallback(async () => {
     try {
@@ -153,6 +203,13 @@ export default function AgentDashboard() {
       const mode = data.mode;
       if (mode === 'simulation') {
         setSimulationActive(true);
+        // Re-show the banner on a fresh simulation event even if previously dismissed.
+        setSimBannerDismissed(false);
+        try {
+          window.localStorage.removeItem(SIM_BANNER_DISMISSED_KEY);
+        } catch {
+          // Ignore.
+        }
         toast(
           data.message || `${agentName} ran in simulation mode — API key missing`,
           'warning'
@@ -179,6 +236,46 @@ export default function AgentDashboard() {
     }
   };
 
+  const handleConfirmReplay = async () => {
+    if (!pendingReplay) return;
+    const run = pendingReplay;
+    setPendingReplay(null);
+    setReplayingRunId(run.id);
+
+    try {
+      const res = await fetch('/api/agents/replay-apify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentRunId: run.id }),
+      });
+
+      const data = (await res.json().catch(() => null)) as ReplayResponse | null;
+
+      if (!res.ok || !data?.success) {
+        const errMessage =
+          data?.error ||
+          (res.status === 503
+            ? 'Replay endpoint is not deployed yet — try again later.'
+            : `Replay failed (${res.status})`);
+        throw new Error(errMessage);
+      }
+
+      const createdCount = typeof data.created === 'number' ? data.created : null;
+      const message =
+        data.message ||
+        (createdCount !== null
+          ? `Replay enqueued — ${createdCount} companies created`
+          : 'Replay enqueued.');
+      toast(message, 'success');
+      await fetchRuns();
+    } catch (err) {
+      console.error('Error replaying Apify run:', err);
+      toast(err instanceof Error ? err.message : 'Replay failed', 'error');
+    } finally {
+      setReplayingRunId(null);
+    }
+  };
+
   const renderAction = (agent: Agent) => {
     if (agent.trigger === 'run') {
       return (
@@ -200,13 +297,25 @@ export default function AgentDashboard() {
     );
   };
 
+  const showSimBanner = simulationActive && !simBannerDismissed;
+
   return (
     <div className={styles.container}>
-      {simulationActive && (
+      {showSimBanner && (
         <div className={styles.simulationBanner} role="status">
-          <strong>Simulation mode.</strong> Lead Scraper is returning mock data because{' '}
-          <code>APIFY_TOKEN</code> isn&apos;t set. Add it in Vercel project settings to enable live
-          scraping.
+          <AlertCircle size={18} strokeWidth={2} className={styles.bannerIcon} aria-hidden />
+          <div className={styles.bannerCopy}>
+            <strong>Lead Scraper running in simulation mode</strong> — set{' '}
+            <code>APIFY_TOKEN</code> in Vercel env for live scraping.
+          </div>
+          <button
+            type="button"
+            className={styles.bannerDismiss}
+            onClick={dismissSimBanner}
+            aria-label="Dismiss simulation banner"
+          >
+            <X size={16} strokeWidth={2} />
+          </button>
         </div>
       )}
 
@@ -250,6 +359,7 @@ export default function AgentDashboard() {
         <div className={styles.historyHeader}>
           <h3>Run history</h3>
           <button type="button" className={styles.refreshBtn} onClick={fetchRuns}>
+            <RefreshCw size={14} strokeWidth={2} aria-hidden />
             Refresh
           </button>
         </div>
@@ -302,41 +412,141 @@ export default function AgentDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {runs.map((run) => (
-                  <tr key={run.id}>
-                    <td className={styles.agentNameCell}>{run.agent_name}</td>
-                    <td>
-                      <span className={`${styles.statusBadge} ${styles[run.status.toLowerCase()]}`}>
-                        {run.status}
-                      </span>
-                    </td>
-                    <td>{run.records_processed} items</td>
-                    <td>+{run.records_created} leads</td>
-                    <td className={styles.dateCell}>
-                      {new Date(run.started_at).toLocaleString()}
-                    </td>
-                    <td className={styles.detailCell}>
-                      {run.error_log ? (
-                        <span className={styles.errorText} title={run.error_log}>
-                          {run.error_log.length > 60
-                            ? `${run.error_log.slice(0, 60)}…`
-                            : run.error_log}
+                {runs.map((run) => {
+                  const isLeadScraper = run.agent_name === 'Lead Scraper Agent';
+                  const isFailed = run.status === 'Failed';
+                  const isSuccess = run.status === 'Success';
+                  const datasetId = extractDatasetId(run.error_log);
+                  const canReplay = isFailed && isLeadScraper && datasetId;
+
+                  return (
+                    <tr key={run.id}>
+                      <td className={styles.agentNameCell}>
+                        <div className={styles.agentNameStack}>
+                          <span>{run.agent_name}</span>
+                          {isSuccess && isLeadScraper && datasetId && (
+                            <span
+                              className={styles.datasetChip}
+                              title={`Apify dataset ${datasetId}`}
+                            >
+                              Apify: {datasetId.slice(0, 8)}…
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`${styles.statusBadge} ${styles[run.status.toLowerCase()]}`}>
+                          {run.status}
                         </span>
-                      ) : run.completed_at ? (
-                        <span className={styles.dateCell}>
-                          finished {new Date(run.completed_at).toLocaleTimeString()}
-                        </span>
-                      ) : (
-                        <span className={styles.dateCell}>running…</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td>{run.records_processed} items</td>
+                      <td>+{run.records_created} leads</td>
+                      <td className={styles.dateCell}>
+                        {new Date(run.started_at).toLocaleString()}
+                      </td>
+                      <td className={styles.detailCell}>
+                        {isFailed && run.error_log ? (
+                          <div className={styles.failedDetail}>
+                            <details className={styles.errorDetails}>
+                              <summary className={styles.errorSummary}>
+                                <AlertCircle
+                                  size={14}
+                                  strokeWidth={2}
+                                  className={styles.errorSummaryIcon}
+                                  aria-hidden
+                                />
+                                <span>View error</span>
+                              </summary>
+                              <pre className={styles.errorBlock}>
+                                {truncateErrorLog(run.error_log).text}
+                              </pre>
+                            </details>
+                            {canReplay && (
+                              <button
+                                type="button"
+                                className={styles.replayBtn}
+                                onClick={() => setPendingReplay(run)}
+                                disabled={replayingRunId !== null}
+                                title="Re-run Gemini enrichment against the existing Apify dataset"
+                              >
+                                <RotateCw
+                                  size={13}
+                                  strokeWidth={2}
+                                  className={
+                                    replayingRunId === run.id ? styles.replaySpin : undefined
+                                  }
+                                  aria-hidden
+                                />
+                                {replayingRunId === run.id ? 'Replaying…' : 'Replay'}
+                              </button>
+                            )}
+                          </div>
+                        ) : run.completed_at ? (
+                          <span className={styles.dateCell}>
+                            finished {new Date(run.completed_at).toLocaleTimeString()}
+                          </span>
+                        ) : (
+                          <span className={styles.dateCell}>running…</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
+
+      {pendingReplay && (
+        <div
+          className={styles.modalOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="replay-modal-title"
+          onClick={() => setPendingReplay(null)}
+        >
+          <div
+            className={styles.modalCard}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <h3 id="replay-modal-title" className={styles.modalTitle}>
+                Replay Apify enrichment?
+              </h3>
+              <button
+                type="button"
+                className={styles.modalDismiss}
+                onClick={() => setPendingReplay(null)}
+                aria-label="Cancel"
+              >
+                <X size={16} strokeWidth={2} />
+              </button>
+            </div>
+            <p className={styles.modalBody}>
+              This re-runs Gemini enrichment + ingestion against the existing Apify dataset. New
+              companies may be created, but the previously failed run record stays intact.
+              Continue?
+            </p>
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.modalCancelBtn}
+                onClick={() => setPendingReplay(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.modalConfirmBtn}
+                onClick={handleConfirmReplay}
+              >
+                Replay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
