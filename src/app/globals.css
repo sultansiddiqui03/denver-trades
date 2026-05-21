@@ -533,13 +533,17 @@ small {
   background-size: 24px 24px;
 }
 
-/* ═══════ SKELETON LOADING ═══════ */
+/* ═══════ SKELETON LOADING ═══════
+   Bumped opacity so the shimmer is actually visible against the dark
+   background. Previously 0.04 → 0.08 → 0.04 which was almost invisible —
+   surfaced 2026-05-22 when a user thought the dashboard was empty mid-load.
+ */
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.04) 25%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.04) 75%
+    rgba(255, 255, 255, 0.06) 25%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.06) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;

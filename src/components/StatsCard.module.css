@@ -7,8 +7,18 @@
   padding: var(--space-5);
   transition: all var(--transition-base);
   overflow: hidden;
-  animation: slideUp var(--transition-slow) ease forwards;
-  opacity: 0;
+  /*
+   * Entrance animation uses `backwards` fill so:
+   *   - During animation-delay, the FROM keyframe state applies (opacity: 0).
+   *   - During animation, keyframe interpolates to opacity: 1.
+   *   - After animation, the base style (no opacity here = opacity: 1) applies.
+   *
+   * Defensive: if the animation never fires (extension interference,
+   * prefers-reduced-motion override) the card stays visible at its base
+   * opacity rather than getting stuck invisible — the bug that surfaced on
+   * 2026-05-22 when stats appeared as empty space on first paint.
+   */
+  animation: slideUp var(--transition-slow) ease backwards;
 }
 
 .statsCard:hover {
