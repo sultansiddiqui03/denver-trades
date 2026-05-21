@@ -494,6 +494,7 @@ export type Database = {
           created_at: string | null
           deal_id: string | null
           direction: string | null
+          extracted_demand: Json | null
           extracted_terms: Json | null
           id: string
           language: string | null
@@ -514,6 +515,7 @@ export type Database = {
           created_at?: string | null
           deal_id?: string | null
           direction?: string | null
+          extracted_demand?: Json | null
           extracted_terms?: Json | null
           id?: string
           language?: string | null
@@ -534,6 +536,7 @@ export type Database = {
           created_at?: string | null
           deal_id?: string | null
           direction?: string | null
+          extracted_demand?: Json | null
           extracted_terms?: Json | null
           id?: string
           language?: string | null

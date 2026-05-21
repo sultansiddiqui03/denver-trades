@@ -16,6 +16,7 @@ import { getUserContext } from '@/lib/auth/server';
 import { fetchDashboardStats } from '@/lib/dashboard/statsData';
 import { fetchActivityFeed } from '@/lib/dashboard/activityData';
 import StatsCard from '@/components/StatsCard';
+import ActiveDemandFeed from '@/components/ActiveDemandFeed';
 import DashboardActivityFeed from './DashboardClient';
 import styles from './page.module.css';
 
@@ -122,6 +123,21 @@ export default async function DashboardOverview() {
           <StatsRow />
         </Suspense>
       </div>
+
+      {/* Active demand — the wedge over Tradyon. Surfaces parsed inbound
+         WhatsApp RFQs as a one-tap quote-generation feed. */}
+      <section className={styles.demandSection}>
+        <div className={styles.sectionHeader}>
+          <h2 className={`${styles.sectionTitle} ${styles.demandTitle}`}>
+            <Zap size={18} strokeWidth={1.8} className={styles.demandTitleIcon} />
+            Active demand
+          </h2>
+          <span className={styles.demandSubtitle}>
+            Inbound buyer signals parsed from WhatsApp
+          </span>
+        </div>
+        <ActiveDemandFeed />
+      </section>
 
       {/* Main Blocks */}
       <div className={styles.dashboardBlocks}>

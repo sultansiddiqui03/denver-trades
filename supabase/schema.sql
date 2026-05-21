@@ -107,6 +107,7 @@ CREATE TABLE outreach_threads (
     subject VARCHAR(500),
     message_content TEXT NOT NULL,
     extracted_terms JSONB,
+    extracted_demand JSONB,
     ai_generated BOOLEAN DEFAULT FALSE,
     needs_review BOOLEAN DEFAULT TRUE,
     status VARCHAR(20) DEFAULT 'Draft'
@@ -119,6 +120,11 @@ CREATE TABLE outreach_threads (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_outreach_threads_twilio_message_sid
   ON outreach_threads(twilio_message_sid)
   WHERE twilio_message_sid IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_outreach_threads_active_demand
+  ON outreach_threads (org_id, created_at DESC)
+  WHERE direction = 'Inbound'
+    AND (extracted_demand->>'has_demand') = 'true';
 
 CREATE TABLE document_audits (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

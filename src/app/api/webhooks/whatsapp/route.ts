@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { getSupabaseServiceClient } from '@/lib/supabase/admin';
 import { verifyTwilioRequest, isWebhookSecretAuthorized } from '@/lib/security/request';
+import { extractDemand, type ExtractedDemand } from '@/lib/agents/demandExtract';
+import { getErrorMessage } from '@/lib/errors';
 
 const WhatsAppJsonSchema = z
   .object({
@@ -170,9 +172,11 @@ export async function POST(request: Request) {
       twilio_message_sid: messageSid || null,
     };
 
-    const { error: threadError } = await supabase
+    const { data: insertedThread, error: threadError } = await supabase
       .from('outreach_threads')
-      .insert(insertPayload);
+      .insert(insertPayload)
+      .select('id')
+      .single();
 
     if (threadError) {
       // Postgres unique_violation
@@ -183,12 +187,37 @@ export async function POST(request: Request) {
       throw threadError;
     }
 
+    // Active Demand extraction. Synchronous on the webhook path because Twilio
+    // gives us ~15s and Gemini-2.5-flash answers in ~1-3s; this stays well
+    // within budget. On extraction failure we still ACK Twilio (so it doesn't
+    // retry) — `extracted_demand` is left NULL and the
+    // /api/admin/whatsapp/extract-backfill endpoint can pick it up later.
+    let demand: ExtractedDemand | null = null;
+    try {
+      demand = await extractDemand(body, matchedCompanyName);
+      if (insertedThread?.id) {
+        await supabase
+          .from('outreach_threads')
+          .update({ extracted_demand: demand })
+          .eq('id', insertedThread.id);
+      }
+    } catch (extractError) {
+      console.error('WhatsApp demand extraction failed:', getErrorMessage(extractError));
+    }
+
+    // If the buyer signaled a real demand, surface that in the notification so
+    // the user sees "BUYS: black pepper" in the bell, not just the raw text.
+    const notifTitle = demand?.has_demand && demand.product
+      ? `${matchedCompanyName} wants ${demand.product}`
+      : `WhatsApp from ${matchedCompanyName}`;
+    const notifLink = demand?.has_demand ? '/dashboard' : '/dashboard/outreach';
+
     await supabase.from('notifications').insert({
       org_id: orgId,
       type: 'whatsapp_message',
-      title: `WhatsApp from ${matchedCompanyName}`,
+      title: notifTitle,
       body: body.length > 80 ? `${body.slice(0, 80)}...` : body,
-      link: `/dashboard/outreach`,
+      link: notifLink,
       is_read: false,
     });
 
