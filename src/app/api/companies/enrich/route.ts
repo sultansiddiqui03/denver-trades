@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { generateJSON } from '@/lib/ai/gemini';
+import { computeAndStoreCompanyEmbedding } from '@/lib/ai/embedCompany';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
 import { parseBody } from '@/lib/validation';
@@ -98,7 +99,23 @@ Current Description: ${company.description || 'None'}`;
 
     if (updateError) throw updateError;
 
-    return NextResponse.json({ success: true, company: updated });
+    // Recompute the company embedding using the freshly enriched fields so
+    // it becomes searchable via /api/search/semantic. Failures here (missing
+    // OPENAI_API_KEY, provider hiccup) must NOT roll back the enrichment —
+    // log + surface a flag so the caller can decide what to show.
+    let embeddingFailed = false;
+    try {
+      await computeAndStoreCompanyEmbedding(supabase, companyId);
+    } catch (embedError) {
+      embeddingFailed = true;
+      console.error('Enrich: embedding compute/store failed:', embedError);
+    }
+
+    return NextResponse.json({
+      success: true,
+      company: updated,
+      embedding_failed: embeddingFailed,
+    });
   } catch (error: unknown) {
     console.error('Enrich API error:', error);
     return NextResponse.json(
