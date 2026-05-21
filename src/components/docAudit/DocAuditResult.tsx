@@ -27,13 +27,13 @@ export default function DocAuditResult({ result }: DocAuditResultProps) {
   return (
     <div className={styles.resultPanel}>
       <div className={styles.resultHeader}>
-        <h3>Compliance Scan Results</h3>
+        <h3>Compliance scan results</h3>
         <span
           className={`${styles.statusBadge} ${
             isCompliant ? styles.statusPass : styles.statusFail
           }`}
         >
-          {isCompliant ? 'Compliant' : `${count} Discrepanc${count === 1 ? 'y' : 'ies'} Found`}
+          {isCompliant ? 'Compliant' : `${count} discrepanc${count === 1 ? 'y' : 'ies'} found`}
         </span>
       </div>
       <p className={styles.summaryText}>{result.summary}</p>

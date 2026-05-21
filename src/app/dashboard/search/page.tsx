@@ -27,6 +27,8 @@ const suggestions = [
   'Robusta coffee suppliers',
 ];
 
+const TOAST_ENRICH_FAIL = 'Enrichment failed — check Claude/Gemini keys';
+
 export default function SearchWorkspace() {
   const { toast } = useToast();
   const [query, setQuery] = useState('');
@@ -88,13 +90,13 @@ export default function SearchWorkspace() {
         setCompanies(prev =>
           prev.map(c => (c.id === id ? { ...c, ...data.company, is_enriched: true } : c))
         );
-        toast(`${data.company.name} enriched with AI intelligence`, 'success');
+        toast(`${data.company.name} enriched`, 'success');
       } else {
-        toast(data.error || 'Enrichment failed', 'error');
+        toast(data.error || TOAST_ENRICH_FAIL, 'error');
       }
     } catch (err) {
       console.error('Enrichment error:', err);
-      toast('Failed to enrich company. Check your API keys.', 'error');
+      toast(TOAST_ENRICH_FAIL, 'error');
     } finally {
       setEnrichingId(null);
     }
@@ -114,9 +116,9 @@ export default function SearchWorkspace() {
     <div className={`${styles.searchContainer} fade-in`}>
       {/* Header */}
       <div className={styles.searchHeader}>
-        <h1 className={styles.searchTitle}>AI Search Workspace</h1>
+        <h1 className={styles.searchTitle}>AI search</h1>
         <span className={styles.searchSubtitle}>
-          Query global buyer directories and import databases using natural language powered by Gemini.
+          Query global buyer directories in plain English. Powered by Gemini.
         </span>
       </div>
 
@@ -130,18 +132,19 @@ export default function SearchWorkspace() {
           <input
             type="text"
             className={styles.searchInput}
-            placeholder="Describe who you want to find (e.g. 'Pepper buyers in Jebel Ali UAE')"
+            placeholder="Describe who you want to find — e.g. pepper buyers in Jebel Ali"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            aria-label="Search query"
           />
           <button type="submit" className={styles.searchBtn} disabled={loading}>
-            {loading ? 'Searching...' : 'Search'}
+            {loading ? 'Searching…' : 'Search'}
           </button>
         </div>
 
         {/* Suggestions */}
         <div className={styles.suggestionsRow}>
-          <span className={styles.suggestionLabel}>Try:</span>
+          <span className={styles.suggestionLabel}>Try</span>
           {suggestions.map((sug) => (
             <button
               key={sug}
@@ -159,7 +162,7 @@ export default function SearchWorkspace() {
       <div className={styles.resultsSection}>
         <div className={styles.resultsMeta}>
           <span className={styles.resultsCount}>
-            Found {filteredCompanies.length} matching entities
+            {filteredCompanies.length} {filteredCompanies.length === 1 ? 'match' : 'matches'}
           </span>
 
           <button
@@ -190,8 +193,9 @@ export default function SearchWorkspace() {
               className={styles.filterSelect}
               value={filterCountry}
               onChange={(e) => setFilterCountry(e.target.value)}
+              aria-label="Filter by country"
             >
-              <option value="All">All Countries</option>
+              <option value="All">All countries</option>
               {uniqueCountries.map(country => (
                 <option key={country} value={country}>{country}</option>
               ))}
@@ -201,8 +205,9 @@ export default function SearchWorkspace() {
               className={styles.filterSelect}
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
+              aria-label="Filter by company type"
             >
-              <option value="All">All Types</option>
+              <option value="All">All types</option>
               <option value="Importer">Importer</option>
               <option value="Exporter">Exporter</option>
             </select>
@@ -217,9 +222,9 @@ export default function SearchWorkspace() {
           </div>
         ) : filteredCompanies.length === 0 ? (
           <EmptyState
-            title="No Companies Found"
-            description="Try a different search query like 'Pepper exporters in Vietnam' or run the Lead Scraper Agent to discover new companies."
-            actionLabel="Run Lead Scraper"
+            title="No companies found"
+            description="Try a different query like 'pepper exporters in Vietnam', or run the lead scraper to discover new companies."
+            actionLabel="Run lead scraper"
             onAction={() => window.location.href = '/dashboard/agents'}
           />
         ) : (
@@ -241,7 +246,7 @@ export default function SearchWorkspace() {
                     </div>
                   </div>
                   <div className={styles.scoreBadge}>
-                    {Math.round(c.confidence_score * 100)}% Match
+                    {Math.round(c.confidence_score * 100)}% match
                   </div>
                 </div>
 
@@ -259,7 +264,7 @@ export default function SearchWorkspace() {
 
                   <div className={styles.shipmentsSummary}>
                     <div className={styles.shipmentValue}>
-                      {c.description || 'No detailed dossier information compiled.'}
+                      {c.description || 'No dossier details yet — enrich to populate.'}
                     </div>
                   </div>
                 </div>
@@ -269,7 +274,7 @@ export default function SearchWorkspace() {
                     type="button"
                     className={`${styles.favoriteBtn} ${c.is_favorited ? styles.favoriteActive : ''}`}
                     onClick={() => handleFavoriteToggle(c.id, c.is_favorited)}
-                    aria-label="Star lead"
+                    aria-label={c.is_favorited ? 'Unstar lead' : 'Star lead'}
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill={c.is_favorited ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -279,7 +284,7 @@ export default function SearchWorkspace() {
                   <div className={styles.actionRow}>
                     {c.is_enriched ? (
                       <Link href={`/dashboard/companies/${c.id}`} className="btn-secondary">
-                        View Dossier
+                        View dossier
                       </Link>
                     ) : (
                       <button
@@ -288,7 +293,7 @@ export default function SearchWorkspace() {
                         disabled={enrichingId === c.id}
                         onClick={() => handleEnrich(c.id)}
                       >
-                        {enrichingId === c.id ? 'Enriching...' : 'Enrich Company'}
+                        {enrichingId === c.id ? 'Enriching…' : 'Enrich company'}
                       </button>
                     )}
                   </div>

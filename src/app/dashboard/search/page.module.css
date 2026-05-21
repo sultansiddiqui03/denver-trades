@@ -302,6 +302,20 @@
   }
 }
 
+@media (max-width: 600px) {
+  .searchTitle {
+    font-size: 1.5rem;
+  }
+
+  .searchBoxCard {
+    padding: var(--space-4);
+  }
+
+  .resultCard {
+    padding: var(--space-4);
+  }
+}
+
 @media (max-width: 500px) {
   .inputGroup {
     flex-direction: column;
@@ -317,5 +331,15 @@
 
   .searchInput {
     padding-right: var(--space-4);
+  }
+
+  .cardActions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .actionRow {
+    justify-content: flex-end;
   }
 }

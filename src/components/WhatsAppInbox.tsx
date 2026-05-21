@@ -118,15 +118,15 @@ export default function WhatsAppInbox() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to dispatch Twilio WhatsApp message via server route');
+        throw new Error('WhatsApp send failed');
       }
 
       setNewMessage('');
       void fetchMessages();
-      toast('WhatsApp message sent', 'success');
+      toast('Message sent', 'success');
     } catch (err) {
       console.error('Error sending message:', err);
-      toast('Failed to send WhatsApp message', 'error');
+      toast('WhatsApp send failed — check Twilio credentials', 'error');
     } finally {
       setLoading(false);
     }
@@ -174,8 +174,8 @@ export default function WhatsAppInbox() {
       {/* Sidebar: Contacts */}
       <div className={styles.sidebar}>
         <div className={styles.sidebarHeader}>
-          <h3>Active Threads</h3>
-          <span className={styles.activeBadge}>2 Online</span>
+          <h3>Active threads</h3>
+          <span className={styles.activeBadge}>2 online</span>
         </div>
         <div className={styles.contactList}>
           {contacts.map((contact) => (
@@ -204,7 +204,7 @@ export default function WhatsAppInbox() {
             <p className={styles.subtext}>{selectedContact.companyName} • {selectedContact.phone}</p>
           </div>
           <div className={styles.statusIndicator}>
-            <span className={styles.dot}></span> Verified WhatsApp Sandbox
+            <span className={styles.dot}></span> WhatsApp sandbox verified
           </div>
         </div>
 
@@ -233,7 +233,7 @@ export default function WhatsAppInbox() {
             </>
           ) : currentChatMessages.length === 0 ? (
             <div className={styles.emptyChat}>
-              <p>No messages yet. Send a message to start the trade negotiation.</p>
+              <p>No messages yet. Send one to start the negotiation.</p>
             </div>
           ) : (
             currentChatMessages.map((msg) => (
@@ -262,14 +262,15 @@ export default function WhatsAppInbox() {
         <form onSubmit={handleSend} className={styles.inputArea}>
           <input
             type="text"
-            placeholder={`Type a WhatsApp message to ${selectedContact.name}...`}
+            placeholder={`Message ${selectedContact.name}…`}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             disabled={loading}
             className={styles.input}
+            aria-label={`Message ${selectedContact.name}`}
           />
           <button type="submit" className={styles.sendButton} disabled={loading || !newMessage.trim()}>
-            Send Message
+            Send
           </button>
         </form>
       </div>
@@ -277,16 +278,17 @@ export default function WhatsAppInbox() {
       {/* Simulator Panel (Side panel for easy testing) */}
       <div className={styles.simulatorPanel}>
         <div className={styles.simHeader}>
-          <h4>Inbound Webhook Simulator</h4>
-          <p>Simulate customer replies hitting your Twilio webhook handler.</p>
+          <h4>Inbound simulator</h4>
+          <p>Post a fake reply to your Twilio webhook handler.</p>
         </div>
         <div className={styles.simBody}>
-          <label className={styles.label}>Reply as {selectedContact.name}:</label>
+          <label className={styles.label}>Reply as {selectedContact.name}</label>
           <textarea
             className={styles.simTextarea}
-            placeholder='e.g., "Yes, we agree to CIF Jebel Ali terms. Please send the contract draft."'
+            placeholder='e.g. "Yes, we agree to CIF Jebel Ali terms. Send the contract draft."'
             value={simulatedInbound}
             onChange={(e) => setSimulatedInbound(e.target.value)}
+            aria-label={`Simulated inbound message from ${selectedContact.name}`}
           />
           <button
             type="button"
@@ -294,7 +296,7 @@ export default function WhatsAppInbox() {
             onClick={handleSimulateInbound}
             disabled={!simulatedInbound.trim()}
           >
-            Simulate Inbound Message
+            Post inbound message
           </button>
         </div>
       </div>

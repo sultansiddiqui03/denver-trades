@@ -281,6 +281,7 @@
 .shipmentsTable {
   width: 100%;
   border-collapse: collapse;
+  min-width: 560px;
 }
 
 .shipmentsTable th {
@@ -290,6 +291,7 @@
   color: var(--text-muted);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-primary);
+  white-space: nowrap;
 }
 
 .shipmentsTable td {
@@ -301,6 +303,50 @@
 
 .shipmentsTable tr:last-child td {
   border-bottom: none;
+}
+
+@media (max-width: 768px) {
+  .dossierHeaderCard {
+    padding: var(--space-5);
+    gap: var(--space-4);
+  }
+
+  .companyName {
+    font-size: 1.75rem;
+  }
+
+  .headerMetrics {
+    width: 100%;
+  }
+
+  .metricBadge {
+    flex: 1;
+  }
+
+  .tabsContainer,
+  .sideCard {
+    padding: var(--space-4);
+  }
+
+  .tabsList {
+    overflow-x: auto;
+    gap: var(--space-4);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tabItem {
+    white-space: nowrap;
+    font-size: 0.875rem;
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .contactRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 /* Side Card: Summary / Tools */

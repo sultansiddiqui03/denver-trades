@@ -84,7 +84,7 @@ export default function DocColumn({
             <div className={styles.fileMeta}>
               <p className={styles.fileName}>{file.name}</p>
               <p className={styles.fileSize}>
-                {(file.size / 1024).toFixed(1)} KB · Attached
+                {(file.size / 1024).toFixed(1)} KB · attached
               </p>
             </div>
             <button
@@ -103,7 +103,7 @@ export default function DocColumn({
           <div className={styles.dropPrompt}>
             <Upload size={28} strokeWidth={1.5} aria-hidden />
             <p>{dropPromptText}</p>
-            <span className={styles.fileSupport}>Supports PDF, images, TXT</span>
+            <span className={styles.fileSupport}>PDF, image, or text file</span>
           </div>
         )}
       </div>

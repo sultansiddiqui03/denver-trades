@@ -109,8 +109,8 @@ export default function NotificationCenter() {
         <div className={styles.dropdown}>
           <div className={styles.dropdownHeader}>
             <h4 className={styles.dropdownTitle}>Notifications</h4>
-            <button className={styles.markReadBtn} onClick={() => setUnread(0)}>
-              Mark all read
+            <button className={styles.markReadBtn} onClick={() => setUnread(0)} type="button">
+              Mark all as read
             </button>
           </div>
 
@@ -134,7 +134,7 @@ export default function NotificationCenter() {
                 ))}
               </>
             ) : items.length === 0 ? (
-              <div className={styles.emptyNotif}>No notifications yet</div>
+              <div className={styles.emptyNotif}>You&apos;re all caught up</div>
             ) : (
               items.map((item) => (
                 <div key={item.id} className={styles.notifItem}>

@@ -88,7 +88,7 @@ export default function DashboardOverview() {
     <div className="fade-in">
       {/* Header */}
       <div className={styles.headerSection}>
-        <h1 className={styles.welcomeTitle}>Welcome Back, Sultan Trades</h1>
+        <h1 className={styles.welcomeTitle}>Welcome back</h1>
         <span className={styles.dateSubtitle}>{currentDate}</span>
       </div>
 
@@ -104,7 +104,7 @@ export default function DashboardOverview() {
         ) : (
           <>
             <StatsCard
-              title="Total Companies"
+              title="Total companies"
               value={stats?.totalCompanies?.toLocaleString() ?? '0'}
               change="Live from database"
               changeType="neutral"
@@ -118,7 +118,7 @@ export default function DashboardOverview() {
               }
             />
             <StatsCard
-              title="Active Deals"
+              title="Active deals"
               value={stats?.activeDeals?.toLocaleString() ?? '0'}
               change="Live from pipeline"
               changeType="neutral"
@@ -133,7 +133,7 @@ export default function DashboardOverview() {
               }
             />
             <StatsCard
-              title="Pipeline Value"
+              title="Pipeline value"
               value={stats?.pipelineValue ?? '$0'}
               change="Live from deals"
               changeType="neutral"
@@ -146,7 +146,7 @@ export default function DashboardOverview() {
               }
             />
             <StatsCard
-              title="Enriched Leads"
+              title="Enriched leads"
               value={stats?.enrichedLeads?.toLocaleString() ?? '0'}
               change="AI-enriched companies"
               changeType="neutral"
@@ -172,7 +172,7 @@ export default function DashboardOverview() {
                 <line x1="12" y1="20" x2="12" y2="4" />
                 <line x1="6" y1="20" x2="6" y2="14" />
               </svg>
-              Recent Operations Log
+              Recent activity
             </h2>
           </div>
 
@@ -186,7 +186,7 @@ export default function DashboardOverview() {
             </div>
           ) : activities.length === 0 ? (
             <EmptyState
-              title="No Recent Activity"
+              title="No recent activity"
               description="Run an agent, send a WhatsApp message, or audit a document to see activity here."
               icon={
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4 }}>
@@ -230,15 +230,15 @@ export default function DashboardOverview() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
               </svg>
-              Quick Tools
+              Quick tools
             </h2>
           </div>
 
           <div className={styles.quickActionsCard}>
             <Link href="/dashboard/search" className={styles.actionBtn}>
               <div className={styles.actionBtnText}>
-                <span className={styles.actionTitle}>AI Buyer Search</span>
-                <span className={styles.actionDesc}>Find verified global importers using natural language</span>
+                <span className={styles.actionTitle}>AI buyer search</span>
+                <span className={styles.actionDesc}>Find verified importers using natural language</span>
               </div>
               <svg className={styles.actionArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6" />
@@ -247,8 +247,8 @@ export default function DashboardOverview() {
 
             <Link href="/dashboard/documents" className={styles.actionBtn}>
               <div className={styles.actionBtnText}>
-                <span className={styles.actionTitle}>Document Audit Copilot</span>
-                <span className={styles.actionDesc}>Compare trade PDFs against Letters of Credit requirements</span>
+                <span className={styles.actionTitle}>Document audit</span>
+                <span className={styles.actionDesc}>Compare B/L against L/C terms</span>
               </div>
               <svg className={styles.actionArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6" />
@@ -257,8 +257,8 @@ export default function DashboardOverview() {
 
             <Link href="/dashboard/outreach" className={styles.actionBtn}>
               <div className={styles.actionBtnText}>
-                <span className={styles.actionTitle}>Generate AI Outreach</span>
-                <span className={styles.actionDesc}>Draft automated emails and WhatsApp messages in buyer&#39;s language</span>
+                <span className={styles.actionTitle}>Generate outreach</span>
+                <span className={styles.actionDesc}>Draft emails and WhatsApp messages in the buyer&apos;s language</span>
               </div>
               <svg className={styles.actionArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6" />

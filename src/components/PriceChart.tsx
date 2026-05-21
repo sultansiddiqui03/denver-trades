@@ -114,7 +114,7 @@ export default function PriceChart() {
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.selectorGroup}>
-          <label htmlFor="commodity-select" className={styles.label}>Select Commodity Index:</label>
+          <label htmlFor="commodity-select" className={styles.label}>Commodity</label>
           <select
             id="commodity-select"
             className={styles.select}
@@ -136,7 +136,7 @@ export default function PriceChart() {
           onClick={triggerPriceTick}
           disabled={updating || loading}
         >
-          {updating ? 'Updating prices...' : 'Simulate Market Price Tick'}
+          {updating ? 'Pulling prices…' : 'Simulate price tick'}
         </button>
       </div>
 
@@ -155,14 +155,14 @@ export default function PriceChart() {
         </div>
       ) : chartData.length === 0 ? (
         <div className={styles.chartFallback}>
-          <p>No pricing records yet for {selectedCommodity || 'this commodity'}. Trigger a price tick or wait for the next cron.</p>
+          <p>No price records yet for {selectedCommodity || 'this commodity'}. Trigger a price tick or wait for the next cron.</p>
         </div>
       ) : (
         <div className={styles.dashboardGrid}>
           {/* Main Chart Area */}
           <div className={styles.chartArea}>
             <div className={styles.chartHeading}>
-              <h4>{hasEnoughForChart ? 'Historical Trend' : 'Latest Tick'}</h4>
+              <h4>{hasEnoughForChart ? 'Historical trend' : 'Latest tick'}</h4>
               <span className={styles.sourceText}>Source: {latestRecord?.source || 'Exchange'}</span>
             </div>
 
@@ -171,7 +171,7 @@ export default function PriceChart() {
                 <PriceLineChart data={chartData} />
               ) : (
                 <div className={styles.singlePointPlaceholder}>
-                  Need at least 2 ticks to draw a line. Trigger another price tick to see a trend.
+                  Need at least 2 ticks to draw a trend line. Trigger another price tick.
                 </div>
               )}
             </div>
@@ -181,7 +181,7 @@ export default function PriceChart() {
           {latestRecord && (
             <div className={styles.infoCol}>
               <div className={styles.card}>
-                <span className={styles.cardLabel}>Latest Value</span>
+                <span className={styles.cardLabel}>Latest value</span>
                 <div className={styles.priceVal}>
                   ${Number(latestRecord.price_usd).toLocaleString()} <span className={styles.unit}>USD / {latestRecord.unit}</span>
                 </div>
@@ -191,12 +191,12 @@ export default function PriceChart() {
               </div>
 
               <div className={styles.card}>
-                <span className={styles.cardLabel}>Update Latency</span>
+                <span className={styles.cardLabel}>Feed status</span>
                 <div className={styles.statusVal}>
-                  <span className={styles.pulseDot}></span> Live Feed Syncing
+                  <span className={styles.pulseDot}></span> Live feed syncing
                 </div>
                 <span className={styles.timestamp}>
-                  Last updated: {new Date(latestRecord.recorded_at).toLocaleTimeString()}
+                  Last updated {new Date(latestRecord.recorded_at).toLocaleTimeString()}
                 </span>
               </div>
             </div>

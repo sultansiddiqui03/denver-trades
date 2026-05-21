@@ -8,9 +8,9 @@ export default function DocumentAudit() {
   return (
     <div className={`${styles.docsContainer} fade-in`}>
       <div className={styles.docsHeader}>
-        <h1 className={styles.docsTitle}>Document Compliance Audit</h1>
+        <h1 className={styles.docsTitle}>Document audit</h1>
         <p className="text-secondary" style={{ fontSize: '0.875rem' }}>
-          Instantly audit trade documents (Bill of Lading, Invoices, Packing Lists) against Letter of Credit terms to guarantee compliance using Gemini-2.5-Flash.
+          Check B/Ls, invoices, and packing lists against L/C terms. Powered by Gemini.
         </p>
       </div>
 
