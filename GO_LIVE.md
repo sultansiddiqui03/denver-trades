@@ -40,6 +40,56 @@ vercel redeploy --prod
 
 ---
 
+## 1b. Recovering an orphaned Apify run (only when needed)
+
+If an Apify scrape finishes but its webhook never lands (callback-URL drift, secret rotation, transient Apify outage), the dataset sits in Apify with real leads and the matching `agent_runs` row stays stuck on **Running**. Instead of hand-writing SQL to import the rows, hit the admin replay endpoint — it reuses the same enrichment + insert + embedding path the webhook uses.
+
+### When to use it
+- An agent run has been **Running** for more than ~5 minutes (the lazy timeout sweep usually flips long-running rows to Failed on the next dispatch — replay still works on the Failed→retry flow only if you first reset its status; see "Idempotency" below).
+- You can see the dataset in https://console.apify.com → **Storage** → **Datasets** with items in it.
+
+### Find the dataset ID
+Apify console → **Storage** → **Datasets** → click the row tied to the broken run. The ID looks like `ffeKO5Oq7meoNAXLf` and shows in the URL and the right-hand panel.
+
+### Call the endpoint
+
+```bash
+curl -X POST https://denver-trades.vercel.app/api/admin/apify/replay \
+  -H "Authorization: Bearer $CRON_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"agentRunId":"<uuid-of-agent_runs-row>","datasetId":"<apify-dataset-id>"}'
+```
+
+Expected response on success:
+```json
+{ "success": true, "processed": 5, "created": 5, "datasetId": "...", "agentRunId": "..." }
+```
+
+### Idempotency
+The endpoint refuses to replay any run whose status is already `Success` or `Failed` — it returns **409** `{ "success": false, "error": "Run already terminal — refusing to replay" }`. To intentionally re-run a previously terminal row, flip it back to `Running` first:
+
+```sql
+UPDATE agent_runs
+SET status = 'Running', completed_at = NULL, error_log = NULL
+WHERE id = '<uuid>';
+```
+…then re-issue the curl above.
+
+### Backfill missing embeddings
+
+If a batch of companies was created while `OPENAI_API_KEY` was missing (or any provider hiccup happened), their `embedding` column is null and they won't appear in `/api/search/semantic` results. Backfill them with:
+
+```bash
+curl -X POST https://denver-trades.vercel.app/api/admin/embeddings/backfill \
+  -H "Authorization: Bearer $CRON_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"limit": 100}'    # body optional; default limit = 50, max 500
+```
+
+It picks up any company row with `embedding IS NULL`, recomputes the vector via OpenAI, and writes it back. Individual failures are logged and returned in the `errors` array — they don't abort the batch.
+
+---
+
 ## 2. Wire your Twilio WhatsApp number to the org (2 min)
 
 So inbound messages route correctly. Get your `TWILIO_WHATSAPP_NUMBER` value from Vercel (format `whatsapp:+14155238886`) and run via the Supabase SQL editor:
