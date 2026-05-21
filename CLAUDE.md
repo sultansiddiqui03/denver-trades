@@ -130,3 +130,21 @@ When the time comes to flip things on (Vercel AI Gateway, Vercel KV for distribu
   - **`lucide-react`** is the canonical icon library — replaced ~20 hand-rolled SVGs across [Sidebar.tsx](src/components/Sidebar.tsx), [layout.tsx](src/app/dashboard/layout.tsx), [CommandPalette.tsx](src/components/CommandPalette.tsx), [EmptyState.tsx](src/components/EmptyState.tsx). Convention: `size={20} strokeWidth={1.6}` for nav, `size={18}` inline.
   - **[TopBarUser.tsx](src/components/TopBarUser.tsx)** owns the avatar/profile section in the topbar — reads real `users` row + joined `organizations.name` via the browser Supabase client; shows skeleton until loaded; no more hardcoded "Sultan Trades / Owner".
   - **Toast already uses real SVGs** — left as-is since the icons are valid and replacing would be churn for no visible gain.
+- **2026-05-21** — **Go-live bundle** shipped (commits `c4a3bee` + `94912db` merge + `5396f73` merge):
+  - **Lead Scraper webhook fix root cause**: Apify only registers ad-hoc webhooks from the `webhooks=` query parameter (URL-safe base64 JSON), NEVER from the request body. Our prior code put webhooks in the body alongside `searchStringsArray` and Apify silently dropped them. Fix in `7e2ce28`. Documented in [src/app/api/agents/run/route.ts](src/app/api/agents/run/route.ts) `dispatchLeadScraper`.
+  - **5 leads backfilled via raw SQL** for the orphan from dataset `ffeKO5Oq7meoNAXLf` (West India Coffee, VendiBean, Coffeeco India, Venino Coffee, Atlas Coffee). One-shot — the new admin endpoint replaces this for future orphans.
+  - **NEW: admin escape hatches** (Bearer-auth via `CRON_SECRET`):
+    - `POST /api/admin/apify/replay` — re-runs the Gemini-enrich + companies-insert + embed pipeline against an existing `agent_runs` row + Apify dataset id. Refuses 409 on a row that's already terminal.
+    - `POST /api/admin/embeddings/backfill` — computes pgvector embeddings for any companies with `embedding IS NULL`. Optional `{ limit }` body, default 50, cap 500.
+    - Shared `enrichAndInsertScrapedItems` helper at [src/lib/agents/apifyReplay.ts](src/lib/agents/apifyReplay.ts) — used by both the live webhook receiver and the replay endpoint so they can never drift.
+  - **NEW: user-context replay proxy** at [src/app/api/agents/replay-apify/route.ts](src/app/api/agents/replay-apify/route.ts) — lets the signed-in user click "Replay" on a Failed run in the UI without exposing `CRON_SECRET` to the client.
+  - **Agents dashboard UX** ([AgentDashboard.tsx](src/components/AgentDashboard.tsx)):
+    - `<details>` disclosure on Failed rows surfaces first 400 chars of `error_log` (red monospace).
+    - Apify dataset chip on Lead Scraper Success rows (`Apify: ffeKO5Oq…`).
+    - Replay button on Failed Lead Scraper runs with a dataset id parsed from `error_log` (regex `/dataset(?:\s+|:)([a-zA-Z0-9_-]{10,})/i`).
+    - Persistent dismissible amber banner when `mode === 'simulation'` arrives (localStorage key `denver-trades.agents.sim-banner-dismissed`).
+  - **Companies directory at `/dashboard/companies`** ([page.tsx](src/app/dashboard/companies/page.tsx)) — new server-rendered page listing all org companies. Sidebar gained the nav item. Empty state with two CTAs.
+  - **Search page polish** ([search/page.tsx](src/app/dashboard/search/page.tsx)) — lucide icons throughout, product chips with `+N more`, target=_blank rel=noopener on websites, company name links to dossier, persistent favorite via new `POST /api/companies/favorite`, three differentiated empty states.
+  - **Topbar profile menu** ([TopBarUser.tsx](src/components/TopBarUser.tsx)) — avatar is now a button opening a Settings/Sign-out dropdown wired to the existing `signOut` server action.
+  - **Notification center** — switched to lucide `Bell` + tracks unread vs a localStorage timestamp (`denver:notif-last-seen`) instead of flagging every fetch as new.
+  - **Known follow-up:** `/dashboard/companies/[id]` still shows hardcoded mock data — needs server-component conversion against the DB. Out of scope for go-live; tracked.
