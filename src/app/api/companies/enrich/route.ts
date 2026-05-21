@@ -7,14 +7,25 @@ import { getErrorMessage } from '@/lib/errors';
 import { parseBody } from '@/lib/validation';
 import { rateLimitOrThrow } from '@/lib/security/rateLimit';
 
-interface EnrichmentResult {
-  description: string;
-  products_dealt: string[];
-  origin_countries: string[];
-  destination_countries: string[];
-  contacts: { name: string; role: string; email: string | null; phone: string | null }[];
-  tags: string[];
-}
+const EnrichmentResultSchema = z.object({
+  description: z.string().default(''),
+  products_dealt: z.array(z.string()).default([]),
+  origin_countries: z.array(z.string()).default([]),
+  destination_countries: z.array(z.string()).default([]),
+  contacts: z
+    .array(
+      z.object({
+        name: z.string(),
+        role: z.string(),
+        email: z.string().nullable(),
+        phone: z.string().nullable(),
+      })
+    )
+    .default([]),
+  tags: z.array(z.string()).default([]),
+});
+
+type EnrichmentResult = z.infer<typeof EnrichmentResultSchema>;
 
 const EnrichSchema = z.object({
   companyId: z.string().uuid('companyId must be a UUID'),
@@ -81,8 +92,9 @@ Current Products: ${(company.products_dealt || []).join(', ') || 'None listed'}
 Website: ${company.website || 'None'}
 Current Description: ${company.description || 'None'}`;
 
-    const enriched: EnrichmentResult = await generateJSON<EnrichmentResult>(
+    const enriched: EnrichmentResult = await generateJSON(
       prompt,
+      EnrichmentResultSchema,
       systemPrompt
     );
 

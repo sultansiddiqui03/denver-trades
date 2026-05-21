@@ -7,16 +7,18 @@ import { parseBody } from '@/lib/validation';
 import { rateLimitOrThrow } from '@/lib/security/rateLimit';
 import type { Json } from '@/lib/supabase/database.types';
 
-interface Discrepancy {
-  severity: 'HIGH' | 'WARNING' | 'INFO';
-  category: string;
-  description: string;
-}
+const DiscrepancySchema = z.object({
+  severity: z.enum(['HIGH', 'WARNING', 'INFO']),
+  category: z.string(),
+  description: z.string(),
+});
 
-interface AuditResponse {
-  discrepancies: Discrepancy[];
-  summary: string;
-}
+const AuditResponseSchema = z.object({
+  discrepancies: z.array(DiscrepancySchema).default([]),
+  summary: z.string().default(''),
+});
+
+type AuditResponse = z.infer<typeof AuditResponseSchema>;
 
 const FileSchema = z.object({
   base64: z.string().min(1),
@@ -102,7 +104,7 @@ Text B: ${text_b || ''}
         files.push({ base64: file_b.base64, mimeType: file_b.mimeType });
       }
 
-      auditResult = await generateMultimodalJSON<AuditResponse>(prompt, files, systemPrompt);
+      auditResult = await generateMultimodalJSON(prompt, files, AuditResponseSchema, systemPrompt);
     } else {
       const prompt = `
 === DOCUMENT A (${doc_type_a}) ===
@@ -111,7 +113,7 @@ ${text_a}
 === DOCUMENT B (${doc_type_b}) ===
 ${text_b}
 `;
-      auditResult = await generateJSON<AuditResponse>(prompt, systemPrompt);
+      auditResult = await generateJSON(prompt, AuditResponseSchema, systemPrompt);
     }
 
     // Save to document_audits table

@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { generateJSON } from '@/lib/ai/gemini';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
 import { rateLimitOrThrow } from '@/lib/security/rateLimit';
 
-interface ParsedQuery {
-  keywords?: string[];
-  countries?: string[];
-  type?: 'Importer' | 'Exporter' | 'Broker' | null;
-}
+const ParsedQuerySchema = z.object({
+  keywords: z.array(z.string()).default([]),
+  countries: z.array(z.string()).default([]),
+  type: z.enum(['Importer', 'Exporter', 'Broker']).nullable().default(null),
+});
+type ParsedQuery = z.infer<typeof ParsedQuerySchema>;
 
 export async function GET(request: Request) {
   try {
@@ -50,8 +52,9 @@ Format as JSON:
   "type": "Importer" or "Exporter" or "Broker" or null
 }`;
 
-    const parsed: ParsedQuery = await generateJSON<ParsedQuery>(
+    const parsed: ParsedQuery = await generateJSON(
       `Parse the following search query: "${query}"`,
+      ParsedQuerySchema,
       systemPrompt
     );
 
