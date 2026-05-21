@@ -103,7 +103,17 @@ WHERE id = '<uuid>';
 
 ### Backfill missing embeddings
 
-If a batch of companies was created while `OPENAI_API_KEY` was missing (or any provider hiccup happened), their `embedding` column is null and they won't appear in `/api/search/semantic` results. Backfill them with:
+If a batch of companies was created while `OPENAI_API_KEY` was missing (or any provider hiccup happened), their `embedding` column is null and they won't appear in `/api/search/semantic` results. Two ways to backfill:
+
+**Option A — from your browser (signed-in, no terminal):** open https://denver-trades.vercel.app/dashboard on any page where you're logged in, hit `F12` to open dev tools, paste this into the Console:
+
+```js
+fetch('/api/agents/backfill-embeddings', { method: 'POST' }).then(r => r.json()).then(console.log)
+```
+
+Within ~5s the console logs `{ success: true, processed: N, embedded: N, failed: 0, errors: [] }`. The user-context proxy calls the admin endpoint server-side with `CRON_SECRET` from Vercel env, so the secret never reaches the browser.
+
+**Option B — from any terminal:**
 
 ```bash
 curl -X POST https://denver-trades.vercel.app/api/admin/embeddings/backfill \
@@ -112,7 +122,7 @@ curl -X POST https://denver-trades.vercel.app/api/admin/embeddings/backfill \
   -d '{"limit": 100}'    # body optional; default limit = 50, max 500
 ```
 
-It picks up any company row with `embedding IS NULL`, recomputes the vector via OpenAI, and writes it back. Individual failures are logged and returned in the `errors` array — they don't abort the batch.
+Either way: the endpoint picks up any company row with `embedding IS NULL`, recomputes the vector via OpenAI, and writes it back. Individual failures are logged and returned in the `errors` array — they don't abort the batch.
 
 ---
 
