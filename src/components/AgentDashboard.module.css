@@ -494,6 +494,80 @@
   animation: spin 1s linear infinite;
 }
 
+/* ───── Inline leads drill-down (Lead Scraper success rows) ───── */
+
+.detailLayout {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.detailMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.expandBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 4px var(--space-3);
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.expandBtn:hover {
+  border-color: var(--border-hover);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+}
+
+.expandBtn:focus-visible {
+  outline: 2px solid var(--accent-lime);
+  outline-offset: 2px;
+}
+
+/* When the inline preview is open, soften the parent row's bottom border so
+   the preview reads as an extension of the row, not a separate block. */
+.rowExpanded td {
+  border-bottom-color: transparent;
+}
+
+/* The leads-row is a sibling <tr> rendered immediately after the data row.
+   We collapse it with `grid-template-rows` instead of `max-height` because
+   that gives us a true content-driven open size — important when the inline
+   preview swaps between skeletons (small) and 5 populated cards (taller). */
+.leadsRow > .leadsCell {
+  padding: 0;
+  border-bottom: 1px solid var(--border-primary);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.leadsInner {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--transition-base);
+}
+
+.leadsInner > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.leadsRowOpen .leadsInner {
+  grid-template-rows: 1fr;
+}
+
 /* ───── Replay confirmation modal ───── */
 
 .modalOverlay {

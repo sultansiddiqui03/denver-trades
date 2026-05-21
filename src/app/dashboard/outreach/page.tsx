@@ -19,27 +19,17 @@ export default function OutreachCenterPage() {
 
 function OutreachCenter() {
   const searchParams = useSearchParams();
-  // Dossier "Generate outreach" button lands here with ?companyName=... so
-  // the recipient field is pre-filled. companyId is round-tripped via the
-  // URL for future use (e.g. attaching the draft to a deal).
+  // Two entry points land here with prefill query params:
+  //   - Dossier "Generate outreach" → ?companyId=...&companyName=...
+  //   - Active Demand "Generate quote →" → ?companyId=...&product=...
+  // companyId is round-tripped through the URL for future use (attaching
+  // the draft to a deal, hydrating extra fields from /api/companies/:id).
   const initialName =
     searchParams.get('companyName') ?? 'Al-Rashid Foodstuff Trading LLC';
+  const initialProduct =
+    searchParams.get('product') ?? 'Black Pepper 550g/l ASTA';
   const [recipientName, setRecipientName] = useState(initialName);
-
-  // Sync the recipient input when the URL changes (e.g. user navigates from
-  // a different dossier). The project's react-hooks/set-state-in-effect
-  // rule disallows direct setState inside effects — defer into a microtask
-  // the same way SearchWorkspace does for its intent-filter rehydrate.
-  useEffect(() => {
-    const next = searchParams.get('companyName');
-    if (!next) return;
-    const timer = window.setTimeout(() => {
-      setRecipientName(next);
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [searchParams]);
-
-  const [product, setProduct] = useState('Black Pepper 550g/l ASTA');
+  const [product, setProduct] = useState(initialProduct);
   const [channel, setChannel] = useState<'WhatsApp' | 'Email'>('WhatsApp');
   const [language, setLanguage] = useState<'en' | 'ar' | 'es'>('en');
   const [tone, setTone] = useState('professional');
@@ -49,6 +39,22 @@ function OutreachCenter() {
   const [generatedDraft, setGeneratedDraft] = useState('');
   const [draftId, setDraftId] = useState('');
   const [copied, setCopied] = useState(false);
+
+  // Sync the recipient + product inputs when the URL changes (e.g. user
+  // navigates between two dossiers or jumps from an active-demand card).
+  // The project's react-hooks/set-state-in-effect rule disallows direct
+  // setState inside effects — defer into a microtask the same way
+  // SearchWorkspace does for its intent-filter rehydrate.
+  useEffect(() => {
+    const nextName = searchParams.get('companyName');
+    const nextProduct = searchParams.get('product');
+    if (!nextName && !nextProduct) return;
+    const timer = window.setTimeout(() => {
+      if (nextName) setRecipientName(nextName);
+      if (nextProduct) setProduct(nextProduct);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [searchParams]);
 
   const handleGenerate = async () => {
     setIsGenerating(true);

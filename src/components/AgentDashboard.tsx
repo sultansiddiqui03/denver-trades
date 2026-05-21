@@ -2,10 +2,11 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, RefreshCw, RotateCw, X } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronRight, RefreshCw, RotateCw, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
 import EmptyState from '@/components/EmptyState';
+import AgentRunLeadsPreview from '@/components/AgentRunLeadsPreview';
 import styles from './AgentDashboard.module.css';
 
 interface AgentRun {
@@ -124,6 +125,22 @@ export default function AgentDashboard() {
   });
   const [replayingRunId, setReplayingRunId] = useState<string | null>(null);
   const [pendingReplay, setPendingReplay] = useState<AgentRun | null>(null);
+  // Only one inline leads-preview at a time so the table never stacks.
+  const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
+  // Track which rows we've ever opened so the inner preview stays mounted
+  // across collapse → the row's grid-row transition can run to completion
+  // without the children vanishing mid-flight, and re-opening is instant.
+  const [touchedRunIds, setTouchedRunIds] = useState<Set<string>>(() => new Set());
+
+  const handleToggleExpand = useCallback((runId: string) => {
+    setExpandedRunId((cur) => (cur === runId ? null : runId));
+    setTouchedRunIds((cur) => {
+      if (cur.has(runId)) return cur;
+      const next = new Set(cur);
+      next.add(runId);
+      return next;
+    });
+  }, []);
 
   const dismissSimBanner = useCallback(() => {
     setSimBannerDismissed(true);
@@ -418,78 +435,128 @@ export default function AgentDashboard() {
                   const isSuccess = run.status === 'Success';
                   const datasetId = extractDatasetId(run.error_log);
                   const canReplay = isFailed && isLeadScraper && datasetId;
+                  // Expandable inline leads preview only makes sense for Lead Scraper
+                  // success rows that actually produced companies. Webhook ingestion
+                  // currently writes `records_created` in real time, so non-zero
+                  // means we have something to surface.
+                  const canExpand = isSuccess && isLeadScraper && run.records_created > 0;
+                  const isExpanded = canExpand && expandedRunId === run.id;
+                  const ChevronIcon = isExpanded ? ChevronDown : ChevronRight;
 
                   return (
-                    <tr key={run.id}>
-                      <td className={styles.agentNameCell}>
-                        <div className={styles.agentNameStack}>
-                          <span>{run.agent_name}</span>
-                          {isSuccess && isLeadScraper && datasetId && (
-                            <span
-                              className={styles.datasetChip}
-                              title={`Apify dataset ${datasetId}`}
-                            >
-                              Apify: {datasetId.slice(0, 8)}…
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`${styles.statusBadge} ${styles[run.status.toLowerCase()]}`}>
-                          {run.status}
-                        </span>
-                      </td>
-                      <td>{run.records_processed} items</td>
-                      <td>+{run.records_created} leads</td>
-                      <td className={styles.dateCell}>
-                        {new Date(run.started_at).toLocaleString()}
-                      </td>
-                      <td className={styles.detailCell}>
-                        {isFailed && run.error_log ? (
-                          <div className={styles.failedDetail}>
-                            <details className={styles.errorDetails}>
-                              <summary className={styles.errorSummary}>
-                                <AlertCircle
-                                  size={14}
-                                  strokeWidth={2}
-                                  className={styles.errorSummaryIcon}
-                                  aria-hidden
-                                />
-                                <span>View error</span>
-                              </summary>
-                              <pre className={styles.errorBlock}>
-                                {truncateErrorLog(run.error_log).text}
-                              </pre>
-                            </details>
-                            {canReplay && (
+                    <React.Fragment key={run.id}>
+                      <tr className={isExpanded ? styles.rowExpanded : undefined}>
+                        <td className={styles.agentNameCell}>
+                          <div className={styles.agentNameStack}>
+                            <span>{run.agent_name}</span>
+                            {isSuccess && isLeadScraper && datasetId && (
+                              <span
+                                className={styles.datasetChip}
+                                title={`Apify dataset ${datasetId}`}
+                              >
+                                Apify: {datasetId.slice(0, 8)}…
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`${styles.statusBadge} ${styles[run.status.toLowerCase()]}`}>
+                            {run.status}
+                          </span>
+                        </td>
+                        <td>{run.records_processed} items</td>
+                        <td>+{run.records_created} leads</td>
+                        <td className={styles.dateCell}>
+                          {new Date(run.started_at).toLocaleString()}
+                        </td>
+                        <td className={styles.detailCell}>
+                          <div className={styles.detailLayout}>
+                            <div className={styles.detailMain}>
+                              {isFailed && run.error_log ? (
+                                <div className={styles.failedDetail}>
+                                  <details className={styles.errorDetails}>
+                                    <summary className={styles.errorSummary}>
+                                      <AlertCircle
+                                        size={14}
+                                        strokeWidth={2}
+                                        className={styles.errorSummaryIcon}
+                                        aria-hidden
+                                      />
+                                      <span>View error</span>
+                                    </summary>
+                                    <pre className={styles.errorBlock}>
+                                      {truncateErrorLog(run.error_log).text}
+                                    </pre>
+                                  </details>
+                                  {canReplay && (
+                                    <button
+                                      type="button"
+                                      className={styles.replayBtn}
+                                      onClick={() => setPendingReplay(run)}
+                                      disabled={replayingRunId !== null}
+                                      title="Re-run Gemini enrichment against the existing Apify dataset"
+                                    >
+                                      <RotateCw
+                                        size={13}
+                                        strokeWidth={2}
+                                        className={
+                                          replayingRunId === run.id ? styles.replaySpin : undefined
+                                        }
+                                        aria-hidden
+                                      />
+                                      {replayingRunId === run.id ? 'Replaying…' : 'Replay'}
+                                    </button>
+                                  )}
+                                </div>
+                              ) : run.completed_at ? (
+                                <span className={styles.dateCell}>
+                                  finished {new Date(run.completed_at).toLocaleTimeString()}
+                                </span>
+                              ) : (
+                                <span className={styles.dateCell}>running…</span>
+                              )}
+                            </div>
+                            {canExpand && (
                               <button
                                 type="button"
-                                className={styles.replayBtn}
-                                onClick={() => setPendingReplay(run)}
-                                disabled={replayingRunId !== null}
-                                title="Re-run Gemini enrichment against the existing Apify dataset"
+                                className={styles.expandBtn}
+                                onClick={() => handleToggleExpand(run.id)}
+                                aria-expanded={isExpanded}
+                                aria-controls={`agent-run-leads-${run.id}`}
+                                title={isExpanded ? 'Hide leads' : 'Show leads from this run'}
                               >
-                                <RotateCw
-                                  size={13}
-                                  strokeWidth={2}
-                                  className={
-                                    replayingRunId === run.id ? styles.replaySpin : undefined
-                                  }
-                                  aria-hidden
-                                />
-                                {replayingRunId === run.id ? 'Replaying…' : 'Replay'}
+                                <ChevronIcon size={16} strokeWidth={2} aria-hidden />
+                                <span>{isExpanded ? 'Hide' : 'View'} leads</span>
                               </button>
                             )}
                           </div>
-                        ) : run.completed_at ? (
-                          <span className={styles.dateCell}>
-                            finished {new Date(run.completed_at).toLocaleTimeString()}
-                          </span>
-                        ) : (
-                          <span className={styles.dateCell}>running…</span>
-                        )}
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+                      {canExpand && (
+                        <tr
+                          id={`agent-run-leads-${run.id}`}
+                          className={`${styles.leadsRow} ${
+                            isExpanded ? styles.leadsRowOpen : ''
+                          }`}
+                          aria-hidden={!isExpanded}
+                        >
+                          <td colSpan={6} className={styles.leadsCell}>
+                            <div className={styles.leadsInner}>
+                              <div>
+                                {touchedRunIds.has(run.id) && (
+                                  <AgentRunLeadsPreview
+                                    agentRunId={run.id}
+                                    errorLog={run.error_log}
+                                    startedAt={run.started_at}
+                                    completedAt={run.completed_at}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

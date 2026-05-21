@@ -1,0 +1,75 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   SearchSuggestions — typeahead dropdown that sits below the AI search
+   input on /dashboard/search. Renders inside the input group's parent
+   so absolute positioning anchors to the form card.
+   ═════════════════════════════════════════════════════════════════════ */
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  animation: fadeInDrop 140ms ease forwards;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.option:hover,
+.optionActive {
+  background: var(--accent-lime-muted);
+  color: var(--accent-lime);
+}
+
+.optionIcon {
+  flex-shrink: 0;
+  color: var(--accent-lime);
+  opacity: 0.7;
+}
+
+.option:hover .optionIcon,
+.optionActive .optionIcon {
+  opacity: 1;
+}
+
+.optionText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes fadeInDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
