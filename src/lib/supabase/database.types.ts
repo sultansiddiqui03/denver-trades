@@ -740,7 +740,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      match_companies_by_embedding: {
+        Args: {
+          match_count: number
+          match_org_id: string
+          query_embedding: string
+        }
+        Returns: {
+          description: string
+          hq_country: string
+          id: string
+          name: string
+          products_dealt: string[]
+          similarity: number
+          type: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

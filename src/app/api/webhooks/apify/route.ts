@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { generateJSON } from '@/lib/ai/gemini';
+import { computeAndStoreCompanyEmbedding } from '@/lib/ai/embedCompany';
 import { getSupabaseServiceClient } from '@/lib/supabase/admin';
 import { getErrorMessage } from '@/lib/errors';
 import { isWebhookSecretAuthorized } from '@/lib/security/request';
@@ -163,7 +164,7 @@ Country Code: ${item.countryCode || 'N/A'}`;
         const contacts = item.phone ? [{ name: 'Main Office', phone: item.phone, email: null }] : [];
 
         // Insert into database
-        const { error: dbError } = await supabase
+        const { data: inserted, error: dbError } = await supabase
           .from('companies')
           .insert({
             org_id: orgId,
@@ -180,12 +181,27 @@ Country Code: ${item.countryCode || 'N/A'}`;
             is_enriched: true,
             enriched_at: new Date().toISOString(),
             confidence_score: 0.92
-          });
+          })
+          .select('id')
+          .single();
 
-        if (dbError) {
+        if (dbError || !inserted) {
           console.error(`Error saving enriched company ${enriched.name}:`, dbError);
         } else {
           createdCount++;
+
+          // Best-effort embedding so the company is searchable via
+          // /api/search/semantic. A missing OPENAI_API_KEY or provider
+          // hiccup must not fail the webhook (which would trigger Apify retries
+          // and risk duplicate rows). Log and continue.
+          try {
+            await computeAndStoreCompanyEmbedding(supabase, inserted.id);
+          } catch (embedError) {
+            console.error(
+              `Apify webhook: embedding failed for company ${inserted.id} (${enriched.name}):`,
+              embedError
+            );
+          }
         }
       } catch (enrichError) {
         console.error('Failed to enrich scraped item:', item, enrichError);
