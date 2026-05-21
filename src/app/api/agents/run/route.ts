@@ -252,6 +252,13 @@ async function dispatchLeadScraper(params: {
   // (Anything in the body that doesn't match the actor's input schema is
   // silently ignored — which is what caused the original "Succeeded but no
   // callback" bug.)  Ref: https://docs.apify.com/platform/integrations/webhooks/ad-hoc-webhooks
+  //
+  // We intentionally do NOT set a `payloadTemplate` here — ad-hoc webhooks
+  // delivered via `?webhooks=` only RELIABLY substitute templates for the
+  // default payload shape; a custom payloadTemplate came through with literal
+  // `{{eventTypeId}}` strings (un-interpolated), which broke the receiver.
+  // Apify's default payload includes `eventType` + `resource.defaultDatasetId`
+  // which the webhook receiver reads directly.
   const webhooksConfig = [
     {
       eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.FAILED'],
@@ -260,11 +267,6 @@ async function dispatchLeadScraper(params: {
       headersTemplate: webhookSecret
         ? JSON.stringify({ 'x-denver-webhook-secret': webhookSecret })
         : undefined,
-      payloadTemplate: JSON.stringify({
-        runId: '{{resource.id}}',
-        event: '{{eventTypeId}}',
-        datasetId: '{{resource.defaultDatasetId}}',
-      }),
     },
   ];
   const webhooksParam = Buffer.from(JSON.stringify(webhooksConfig))

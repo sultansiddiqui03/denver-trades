@@ -9,11 +9,25 @@ import {
   fetchApifyDatasetItems,
 } from '@/lib/agents/apifyReplay';
 
-const ApifyWebhookSchema = z.object({
-  runId: z.string().optional(),
-  event: z.string().min(1, 'event is required'),
-  datasetId: z.string().min(1, 'datasetId is required'),
-});
+// Apify's default webhook payload shape (when no custom payloadTemplate is
+// set in the ad-hoc webhook config). The dispatch in /api/agents/run is
+// deliberately payloadTemplate-less because a custom payloadTemplate via the
+// `?webhooks=` query param came through with literal `{{eventTypeId}}` strings
+// (un-interpolated) on 2026-05-21 and broke production. Apify natively
+// interpolates the default payload — `eventType` + `resource.defaultDatasetId`
+// + `resource.id` are all we need.
+// Ref: https://docs.apify.com/platform/integrations/webhooks/actions
+const ApifyWebhookSchema = z
+  .object({
+    eventType: z.string().min(1, 'eventType is required'),
+    resource: z
+      .object({
+        id: z.string().min(1, 'resource.id is required'),
+        defaultDatasetId: z.string().min(1, 'resource.defaultDatasetId is required'),
+      })
+      .passthrough(),
+  })
+  .passthrough();
 
 export async function POST(request: Request) {
   const supabase = getSupabaseServiceClient();
@@ -35,9 +49,14 @@ export async function POST(request: Request) {
 
     const parsed = await parseBody(request, ApifyWebhookSchema);
     if (!parsed.ok) return parsed.response;
-    const { event, datasetId } = parsed.data;
+    const { eventType, resource } = parsed.data;
+    const datasetId = resource.defaultDatasetId;
+    const apifyRunId = resource.id;
 
-    console.info(`Apify Webhook triggered for Run ID: ${agentRunId}. Event: ${event}, Dataset ID: ${datasetId}`);
+    console.info(
+      `Apify Webhook triggered for Run ID: ${agentRunId}. ` +
+      `EventType: ${eventType}, Apify run: ${apifyRunId}, Dataset: ${datasetId}`
+    );
 
     const { data: runRecord, error: runFetchError } = await supabase
       .from('agent_runs')
@@ -61,13 +80,14 @@ export async function POST(request: Request) {
     // P1-14: never trust an org_id from the payload; use the value joined from the
     // verified agent_runs record only.
 
-    // If the run failed, update agent run and exit
-    if (event !== 'ACTOR.RUN.SUCCEEDED') {
+    // If the run failed, update agent run and exit. Stash the Apify run/dataset
+    // id in error_log so the Replay button on the UI can recover the data.
+    if (eventType !== 'ACTOR.RUN.SUCCEEDED') {
       await supabase
         .from('agent_runs')
         .update({
           status: 'Failed',
-          error_log: `Apify execution failed. Event trigger: ${event}`,
+          error_log: `Apify execution failed (eventType=${eventType}). Apify run: ${apifyRunId}, dataset: ${datasetId}`,
           completed_at: new Date().toISOString()
         })
         .eq('id', agentRunId);
@@ -79,6 +99,11 @@ export async function POST(request: Request) {
     const items = await fetchApifyDatasetItems(datasetId);
     console.info(`Fetched ${items.length} items from Apify dataset ${datasetId}`);
 
+    // Stash the dataset id in error_log even on Success rows so the agent
+    // dashboard's Apify chip (regex `/dataset(?:\s+|:)([a-zA-Z0-9_-]{10,})/i`)
+    // can find it. Not an actual error — the field is the convenient string.
+    const datasetTrace = `Apify run: ${apifyRunId}, dataset: ${datasetId}`;
+
     if (items.length === 0) {
       await supabase
         .from('agent_runs')
@@ -86,7 +111,8 @@ export async function POST(request: Request) {
           status: 'Success',
           records_processed: 0,
           records_created: 0,
-          completed_at: new Date().toISOString()
+          completed_at: new Date().toISOString(),
+          error_log: datasetTrace,
         })
         .eq('id', agentRunId);
 
@@ -103,7 +129,8 @@ export async function POST(request: Request) {
         status: 'Success',
         records_processed: processed,
         records_created: created,
-        completed_at: new Date().toISOString()
+        completed_at: new Date().toISOString(),
+        error_log: datasetTrace,
       })
       .eq('id', agentRunId);
 
