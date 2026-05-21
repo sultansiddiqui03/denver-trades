@@ -4,6 +4,7 @@ import { generateJSON, generateMultimodalJSON } from '@/lib/ai/gemini';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
 import { parseBody } from '@/lib/validation';
+import { rateLimitOrThrow } from '@/lib/security/rateLimit';
 import type { Json } from '@/lib/supabase/database.types';
 
 interface Discrepancy {
@@ -47,6 +48,15 @@ export async function POST(request: Request) {
     if (!context) return response;
 
     const { orgId, supabase } = context;
+
+    // Audits are expensive (Gemini multimodal). 10 per 5 min per org.
+    const limited = rateLimitOrThrow({
+      key: `${orgId}:documents.audit`,
+      max: 10,
+      windowSec: 300,
+    });
+    if (limited) return limited;
+
     const parsed = await parseBody(request, DocAuditSchema);
     if (!parsed.ok) return parsed.response;
     const { deal_id, doc_type_a, doc_type_b, text_a, text_b, file_a, file_b } = parsed.data;

@@ -4,6 +4,7 @@ import { generateEmbedding } from '@/lib/ai/openai';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
 import { parseBody } from '@/lib/validation';
+import { rateLimitOrThrow } from '@/lib/security/rateLimit';
 
 const SemanticSearchSchema = z.object({
   query: z.string().min(2, 'query must be at least 2 characters'),
@@ -16,6 +17,13 @@ export async function POST(request: Request) {
     if (!context) return response;
 
     const { orgId, supabase } = context;
+
+    const limited = rateLimitOrThrow({
+      key: `${orgId}:search.semantic`,
+      max: 60,
+      windowSec: 60,
+    });
+    if (limited) return limited;
 
     const parsed = await parseBody(request, SemanticSearchSchema);
     if (!parsed.ok) return parsed.response;

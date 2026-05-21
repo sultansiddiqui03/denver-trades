@@ -164,11 +164,16 @@ One-click in Supabase Auth settings.
 ### P2-1 · Vercel AI Gateway for AI calls · M
 Drop `@anthropic-ai/sdk` + `@google/generative-ai` direct deps; use `"anthropic/claude-opus-4-7"` strings via the gateway for unified observability and fallback.
 
-### P2-2 · Stream AI responses · M
-Wrap with `streamText` from AI SDK v6; UI shows progressive output.
+### ✅ P2-2 · Stream AI responses · M
+- New [/api/outreach/generate/stream](src/app/api/outreach/generate/stream/route.ts) — uses AI SDK's `streamText` + `result.toTextStreamResponse()`. Persists the Draft row in the `onFinish` callback after the stream completes (never half-writes partial copy).
+- Outreach page (`/dashboard/outreach`) now reads the stream and appends chunks to the draft textarea live — user sees the pitch unfold instead of staring at a spinner.
+- Rate-limited via the same 30/5min bucket as the non-stream endpoint (`${orgId}:outreach.generate`) so swapping to streaming doesn't open a new burst loophole.
+- The non-stream `/api/outreach/generate` stays available for callers that want the full response in one shot.
 
-### P2-3 · Rate-limit AI endpoints per org · M
-Sliding-window middleware backed by Upstash/Vercel KV; per-org caps on `/api/outreach/generate`, `/api/companies/enrich`, `/api/documents/audit`, `/api/search`.
+### ✅ P2-3 · Rate-limit AI endpoints per org · M
+- New [src/lib/security/rateLimit.ts](src/lib/security/rateLimit.ts) — sliding-window limiter with a per-instance LRU Map (max 5000 buckets, ~10% bulk eviction). `rateLimitOrThrow(opts)` returns either `null` (allowed, caller proceeds) or a ready-to-return 429 response with `Retry-After` / `X-RateLimit-Limit` / `X-RateLimit-Remaining` headers.
+- Applied to: `/api/outreach/generate` (30/5min), `/api/outreach/generate/stream` (same bucket), `/api/companies/enrich` (20/5min), `/api/documents/audit` (10/5min), `/api/search` (60/min, empty-query "list all" path skipped), `/api/search/semantic` (60/min).
+- Storage is in-process for now. On Fluid Compute, instances are reused across concurrent requests so this gives correct per-instance counts; not distributed. Drop-in upgrade path documented in the module header — swap `memoryStore` for an Upstash Redis or Vercel KV impl when you install one, no caller changes.
 
 ### P2-4 · Vercel Workflow for long-running Apify dispatch · M
 Make agent runs durable (retriable, cancelable).

@@ -5,6 +5,7 @@ import { computeAndStoreCompanyEmbedding } from '@/lib/ai/embedCompany';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
 import { parseBody } from '@/lib/validation';
+import { rateLimitOrThrow } from '@/lib/security/rateLimit';
 
 interface EnrichmentResult {
   description: string;
@@ -25,6 +26,14 @@ export async function POST(request: Request) {
     if (!context) return response;
 
     const { orgId, supabase } = context;
+
+    const limited = rateLimitOrThrow({
+      key: `${orgId}:companies.enrich`,
+      max: 20,
+      windowSec: 300,
+    });
+    if (limited) return limited;
+
     const parsed = await parseBody(request, EnrichSchema);
     if (!parsed.ok) return parsed.response;
     const { companyId } = parsed.data;

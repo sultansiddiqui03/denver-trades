@@ -19,8 +19,11 @@ export default function OutreachCenter() {
 
   const handleGenerate = async () => {
     setIsGenerating(true);
+    setGeneratedDraft('');
+    setDraftId('');
+
     try {
-      const response = await fetch('/api/outreach/generate', {
+      const response = await fetch('/api/outreach/generate/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -29,16 +32,29 @@ export default function OutreachCenter() {
           channel,
           language,
           tone,
-          deal_value: dealValue
-        })
+          // The streaming endpoint expects a number; coerce on the way out.
+          deal_value: dealValue ? Number(dealValue) : null,
+        }),
       });
 
-      const data = await response.json();
-      if (data.success) {
-        setGeneratedDraft(data.pitch);
-        setDraftId(data.draft?.id || '');
-      } else {
-        console.error('Error generating pitch:', data.error);
+      if (!response.ok || !response.body) {
+        const errorText = await response.text();
+        console.error('Error generating pitch:', errorText);
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffered = '';
+
+      // Stream chunks straight into the textarea so the user sees the pitch
+      // unfold in real time. The endpoint persists the final Draft via its
+      // onFinish hook, so we don't need to call /api/outreach/generate after.
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffered += decoder.decode(value, { stream: true });
+        setGeneratedDraft(buffered);
       }
     } catch (error) {
       console.error('Network error during pitch generation:', error);

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { generateJSON } from '@/lib/ai/gemini';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
+import { rateLimitOrThrow } from '@/lib/security/rateLimit';
 
 interface ParsedQuery {
   keywords?: string[];
@@ -17,6 +18,16 @@ export async function GET(request: Request) {
     const { orgId, supabase } = context;
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q') || '';
+
+    // Skip rate limit for the empty-query "list all" path. AI-burning paths get gated.
+    if (query) {
+      const limited = rateLimitOrThrow({
+        key: `${orgId}:search.keyword`,
+        max: 60,
+        windowSec: 60,
+      });
+      if (limited) return limited;
+    }
 
     if (!query) {
       // Return all companies for the org if query is empty

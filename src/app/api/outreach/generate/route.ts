@@ -4,6 +4,7 @@ import { generateText } from '@/lib/ai/router';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
 import { parseBody } from '@/lib/validation';
+import { rateLimitOrThrow } from '@/lib/security/rateLimit';
 
 const OutreachGenerateSchema = z.object({
   product: z.string().min(1, 'product is required'),
@@ -20,6 +21,15 @@ export async function POST(request: Request) {
     if (!context) return response;
 
     const { orgId, supabase } = context;
+
+    // 30 generations / 5 min per org — covers a normal manual usage burst
+    // without letting a runaway loop blow up the Claude bill.
+    const limited = rateLimitOrThrow({
+      key: `${orgId}:outreach.generate`,
+      max: 30,
+      windowSec: 300,
+    });
+    if (limited) return limited;
 
     const parsed = await parseBody(request, OutreachGenerateSchema);
     if (!parsed.ok) return parsed.response;
