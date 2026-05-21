@@ -244,9 +244,35 @@ async function dispatchLeadScraper(params: {
 
   // Live Apify dispatch
   const actorId = process.env.APIFY_ACTOR_ID || 'compass~crawler-google-places';
-  const apifyUrl = `https://api.apify.com/v2/acts/${actorId}/runs?token=${token}`;
   const webhookSecret = process.env.APIFY_WEBHOOK_SECRET;
   const webhookUrl = `${publicBaseUrl()}/api/webhooks/apify?agent_run_id=${runRecordId}`;
+
+  // Apify ad-hoc webhooks must be passed as a URL-safe base64-encoded JSON
+  // array in the `webhooks` QUERY PARAMETER, not in the request body.
+  // (Anything in the body that doesn't match the actor's input schema is
+  // silently ignored — which is what caused the original "Succeeded but no
+  // callback" bug.)  Ref: https://docs.apify.com/platform/integrations/webhooks/ad-hoc-webhooks
+  const webhooksConfig = [
+    {
+      eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.FAILED'],
+      requestUrl: webhookUrl,
+      // P1-1: pass secret via header, not query string
+      headersTemplate: webhookSecret
+        ? JSON.stringify({ 'x-denver-webhook-secret': webhookSecret })
+        : undefined,
+      payloadTemplate: JSON.stringify({
+        runId: '{{resource.id}}',
+        event: '{{eventTypeId}}',
+        datasetId: '{{resource.defaultDatasetId}}',
+      }),
+    },
+  ];
+  const webhooksParam = Buffer.from(JSON.stringify(webhooksConfig))
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+  const apifyUrl = `https://api.apify.com/v2/acts/${actorId}/runs?token=${token}&webhooks=${webhooksParam}`;
 
   const apifyResponse = await fetch(apifyUrl, {
     method: 'POST',
@@ -258,21 +284,6 @@ async function dispatchLeadScraper(params: {
       // interface in /api/webhooks/apify, so no mapping is required.
       searchStringsArray: [searchQuery],
       maxCrawledPlacesPerSearch: 5,
-      webhooks: [
-        {
-          eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.FAILED'],
-          requestUrl: webhookUrl,
-          // P1-1: pass secret via header, not query string
-          headersTemplate: webhookSecret
-            ? JSON.stringify({ 'x-denver-webhook-secret': webhookSecret })
-            : undefined,
-          payloadTemplate: JSON.stringify({
-            runId: '{{resource.id}}',
-            event: '{{eventTypeId}}',
-            datasetId: '{{resource.defaultDatasetId}}',
-          }),
-        },
-      ],
     }),
   });
 
