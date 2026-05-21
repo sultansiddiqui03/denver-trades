@@ -4,6 +4,32 @@ Pre-flight steps to take **before** sharing the production URL with real custome
 
 ---
 
+## 0. Feature inventory (what's live as of 2026-05-22)
+
+Quick map of what your product does today, organized the way a trader would think about it:
+
+| Surface | What it does | Tradyon parity |
+|---|---|---|
+| `/dashboard` overview | Stats, **Active Demand feed** (parsed RFQs), Recent activity, Quick Tools | They lack the demand feed entirely — this is our wedge |
+| `/dashboard/search` | Sidebar splits into **Find Buyers** + **Find Sellers**. Buyer/Seller/Broker filter pills, AI typeahead suggestions, semantic (pgvector) and keyword modes | ✅ feature parity + semantic |
+| `/dashboard/companies` | Directory with BUYS/SELLS/BROKER chips, SOURCES FROM / SHIPS TO trade lanes, enriched checkmark + date | ✅ feature parity |
+| `/dashboard/companies/[id]` | 4-tab dossier: Overview · Shipment History · Commodities · Contacts. Generate-outreach deep-links | ✅ feature parity |
+| `/dashboard/pipeline` | 9-stage kanban (New Lead → … → Closed Won/Lost), `LEAD-OPP-2026-NNNNN` deal IDs, dnd-kit drag-drop | Their 5-stage; we go further |
+| `/dashboard/outreach` | Streaming AI generation, EN/ES/AR multi-lingual, WhatsApp + Email channels, prefilled from dossier or Active Demand | They have templates; we stream |
+| `/dashboard/documents` | L/C vs B/L compliance audit via Gemini multimodal | They don't have this |
+| `/dashboard/prices` | 10 commodities, daily Vercel cron `0 2 * * *` | They don't have this |
+| `/dashboard/agents` | Lead Scraper, Price Ingest, Doc Audit, WhatsApp Parser. **Inline leads drill-down** on Success rows | They don't surface agents |
+| `/dashboard/analytics` | Recharts dashboards (deals, countries, value) | ✅ feature parity |
+| Cmd+K palette | Fuzzy nav + recent items | They don't have this |
+
+**Architecture facts** worth knowing when something breaks:
+- Webhook secret on Apify dispatch is in the `x-denver-webhook-secret` HEADER (not query string). Default payload (no custom `payloadTemplate`) — Apify's `?webhooks=` ad-hoc form doesn't interpolate custom templates.
+- Every domain table carries `org_id` and is RLS-scoped except `commodity_prices` (intentionally global).
+- Inbound WhatsApp messages are Gemini-extracted on the webhook path (sync, ~2s, inside Twilio's 15s budget). Extraction writes `outreach_threads.extracted_demand` (JSONB).
+- Backfill endpoints (Bearer `CRON_SECRET`): `/api/admin/apify/replay`, `/api/admin/embeddings/backfill`, `/api/admin/whatsapp/extract-backfill`.
+
+---
+
 ## 1. Verify the two production bug fixes landed (5 min)
 
 Both fixes shipped in the same commit that points to this file. Confirm by checking:
@@ -177,20 +203,49 @@ GitHub repo → Settings → Branches → require PR + CI green before merge to 
 
 ---
 
-## 8. Smoke-test the whole flow with a fresh user
+## 8. Smoke-test the whole flow with a fresh user (Wave 2 edition)
 
 Open the production URL in an **incognito window**. Sign in with a different Google account. Walk through:
 
-1. Dashboard renders (real name in topbar)
-2. Search returns results
-3. Agents → trigger Lead Scraper → wait → see new companies
-4. Pipeline → drag a deal between columns → refresh → persists
-5. Outreach → generate pitch → see streaming
-6. Documents → pre-fill → audit → see discrepancies
-7. Notifications bell → realtime updates when new agent runs
-8. Cmd+K → fuzzy search → navigates correctly
+### Core
+1. **Dashboard** renders (real name in topbar, Active Demand feed visible above Recent activity)
+2. **Sidebar** is grouped into MARKET RESEARCH / CRM / TOOLS sections
+3. **Cmd+K** fuzzy search → navigates correctly, recent items shown
 
-If everything in this list works, **you're live**.
+### Find Buyers / Find Sellers
+4. Click **Find Buyers** in sidebar → page title "Find buyers", coral BUYS chips on every card, intent pill row shows "Buyers" active
+5. Click **Find Sellers** → page title flips to "Find sellers", lime SELLS chips, Exporter rows surface
+6. Start typing in the search input (e.g. "pep") → AI suggestion dropdown appears with 5 ranked matches
+7. Click a company name → lands on **dossier** with 4 tabs (Overview / Shipment History / Commodities / Contacts) and BUYS/SELLS/BROKER chip in the hero
+8. Click a commodity chip in the dossier → cross-links back to search with that product as query
+
+### Pipeline
+9. **Pipeline** → 9 columns from New Lead to Closed Lost, color-coded top accents
+10. Each card carries a `LEAD-OPP-2026-NNNNN` monospace ID
+11. Drag a card between columns → "Saving…" lime pill flashes → flips to "Saved" → refresh confirms persistence
+12. Empty columns show a dashed-border tile with the stage description
+
+### Agents
+13. **Agents** → click **Run now** on Lead Scraper Agent
+14. Within ~15-20s a new Success row appears with "+N leads" in Created
+15. Click **"View leads"** chevron on that Success row → 5 mini-cards expand inline (BUYS/SELLS chips, locations, products) — **no tab-switch needed**
+16. Each mini-card name links to the dossier
+
+### Outreach
+17. From the dossier, click **Generate outreach** → outreach page opens with company name prefilled
+18. From an Active Demand card on `/dashboard`, click **Generate quote →** → outreach opens with both company name AND product prefilled
+19. Click Generate pitch → tokens stream in live
+
+### Documents + WhatsApp
+20. **Documents** → upload an L/C + B/L pair → run audit → discrepancy report renders
+21. Send a WhatsApp message to your Twilio sandbox number from a registered tester ("Hi, looking for 2 containers of black pepper CIF Jebel Ali")
+22. Within ~5s the message lands in the WhatsApp inbox AND appears as a card in the **Active Demand** feed with structured fields
+
+### Notifications + realtime
+23. **Notifications bell** → realtime updates when new agent runs land
+24. Bell badge tracks unread vs your `denver:notif-last-seen` localStorage timestamp
+
+If every step lands, **you're live**.
 
 ---
 

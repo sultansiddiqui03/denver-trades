@@ -241,6 +241,7 @@ export type Database = {
           assigned_to: string | null
           company_id: string | null
           created_at: string | null
+          deal_code: string | null
           expected_close_date: string | null
           id: string
           incoterm: string | null
@@ -262,6 +263,7 @@ export type Database = {
           assigned_to?: string | null
           company_id?: string | null
           created_at?: string | null
+          deal_code?: string | null
           expected_close_date?: string | null
           id?: string
           incoterm?: string | null
@@ -283,6 +285,7 @@ export type Database = {
           assigned_to?: string | null
           company_id?: string | null
           created_at?: string | null
+          deal_code?: string | null
           expected_close_date?: string | null
           id?: string
           incoterm?: string | null
