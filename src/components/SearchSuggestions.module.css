@@ -9,14 +9,19 @@
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-  z-index: 50;
+  /* Floating overlay — sit above sidebar (z=100) so the dropdown can never be
+     occluded when the search input is near the page edge. */
+  z-index: 120;
   display: flex;
   flex-direction: column;
   padding: var(--space-2);
-  background: var(--bg-tertiary);
+  /* Solid background — `--bg-card` is 85% opacity and would let the lime
+     "Search" button + the input box bleed through the menu. Mirror the
+     pattern we fixed on the agents source-picker. */
+  background: #141414;
   border: 1px solid var(--border-hover);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
   animation: fadeInDrop 140ms ease forwards;
   max-height: 320px;
   overflow-y: auto;
@@ -42,6 +47,13 @@
 .optionActive {
   background: var(--accent-lime-muted);
   color: var(--accent-lime);
+}
+
+.option:focus-visible {
+  outline: none;
+  background: var(--accent-lime-muted);
+  color: var(--accent-lime);
+  box-shadow: inset 0 0 0 1px var(--accent-lime);
 }
 
 .optionIcon {

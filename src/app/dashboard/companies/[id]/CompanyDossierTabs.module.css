@@ -26,17 +26,24 @@
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--text-secondary);
-  padding-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-1) var(--space-3) var(--space-1);
   position: relative;
   background: transparent;
   border: none;
   cursor: pointer;
   transition: color var(--transition-fast);
   white-space: nowrap;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
 }
 
 .tabItem:hover {
   color: var(--text-primary);
+}
+
+.tabItem:focus-visible {
+  outline: none;
+  color: var(--text-primary);
+  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.08);
 }
 
 .tabActive {

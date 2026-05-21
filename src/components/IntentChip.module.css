@@ -1,10 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════════════
    IntentChip — shared BUYS / SELLS / BROKER pill, used across the search
-   page, the companies directory, and the company dossier hero. Variants
-   match the Tradyon-style framing: buyer (coral), seller (lime), broker
-   (blue), unknown (neutral). Keep this in lock-step with the duplicate
-   classes in `search/page.module.css` and `companies/page.module.css`
-   while we migrate every consumer.
+   page, the companies directory, the company dossier hero, and the
+   pipeline kanban cards. Variants match the Tradyon-style framing:
+   buyer (coral), seller (lime), broker (blue), unknown (neutral).
+   This is the single source of truth — the dead duplicates in the
+   search/companies stylesheets were removed in the Wave 3 polish pass.
    ═════════════════════════════════════════════════════════════════════ */
 
 .chip {
