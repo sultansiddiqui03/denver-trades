@@ -105,7 +105,18 @@ This file is orientation. When starting significant work:
 3. Add notable architectural decisions to **Recent decisions** so future-you has the why.
 
 ## Current focus
-**Phase 0: 12/12 ✅ · Phase 1: 13/14 ✅ · Phase 2: 13/17 ✅ · Phase 3: 14/18 ✅ · Phase 2.5: Resend + Embeddings + semantic-search UI + streaming + rate limiting all shipped.** Outstanding: P1-13 (your Supabase dashboard click), P2-4 Workflow (WDK design), P2-17 branch protection (your GH click), plus 5 dashboard pages intentionally kept client-side (interactive state). All AI cost paths are gated by per-org sliding-window rate limits; in-memory now, drop-in KV upgrade path documented. Production deployed (`dpl_nNF86Ly4wQUDNVXP2w2TReWh6RW5`). One critical follow-up: **`CLAUDE_API_KEY` is missing in Vercel production envs** — outreach/enrich/search will return 500s until this is added (`vercel env add CLAUDE_API_KEY production`). Phase 1 remaining: P1-3 + P1-4 + P1-14 (WhatsApp tenant routing bundle), P1-5 (zod validation), P1-13 (Supabase dashboard toggle).
+**Roadmap closed.** Phase 0: 12/12 ✅ · Phase 1: 13/14 ✅ · Phase 2: 13/17 ✅ · Phase 3: 15/18 ✅ · Phase 2.5: Resend + Embeddings + semantic-search UI + streaming + rate limiting all ✅.
+
+Items not shipped — each with an explicit reason in [ROADMAP.md](ROADMAP.md):
+- **P1-13** Supabase leaked-password protection — your dashboard toggle.
+- **P2-4** Vercel Workflow — deferred indefinitely (current Apify path already durable enough; revisit on reliability complaint).
+- **P2-5** 5 of 8 dashboard pages stay client — interactive state pays the JS cost.
+- **P2-15** unused indexes — wait for real traffic patterns.
+- **P2-17** branch protection — your GH repo settings.
+- **P3-10** card consistency — intentionally not converged (component-internal cards have layout-specific affordances).
+- **P3-14** page transitions — experimental in Next 16; existing `.fade-in` covers basic case.
+
+When the time comes to flip things on (Vercel AI Gateway, Vercel KV for distributed rate limits, Resend domain): the code is already shaped to accept those — see the per-item notes in ROADMAP. Production deployed (`dpl_nNF86Ly4wQUDNVXP2w2TReWh6RW5`). One critical follow-up: **`CLAUDE_API_KEY` is missing in Vercel production envs** — outreach/enrich/search will return 500s until this is added (`vercel env add CLAUDE_API_KEY production`). Phase 1 remaining: P1-3 + P1-4 + P1-14 (WhatsApp tenant routing bundle), P1-5 (zod validation), P1-13 (Supabase dashboard toggle).
 
 ## Recent decisions
 - **2026-05-21** — Initial repo audit completed. Findings split between [CLAUDE.md](CLAUDE.md) (orientation) and [ROADMAP.md](ROADMAP.md) (action items). Live state verified against Vercel (8 projects in team, denver-trades on `main`) and Supabase (12 tables, RLS on all, 3 migrations applied, 1 security WARN, 19 unused indexes per advisor).

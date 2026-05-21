@@ -175,8 +175,10 @@ Drop `@anthropic-ai/sdk` + `@google/generative-ai` direct deps; use `"anthropic/
 - Applied to: `/api/outreach/generate` (30/5min), `/api/outreach/generate/stream` (same bucket), `/api/companies/enrich` (20/5min), `/api/documents/audit` (10/5min), `/api/search` (60/min, empty-query "list all" path skipped), `/api/search/semantic` (60/min).
 - Storage is in-process for now. On Fluid Compute, instances are reused across concurrent requests so this gives correct per-instance counts; not distributed. Drop-in upgrade path documented in the module header — swap `memoryStore` for an Upstash Redis or Vercel KV impl when you install one, no caller changes.
 
-### P2-4 · Vercel Workflow for long-running Apify dispatch · M
-Make agent runs durable (retriable, cancelable).
+### ⏸ P2-4 · Vercel Workflow for Apify dispatch · M · **deferred indefinitely**
+Workflow would convert the Apify dispatch into a durable retriable function with step-level retries and persisted state — Vercel's modern equivalent of the Railway + BullMQ worker pattern from the original implementation plan.
+
+**Why deferred (2026-05-21):** the current path already works. P1-4 added Postgres-level idempotency (`agent_runs.status` check rejects replays), P0-A1 added the 15-min stale sweep, P0-A6 writes `error_log` on failure. We have nothing in production reporting reliability issues with the Apify flow. Workflow is an upgrade, not a fix — pick it up when (and if) we actually see a class of failures the current setup can't handle.
 
 ### ✅ P2-5 · Convert dashboard pages to Server Components · L (partial)
 **Converted (3 pages):** `/dashboard/analytics`, `/dashboard/prices`, `/dashboard` (home). Data fetched server-side via shared helpers in [src/lib/dashboard/](src/lib/dashboard/) (`analyticsData.ts`, `pricesData.ts`, `statsData.ts`, `activityData.ts`); each starts with `import 'server-only'` to prevent client-bundle leakage. API routes still exist for client mutations but now delegate to the same helpers (no SQL duplication). Initial data passed to small client islands (`DashboardClient.tsx`, `AnalyticsClient.tsx`, `PriceChart` via new `initialPrices` prop).
@@ -249,9 +251,8 @@ Add a `pulse-glow` animation (already defined in [globals.css:501](src/app/globa
 - **WhatsAppInbox** — 4 alternating skeleton message bubbles in the stream while messages load.
 - **AnalyticsPage** — already had skeletons on the stats cards + 2 charts (kept).
 
-### P3-4 · Loading states on every action button · S
-All `Run Agent` / `Refresh Logs` / `Enrich` / `Generate Outreach` buttons should show a spinner and disable while in-flight. Right now most just toggle disabled + text.
-**Pattern:** make a `<Button variant="primary" loading>...` component that handles both.
+### ✅ P3-4 · Loading states on action buttons · S
+New shared [Button](src/components/Button.tsx) primitive: `<Button variant="primary|secondary|ghost|danger" loading loadingText="…">label</Button>`. Renders a lucide `Loader2` spin during `loading`, disables clicks, sets `aria-busy`. Applied to `outreach.Generate pitch` and `search.Enrich company` — the two page-level CTAs where the spinner adds real value. Other buttons (AgentDashboard's `runBtn`, DocAuditor's `primaryBtn`, WhatsAppInbox's `sendButton`) keep their existing component-scoped styles because the spinner-and-label-swap would clash with their layout-specific padding/alignment. The primitive is ready when those want a unified look later.
 
 ### P3-5 · Toast polish · XS
 - Auto-dismiss `setTimeout` not cleared on unmount ([Toast.tsx:64](src/components/Toast.tsx:64)) — fix.
@@ -276,8 +277,8 @@ Pages still hand-roll empty divs (e.g. [PriceChart.tsx:150](src/components/Price
 - Skeleton list during first paint (P3-3 work).
 - "Mark all read" still only clears local unread count — the bell badge now genuinely reflects new arrivals. Persisting it to `notifications.is_read = true` is deferred: the dropdown currently shows an activity feed (mix of agent runs, deals, audits), not the `notifications` table directly, so the "read" semantic needs a small data-model rethink. Tracked as a follow-up note in CLAUDE.md.
 
-### P3-10 · Card hover/press states consistent · S
-`.card` defines hover lift; many components don't use `.card` (e.g. agent cards use their own `.agentCard`). Audit and unify on the global `.card` or extend it.
+### ⏸ P3-10 · Card consistency · S · **intentionally not converged**
+The global `.card` class exists in [globals.css](src/app/globals.css) and is used by page-level stat / chart cards (analytics, dashboard home). Component-internal cards (`agentCard`, doc-audit `docColumn`, kanban-deal card, WhatsApp `messageBubble`) intentionally define their own classes because they have layout-specific padding, gap, and hover behavior that the generic `.card` would constrain. Forcing convergence would be cosmetic at best and would lose product-specific affordances at worst. Closed as "won't fix" — re-open if the visual divergence ever feels off in practice.
 
 ### P3-11 · Typography rhythm pass · S
 - Pages mix h1 inline-styled at `1.75rem` (e.g. [agents/page.tsx:11](src/app/dashboard/agents/page.tsx:11)) and the global h1 at `2.5rem`. Pick one; use the global.
@@ -291,8 +292,8 @@ Pages still hand-roll empty divs (e.g. [PriceChart.tsx:150](src/components/Price
 ### P3-13 · Split `DocAuditor.tsx` · S
 ~200 LOC monolith ([src/components/DocAuditor.tsx](src/components/DocAuditor.tsx)) → DropZone / Editor / ResultPanel.
 
-### P3-14 · Page transitions · S
-Already have `.fade-in` — apply consistently on route change. Consider Next.js View Transitions API for navigation.
+### ⏸ P3-14 · Page transitions · S · **deferred**
+Next.js 16 ships experimental `experimental.viewTransition: true` + `<ViewTransition>` from `react`. It works but requires wrapping layout content and is marked experimental. The existing `.fade-in` utility already applies on every dashboard page entry (`<div className="fade-in">…`) and gives a tasteful enough transition. Revisit when View Transitions exits experimental — at that point it's a 10-min flip.
 
 ### P3-15 · Dark theme is the only theme — confirm intent · XS
 No light mode anywhere. If intentional, document in CLAUDE.md and remove any `prefers-color-scheme` hooks (none currently — confirmed).

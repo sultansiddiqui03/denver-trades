@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import EmptyState from '@/components/EmptyState';
+import Button from '@/components/Button';
 import { exportToCsv } from '@/lib/exportCsv';
 import styles from './page.module.css';
 
@@ -345,14 +346,14 @@ export default function SearchWorkspace() {
                         View dossier
                       </Link>
                     ) : (
-                      <button
-                        type="button"
-                        className="btn-primary"
-                        disabled={enrichingId === c.id}
+                      <Button
+                        variant="primary"
+                        loading={enrichingId === c.id}
+                        loadingText="Enriching…"
                         onClick={() => handleEnrich(c.id)}
                       >
-                        {enrichingId === c.id ? 'Enriching…' : 'Enrich company'}
-                      </button>
+                        Enrich company
+                      </Button>
                     )}
                   </div>
                 </div>

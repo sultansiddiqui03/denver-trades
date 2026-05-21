@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import WhatsAppInbox from '@/components/WhatsAppInbox';
+import Button from '@/components/Button';
 import styles from './page.module.css';
 
 export default function OutreachCenter() {
@@ -174,14 +175,15 @@ export default function OutreachCenter() {
             />
           </div>
 
-          <button
-            type="button"
-            className="btn-primary"
+          <Button
+            variant="primary"
+            loading={isGenerating}
+            loadingText="Drafting…"
+            disabled={!product.trim()}
             onClick={handleGenerate}
-            disabled={isGenerating || !product.trim()}
           >
-            {isGenerating ? 'Drafting…' : 'Generate pitch'}
-          </button>
+            Generate pitch
+          </Button>
         </div>
 
         {/* Output Card */}
