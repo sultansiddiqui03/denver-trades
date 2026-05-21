@@ -1,8 +1,10 @@
 import React, { Suspense } from 'react';
 import { redirect } from 'next/navigation';
+import { Anchor, LineChart, TrendingDown, TrendingUp } from 'lucide-react';
 import { getUserContext } from '@/lib/auth/server';
 import { fetchPrices, type PriceRecord } from '@/lib/dashboard/pricesData';
 import PriceChart from '@/components/PriceChart';
+import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,23 +98,19 @@ async function PriceChartServer() {
 
 export default async function PricesPage() {
   return (
-    <div
-      className="fade-in"
-      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}
-    >
+    <div className={`${styles.pricesContainer} fade-in`}>
       {/* Header */}
-      <div>
-        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 800 }}>
-          Commodity prices
-        </h1>
-        <p className="text-secondary" style={{ fontSize: '0.875rem' }}>
+      <div className={styles.pricesHeader}>
+        <h1 className={styles.pricesTitle}>Commodity prices</h1>
+        <p className={styles.pricesSubtitle}>
           Live benchmark prices for spices, nuts, and agri exports from port registries and global exchanges.
         </p>
       </div>
 
       {/* Interactive Price Chart Workspace */}
-      <div className="card" style={{ padding: 'var(--space-5)' }}>
-        <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.15rem', marginBottom: '15px' }}>
+      <div className={`card ${styles.workspaceCard}`}>
+        <h3 className={styles.sectionHeading}>
+          <LineChart size={18} strokeWidth={1.8} aria-hidden />
           Index analytics
         </h3>
         <Suspense fallback={<PriceChartSkeleton />}>
@@ -122,36 +120,22 @@ export default async function PricesPage() {
 
       {/* List Indices Grid */}
       <div>
-        <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.15rem', marginBottom: '15px' }}>
+        <h3 className={styles.sectionHeading}>
+          <Anchor size={18} strokeWidth={1.8} aria-hidden />
           Exchange rates
         </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        <div className={styles.feedList}>
           {FEEDS.map((f) => (
-            <div
-              key={f.id}
-              className="card"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 'var(--space-4)',
-                flexWrap: 'wrap',
-                padding: 'var(--space-4) var(--space-6)',
-              }}
-            >
-              {/* Left: Info */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 200px' }}>
-                <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {f.commodity}
-                </span>
-                <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                  {f.grade} • <span style={{ color: 'var(--text-muted)' }}>{f.origin}</span>
+            <div key={f.id} className={styles.feedCard}>
+              <div className={styles.feedInfo}>
+                <span className={styles.feedName}>{f.commodity}</span>
+                <span className={styles.feedMeta}>
+                  {f.grade} • <span className={styles.feedOrigin}>{f.origin}</span>
                 </span>
               </div>
 
-              {/* Middle: Sparkline */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1 1 120px' }}>
-                <svg width="120" height="30" viewBox="0 0 90 20">
+              <div className={styles.feedSparkline}>
+                <svg width="120" height="30" viewBox="0 0 90 20" aria-hidden>
                   <path
                     d={f.sparkline}
                     fill="none"
@@ -163,19 +147,19 @@ export default async function PricesPage() {
                 </svg>
               </div>
 
-              {/* Right: Value */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-5)' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                  <span className="mono" style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-                    {f.price}
-                  </span>
-                  <span
-                    className={`badge ${f.isUp ? 'badge-green' : 'badge-red'}`}
-                    style={{ fontSize: '0.75rem', fontWeight: 700 }}
-                  >
-                    {f.change}
-                  </span>
-                </div>
+              <div className={styles.feedValueCol}>
+                <span className={`mono ${styles.feedPrice}`}>{f.price}</span>
+                <span
+                  className={`badge ${f.isUp ? 'badge-green' : 'badge-red'}`}
+                  style={{ fontSize: '0.75rem', fontWeight: 700 }}
+                >
+                  {f.isUp ? (
+                    <TrendingUp size={12} strokeWidth={2.2} aria-hidden />
+                  ) : (
+                    <TrendingDown size={12} strokeWidth={2.2} aria-hidden />
+                  )}
+                  {f.change}
+                </span>
               </div>
             </div>
           ))}

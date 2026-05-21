@@ -46,6 +46,13 @@
   color: var(--text-primary);
 }
 
+.sectionTitle {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
 .formGroup {
   display: flex;
   flex-direction: column;
@@ -89,6 +96,10 @@
 
 .toggleBtn {
   flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   padding: var(--space-3);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
@@ -96,15 +107,23 @@
   font-weight: 600;
   color: var(--text-secondary);
   text-align: center;
+  background: var(--bg-input);
   transition: all var(--transition-fast);
 }
 
 .toggleBtn:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.06);
   border-color: var(--border-hover);
+  color: var(--text-primary);
 }
 
-.toggleActive {
+.toggleBtn:focus-visible {
+  outline: 2px solid var(--accent-lime);
+  outline-offset: 2px;
+}
+
+.toggleActive,
+.toggleActive:hover {
   background: var(--accent-lime-muted);
   border-color: var(--accent-lime);
   color: var(--accent-lime);
@@ -122,7 +141,7 @@
 }
 
 .outputBody {
-  background: rgba(0, 0, 0, 0.2);
+  background: #0a0a0a;
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
@@ -154,25 +173,130 @@
   color: var(--text-primary);
   white-space: pre-line;
   flex: 1;
+  margin: 0;
+  font-family: var(--font-body);
 }
 
 .whatsappMock {
-  border-left: 3px solid var(--accent-green);
-  padding-left: var(--space-3);
+  align-self: flex-start;
+  max-width: 92%;
+  background: rgba(0, 212, 126, 0.08);
+  border: 1px solid rgba(0, 212, 126, 0.22);
+  border-bottom-left-radius: 4px;
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
   font-family: system-ui, -apple-system, sans-serif;
 }
 
 .emailMock {
   font-family: var(--font-body);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--info);
+  background: rgba(59, 130, 246, 0.04);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.streamingCursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--accent-lime);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: streamBlink 1s steps(2, jump-none) infinite;
+}
+
+@keyframes streamBlink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.streamingDraft {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  background: rgba(204, 255, 0, 0.04);
+  border: 1px solid rgba(204, 255, 0, 0.18);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  margin: 0;
+  overflow-y: auto;
+}
+
+.streamingHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+  letter-spacing: 0.02em;
+}
+
+.streamingDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-lime);
+  box-shadow: 0 0 8px var(--accent-lime);
+  animation: pulse-glow 1.4s ease-in-out infinite;
+}
+
+.outputEmpty {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  max-width: 320px;
+}
+
+.outputEmptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: rgba(204, 255, 0, 0.08);
+  color: var(--accent-lime);
 }
 
 .copySuccess {
   font-size: 0.8125rem;
   color: var(--accent-lime);
   font-weight: 600;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 4px;
+}
+
+.sandboxSection {
+  margin-top: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-6);
+  border-top: 1px dashed var(--border-primary);
+}
+
+.sandboxSubtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
 }
 
 @media (max-width: 600px) {

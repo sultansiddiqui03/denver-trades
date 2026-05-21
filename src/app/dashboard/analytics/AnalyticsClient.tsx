@@ -2,6 +2,7 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
+import { BarChart3, Globe2 } from 'lucide-react';
 import styles from './page.module.css';
 import type { StagePoint } from '@/components/charts/DealsBarChart';
 import type { CountryPoint } from '@/components/charts/CountriesPieChart';
@@ -95,7 +96,13 @@ export default function AnalyticsClient({ initial }: Props) {
         <div className={`card ${styles.chartCard}`}>
           <h3 className={styles.chartTitle}>Deals by pipeline stage</h3>
           {stageChartData.length === 0 ? (
-            <div className={styles.chartEmpty}>No deals in pipeline yet</div>
+            <div className={styles.chartEmpty}>
+              <BarChart3 size={28} strokeWidth={1.2} aria-hidden />
+              <span>No deals in pipeline yet</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Move leads through the pipeline to populate this chart
+              </span>
+            </div>
           ) : (
             <div className={styles.chartCanvas}>
               <DealsBarChart data={stageChartData} />
@@ -106,7 +113,13 @@ export default function AnalyticsClient({ initial }: Props) {
         <div className={`card ${styles.chartCard}`}>
           <h3 className={styles.chartTitle}>Companies by country</h3>
           {countryChartData.length === 0 ? (
-            <div className={styles.chartEmpty}>No company data yet</div>
+            <div className={styles.chartEmpty}>
+              <Globe2 size={28} strokeWidth={1.2} aria-hidden />
+              <span>No company data yet</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Run a Lead Scraper agent to start populating companies
+              </span>
+            </div>
           ) : (
             <div className={styles.chartCanvas}>
               <CountriesPieChart data={countryChartData} />

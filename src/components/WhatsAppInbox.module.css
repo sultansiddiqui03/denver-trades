@@ -1,13 +1,12 @@
 .container {
   display: grid;
   grid-template-columns: 280px 1fr 300px;
-  background: var(--bg-card);
+  background: #111111;
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
   height: 600px;
   overflow: hidden;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-md);
 }
 
 .sidebar {
@@ -66,6 +65,11 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
+.contactItem:focus-visible {
+  outline: 2px solid var(--accent-lime);
+  outline-offset: -2px;
+}
+
 .activeContact {
   background: var(--accent-lime-muted) !important;
   border-left: 3px solid var(--accent-lime);
@@ -109,7 +113,8 @@
 .chatArea {
   display: flex;
   flex-direction: column;
-  background: rgba(0, 0, 0, 0.2);
+  background: #0a0a0a;
+  min-width: 0;
 }
 
 .chatHeader {

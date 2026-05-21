@@ -1,0 +1,136 @@
+.pricesContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.pricesHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pricesTitle {
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.pricesSubtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.workspaceCard {
+  padding: var(--space-5);
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+
+.sectionHeading svg {
+  color: var(--accent-lime);
+}
+
+.feedList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.feedCard {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr auto;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-5);
+  background: #141414;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition-fast);
+}
+
+.feedCard:hover {
+  border-color: var(--border-hover);
+}
+
+.feedInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.feedName {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.feedMeta {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.feedOrigin {
+  color: var(--text-muted);
+}
+
+.feedSparkline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+}
+
+.feedValueCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 110px;
+}
+
+.feedPrice {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 768px) {
+  .feedCard {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+  }
+}
+
+@media (max-width: 600px) {
+  .pricesTitle {
+    font-size: 1.5rem;
+  }
+
+  .feedCard {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .feedSparkline {
+    justify-content: flex-start;
+  }
+
+  .feedValueCol {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+}
