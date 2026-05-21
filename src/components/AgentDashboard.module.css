@@ -153,6 +153,17 @@
   cursor: not-allowed;
 }
 
+/* Short helper line under the data-source <select> on the Lead Scraper card.
+   Used to explain the per-result cost trade-off between Google Maps (free)
+   and ImportYeti (~$5-7 / 1k results). */
+.sourceHint {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
 .metaRow {
   display: flex;
   justify-content: space-between;

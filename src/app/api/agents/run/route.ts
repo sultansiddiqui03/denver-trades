@@ -6,7 +6,7 @@ import { getErrorMessage } from '@/lib/errors';
 import { runPriceIngest } from '@/lib/agents/priceIngest';
 import { parseBody } from '@/lib/validation';
 import type { Database } from '@/lib/supabase/database.types';
-import { pickActor } from '@/lib/agents/scraperActors';
+import { pickActor, SCRAPER_ACTORS } from '@/lib/agents/scraperActors';
 
 // APIFY_ACTOR_ID format: <username>~<actor-name> (the Apify "technical name").
 // The actor-specific input/output contracts live in scraperActors.ts so
@@ -17,10 +17,29 @@ import { pickActor } from '@/lib/agents/scraperActors';
 //   - `lulzasaur~importyeti-scraper`      (customs-grade, budget alternative)
 // Anything else falls back to the default — see GO_LIVE.md "Switching to
 // customs-data enrichment" for the trade-off matrix.
+//
+// Per-run override: callers may include `actorId` in the POST body to choose
+// the actor for a single run (UI source-picker on the Lead Scraper card).
+// Resolution order on Lead Scraper dispatch is: body.actorId → env
+// APIFY_ACTOR_ID → code default. Unknown ids fall back permissively to the
+// default per pickActor's contract — typos can't brick production.
+
+// Accepted actor ids — keys of SCRAPER_ACTORS plus tolerated slash form
+// (since operators commonly copy `username/actor` from the Apify store URL).
+const ACTOR_ID_VALUES = Object.keys(SCRAPER_ACTORS);
 
 const RunAgentSchema = z.object({
   agentName: z.string().min(1, 'agentName is required'),
   query: z.string().optional(),
+  actorId: z
+    .string()
+    .trim()
+    .min(1)
+    .transform((value) => value.replace(/\//g, '~'))
+    .refine((value) => ACTOR_ID_VALUES.includes(value), {
+      message: `actorId must be one of: ${ACTOR_ID_VALUES.join(', ')}`,
+    })
+    .optional(),
 });
 
 const LEAD_SCRAPER = 'Lead Scraper Agent';
@@ -67,6 +86,7 @@ export async function POST(request: Request) {
 
   const agentName = parsed.data.agentName.trim();
   const query = parsed.data.query?.trim();
+  const actorId = parsed.data.actorId;
 
   if (!KNOWN_AGENTS.has(agentName)) {
     return NextResponse.json(
@@ -97,7 +117,7 @@ export async function POST(request: Request) {
 
   try {
     if (agentName === LEAD_SCRAPER) {
-      return await dispatchLeadScraper({ runRecordId: runRecord.id, orgId, query, supabase });
+      return await dispatchLeadScraper({ runRecordId: runRecord.id, orgId, query, actorId, supabase });
     }
 
     if (agentName === PRICE_INGEST) {
@@ -196,9 +216,11 @@ async function dispatchLeadScraper(params: {
   runRecordId: string;
   orgId: string;
   query: string | undefined;
+  /** Per-request actor override (zod-validated against SCRAPER_ACTORS). */
+  actorId: string | undefined;
   supabase: SupabaseClient<Database>;
 }) {
-  const { runRecordId, orgId, query, supabase } = params;
+  const { runRecordId, orgId, query, actorId, supabase } = params;
   const searchQuery = query || 'Spice exporters in Vietnam';
   const token = process.env.APIFY_TOKEN || process.env.APIFY_API_TOKEN;
 
@@ -241,9 +263,12 @@ async function dispatchLeadScraper(params: {
     });
   }
 
-  // Live Apify dispatch — actor + input shape are now data-driven via
-  // scraperActors.ts. APIFY_ACTOR_ID picks the entry; default is Google Maps.
-  const actor = pickActor(process.env.APIFY_ACTOR_ID);
+  // Live Apify dispatch — actor + input shape are data-driven via
+  // scraperActors.ts. Resolution order:
+  //   1. Per-request `actorId` (the UI source picker on the Lead Scraper card)
+  //   2. APIFY_ACTOR_ID env var (operator-level default)
+  //   3. Code default (Google Maps)
+  const actor = pickActor(actorId ?? process.env.APIFY_ACTOR_ID);
   const webhookSecret = process.env.APIFY_WEBHOOK_SECRET;
   // Thread the actor id back to the webhook receiver via the callback URL so
   // it can run the correct `mapItem` adapter against the dataset. We never

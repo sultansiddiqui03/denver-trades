@@ -88,6 +88,41 @@ const INITIAL_AGENTS: Agent[] = [
 
 const SIM_BANNER_DISMISSED_KEY = 'denver-trades.agents.sim-banner-dismissed';
 const ERROR_LOG_TRUNCATE_AT = 400;
+
+/**
+ * Lead Scraper source options.
+ *
+ * Kept in sync with `SCRAPER_ACTORS` in src/lib/agents/scraperActors.ts. The
+ * server-side zod schema in /api/agents/run validates against the same set,
+ * so a typo here would surface as a 400 (defence in depth — but lockstep
+ * still preferred over runtime divergence).
+ *
+ * Default is the empty-string sentinel — when chosen, the backend falls
+ * through to `APIFY_ACTOR_ID` env var → code default (Google Maps). That keeps
+ * the existing zero-cost behaviour for users who never touch this dropdown.
+ */
+const SCRAPER_SOURCE_KEY = 'denver-trades.agents.scraper-source';
+const SCRAPER_SOURCE_OPTIONS: {
+  value: string;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    value: '',
+    label: 'Default (Google Maps · directory)',
+    hint: 'Free per-result; broad business directory data.',
+  },
+  {
+    value: 'zen-studio~importyeti-scraper',
+    label: 'ImportYeti — customs data (zen-studio)',
+    hint: 'Shipment-grade data with HS codes + trading partners. ~$7 / 1k results.',
+  },
+  {
+    value: 'lulzasaur~importyeti-scraper',
+    label: 'ImportYeti — customs data (lulzasaur, budget)',
+    hint: 'Same data source as zen-studio, fewer fields per record. ~$5 / 1k results.',
+  },
+];
 // Matches "dataset ffeKO5Oq7meoNAXLf" or "dataset: ffeKO5Oq7meoNAXLf"
 const DATASET_ID_RE = /dataset(?:\s+|:\s*)([a-zA-Z0-9_-]{10,})/i;
 
@@ -112,6 +147,17 @@ export default function AgentDashboard() {
   const [hasFetched, setHasFetched] = useState(false);
   const [triggering, setTriggering] = useState<string | null>(null);
   const [scraperQuery, setScraperQuery] = useState('Spice exporters in Vietnam');
+  // Per-run actor override. Empty string = let the server default (env or
+  // code) win. Hydrated from localStorage so the picker is sticky across
+  // refreshes. Lazy initializer keeps SSR happy.
+  const [scraperSource, setScraperSource] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    try {
+      return window.localStorage.getItem(SCRAPER_SOURCE_KEY) ?? '';
+    } catch {
+      return '';
+    }
+  });
   const [simulationActive, setSimulationActive] = useState(false);
   // Lazy initializer reads localStorage on the first client render so we don't
   // need an extra effect (which the codebase's lint rule rejects).
@@ -202,13 +248,21 @@ export default function AgentDashboard() {
     );
 
     try {
+      // Lead Scraper accepts an optional `actorId` override so the user can
+      // pick "ImportYeti" or "Google Maps" per run from the source dropdown.
+      // Empty string → don't send (server defaults to env or code default).
+      const requestBody: Record<string, unknown> = {
+        agentName,
+        query: agentName === 'Lead Scraper Agent' ? scraperQuery : undefined,
+      };
+      if (agentName === 'Lead Scraper Agent' && scraperSource) {
+        requestBody.actorId = scraperSource;
+      }
+
       const res = await fetch('/api/agents/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agentName,
-          query: agentName === 'Lead Scraper Agent' ? scraperQuery : undefined,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = (await res.json()) as AgentRunResponse;
@@ -348,20 +402,58 @@ export default function AgentDashboard() {
             <p className={styles.description}>{agent.description}</p>
 
             {agent.name === 'Lead Scraper Agent' && (
-              <div className={styles.queryField}>
-                <label htmlFor="scraper-query" className={styles.queryLabel}>
-                  Scraping query
-                </label>
-                <input
-                  id="scraper-query"
-                  type="text"
-                  className={styles.queryInput}
-                  value={scraperQuery}
-                  onChange={(e) => setScraperQuery(e.target.value)}
-                  placeholder="e.g. spice exporters in Vietnam"
-                  disabled={triggering !== null}
-                />
-              </div>
+              <>
+                <div className={styles.queryField}>
+                  <label htmlFor="scraper-query" className={styles.queryLabel}>
+                    Scraping query
+                  </label>
+                  <input
+                    id="scraper-query"
+                    type="text"
+                    className={styles.queryInput}
+                    value={scraperQuery}
+                    onChange={(e) => setScraperQuery(e.target.value)}
+                    placeholder="e.g. spice exporters in Vietnam"
+                    disabled={triggering !== null}
+                  />
+                </div>
+                <div className={styles.queryField}>
+                  <label htmlFor="scraper-source" className={styles.queryLabel}>
+                    Data source
+                  </label>
+                  <select
+                    id="scraper-source"
+                    className={styles.queryInput}
+                    value={scraperSource}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setScraperSource(next);
+                      try {
+                        if (next) {
+                          window.localStorage.setItem(SCRAPER_SOURCE_KEY, next);
+                        } else {
+                          window.localStorage.removeItem(SCRAPER_SOURCE_KEY);
+                        }
+                      } catch {
+                        // localStorage may be unavailable (private mode); ignore.
+                      }
+                    }}
+                    disabled={triggering !== null}
+                  >
+                    {SCRAPER_SOURCE_OPTIONS.map((opt) => (
+                      <option key={opt.value || 'default'} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  {(() => {
+                    const active =
+                      SCRAPER_SOURCE_OPTIONS.find((o) => o.value === scraperSource) ??
+                      SCRAPER_SOURCE_OPTIONS[0];
+                    return <span className={styles.sourceHint}>{active.hint}</span>;
+                  })()}
+                </div>
+              </>
             )}
 
             <div className={styles.metaRow}>
