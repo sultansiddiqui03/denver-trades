@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, ChevronDown, ChevronRight, RefreshCw, RotateCw, X } from 'lucide-react';
+import { AlertCircle, Check, ChevronDown, ChevronRight, RefreshCw, RotateCw, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
 import EmptyState from '@/components/EmptyState';
@@ -158,6 +158,8 @@ export default function AgentDashboard() {
       return '';
     }
   });
+  const [sourcePickerOpen, setSourcePickerOpen] = useState(false);
+  const sourcePickerRef = useRef<HTMLDivElement | null>(null);
   const [simulationActive, setSimulationActive] = useState(false);
   // Lazy initializer reads localStorage on the first client render so we don't
   // need an extra effect (which the codebase's lint rule rejects).
@@ -196,6 +198,25 @@ export default function AgentDashboard() {
       // Ignore.
     }
   }, []);
+
+  // Close the source-picker dropdown on outside click / Escape.
+  useEffect(() => {
+    if (!sourcePickerOpen) return;
+    const onDocPointer = (e: MouseEvent) => {
+      if (!sourcePickerRef.current) return;
+      if (sourcePickerRef.current.contains(e.target as Node)) return;
+      setSourcePickerOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSourcePickerOpen(false);
+    };
+    window.addEventListener('mousedown', onDocPointer);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('mousedown', onDocPointer);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [sourcePickerOpen]);
 
   const fetchRuns = useCallback(async () => {
     try {
@@ -418,39 +439,100 @@ export default function AgentDashboard() {
                   />
                 </div>
                 <div className={styles.queryField}>
-                  <label htmlFor="scraper-source" className={styles.queryLabel}>
+                  <span className={styles.queryLabel} id="scraper-source-label">
                     Data source
-                  </label>
-                  <select
-                    id="scraper-source"
-                    className={styles.queryInput}
-                    value={scraperSource}
-                    onChange={(e) => {
-                      const next = e.target.value;
-                      setScraperSource(next);
-                      try {
-                        if (next) {
-                          window.localStorage.setItem(SCRAPER_SOURCE_KEY, next);
-                        } else {
-                          window.localStorage.removeItem(SCRAPER_SOURCE_KEY);
-                        }
-                      } catch {
-                        // localStorage may be unavailable (private mode); ignore.
-                      }
-                    }}
-                    disabled={triggering !== null}
-                  >
-                    {SCRAPER_SOURCE_OPTIONS.map((opt) => (
-                      <option key={opt.value || 'default'} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                  </span>
                   {(() => {
-                    const active =
+                    const activeOpt =
                       SCRAPER_SOURCE_OPTIONS.find((o) => o.value === scraperSource) ??
                       SCRAPER_SOURCE_OPTIONS[0];
-                    return <span className={styles.sourceHint}>{active.hint}</span>;
+                    return (
+                      <div
+                        className={styles.sourcePicker}
+                        ref={sourcePickerRef}
+                      >
+                        <button
+                          type="button"
+                          className={`${styles.sourcePickerTrigger} ${sourcePickerOpen ? styles.sourcePickerOpen : ''}`}
+                          aria-haspopup="listbox"
+                          aria-expanded={sourcePickerOpen}
+                          aria-labelledby="scraper-source-label"
+                          disabled={triggering !== null}
+                          onClick={() => setSourcePickerOpen((v) => !v)}
+                        >
+                          <span className={styles.sourcePickerLabel}>
+                            <span className={styles.sourcePickerLabelText}>
+                              {activeOpt.label}
+                            </span>
+                            <span className={styles.sourcePickerLabelHint}>
+                              {activeOpt.hint}
+                            </span>
+                          </span>
+                          <ChevronDown
+                            size={16}
+                            strokeWidth={1.8}
+                            aria-hidden
+                            className={`${styles.sourcePickerChevron} ${sourcePickerOpen ? styles.sourcePickerChevronOpen : ''}`}
+                          />
+                        </button>
+                        {sourcePickerOpen ? (
+                          <ul
+                            className={styles.sourcePickerMenu}
+                            role="listbox"
+                            aria-labelledby="scraper-source-label"
+                          >
+                            {SCRAPER_SOURCE_OPTIONS.map((opt) => {
+                              const selected = opt.value === scraperSource;
+                              return (
+                                <li
+                                  key={opt.value || 'default'}
+                                  role="option"
+                                  aria-selected={selected}
+                                >
+                                  <button
+                                    type="button"
+                                    className={`${styles.sourcePickerOption} ${selected ? styles.sourcePickerOptionSelected : ''}`}
+                                    onClick={() => {
+                                      setScraperSource(opt.value);
+                                      try {
+                                        if (opt.value) {
+                                          window.localStorage.setItem(
+                                            SCRAPER_SOURCE_KEY,
+                                            opt.value
+                                          );
+                                        } else {
+                                          window.localStorage.removeItem(SCRAPER_SOURCE_KEY);
+                                        }
+                                      } catch {
+                                        // localStorage may be unavailable (private mode); ignore.
+                                      }
+                                      setSourcePickerOpen(false);
+                                    }}
+                                  >
+                                    <span className={styles.sourcePickerOptionMain}>
+                                      <span className={styles.sourcePickerOptionLabel}>
+                                        {opt.label}
+                                      </span>
+                                      <span className={styles.sourcePickerOptionHint}>
+                                        {opt.hint}
+                                      </span>
+                                    </span>
+                                    {selected ? (
+                                      <Check
+                                        size={16}
+                                        strokeWidth={2.2}
+                                        aria-hidden
+                                        className={styles.sourcePickerCheck}
+                                      />
+                                    ) : null}
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : null}
+                      </div>
+                    );
                   })()}
                 </div>
               </>

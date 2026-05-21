@@ -153,15 +153,164 @@
   cursor: not-allowed;
 }
 
-/* Short helper line under the data-source <select> on the Lead Scraper card.
-   Used to explain the per-result cost trade-off between Google Maps (free)
-   and ImportYeti (~$5-7 / 1k results). */
-.sourceHint {
-  display: block;
-  margin-top: var(--space-1);
+/* ─────────────────────────────────────────────────────────────────────────
+   Custom data-source picker (Lead Scraper card)
+   Native <select> dropdowns blend into the dark theme and obscure the cost
+   hint — this is a button + listbox panel that respects design tokens and
+   shows each option with its label + hint inline.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.sourcePicker {
+  position: relative;
+}
+
+.sourcePickerTrigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.sourcePickerTrigger:hover {
+  border-color: var(--border-hover);
+}
+
+.sourcePickerTrigger:focus,
+.sourcePickerTrigger:focus-visible {
+  background: var(--bg-input-focus);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.08);
+  outline: none;
+}
+
+.sourcePickerTrigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sourcePickerOpen {
+  border-color: var(--border-focus);
+}
+
+.sourcePickerLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sourcePickerLabelText {
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sourcePickerLabelHint {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sourcePickerChevron {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+
+.sourcePickerChevronOpen {
+  transform: rotate(180deg);
+}
+
+.sourcePickerMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  list-style: none;
+  margin: 0;
+  padding: var(--space-1);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sourcePickerOption {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.sourcePickerOption:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sourcePickerOptionSelected {
+  background: var(--accent-lime-muted);
+}
+
+.sourcePickerOptionSelected:hover {
+  background: var(--accent-lime-muted);
+}
+
+.sourcePickerOptionMain {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sourcePickerOptionLabel {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.sourcePickerOptionSelected .sourcePickerOptionLabel {
+  color: var(--accent-lime);
+}
+
+.sourcePickerOptionHint {
   font-size: 0.6875rem;
   color: var(--text-muted);
   line-height: 1.4;
+}
+
+.sourcePickerCheck {
+  color: var(--accent-lime);
+  flex-shrink: 0;
 }
 
 .metaRow {
