@@ -25,17 +25,19 @@ interface ScrapedPlace {
   description?: string;
 }
 
-interface EnrichedCompany {
-  name: string;
-  type: 'Importer' | 'Exporter' | 'Broker';
-  hq_country: string;
-  hq_city: string;
-  origin_countries: string[];
-  destination_countries: string[];
-  products_dealt: string[];
-  website?: string;
-  description?: string;
-}
+const EnrichedCompanySchema = z.object({
+  name: z.string(),
+  type: z.enum(['Importer', 'Exporter', 'Broker']),
+  hq_country: z.string().default(''),
+  hq_city: z.string().default(''),
+  origin_countries: z.array(z.string()).default([]),
+  destination_countries: z.array(z.string()).default([]),
+  products_dealt: z.array(z.string()).default([]),
+  website: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+});
+
+type EnrichedCompany = z.infer<typeof EnrichedCompanySchema>;
 
 export async function POST(request: Request) {
   const supabase = getSupabaseServiceClient();
@@ -158,7 +160,7 @@ Address: ${item.address || item.street || 'N/A'}
 City: ${item.city || 'N/A'}
 Country Code: ${item.countryCode || 'N/A'}`;
 
-        const enriched: EnrichedCompany = await generateJSON<EnrichedCompany>(promptText, systemPrompt);
+        const enriched: EnrichedCompany = await generateJSON(promptText, EnrichedCompanySchema, systemPrompt);
 
         // Save contacts details inside JSONB contacts field
         const contacts = item.phone ? [{ name: 'Main Office', phone: item.phone, email: null }] : [];
