@@ -72,8 +72,8 @@ const stages: { label: string; key: Deal['stage'] }[] = [
   { label: 'Discovery', key: 'Discovery' },
   { label: 'Outreach', key: 'Outreach' },
   { label: 'Negotiation', key: 'Negotiation' },
-  { label: 'Documents Audit', key: 'Audit' },
-  { label: 'Closed / Won', key: 'Closed' },
+  { label: 'Documents audit', key: 'Audit' },
+  { label: 'Closed / won', key: 'Closed' },
 ];
 
 const mapDbToUiStage = (dbStage: string | null): Deal['stage'] => {
@@ -155,7 +155,7 @@ export default function KanbanPipeline() {
       prev.map((deal) => (deal.id === id ? { ...deal, stage: nextStage } : deal))
     );
 
-    setSavingState('Saving changes...');
+    setSavingState('Saving…');
 
     // Persist stage update in Supabase
     try {
@@ -165,12 +165,12 @@ export default function KanbanPipeline() {
         .eq('id', id);
 
       if (error) throw error;
-      setSavingState('Changes saved!');
-      toast(`Deal moved to ${nextStage}`, 'success');
+      setSavingState('Saved');
+      toast(`Moved to ${nextStage}`, 'success');
       setTimeout(() => setSavingState(null), 2000);
     } catch (err) {
       console.error('Failed to sync pipeline update:', err);
-      setSavingState('Connection offline. Saved locally.');
+      setSavingState('Offline — saved locally');
       setTimeout(() => setSavingState(null), 3000);
     }
   };
@@ -193,9 +193,9 @@ export default function KanbanPipeline() {
       {/* Header */}
       <div className={styles.pipelineHeader}>
         <div>
-          <h1 className={styles.pipelineTitle}>Trade Pipeline</h1>
+          <h1 className={styles.pipelineTitle}>Trade pipeline</h1>
           <p className="text-secondary" style={{ fontSize: '0.875rem' }}>
-            Manage active shipments, buyer negotiations, and audit checklists.
+            Track shipments, negotiations, and audit checklists by stage.
           </p>
         </div>
 
@@ -227,7 +227,7 @@ export default function KanbanPipeline() {
 
       {loading ? (
         <div className={styles.loadingSpinner}>
-          <p>Connecting to Live Trades Database...</p>
+          <p>Loading pipeline…</p>
         </div>
       ) : (
         /* Board wrapper */
@@ -240,7 +240,7 @@ export default function KanbanPipeline() {
                   <div>
                     <h3 className={styles.columnTitle}>{stage.label}</h3>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Value: {calculateTotalValue(stage.key)}
+                      {calculateTotalValue(stage.key)} total
                     </span>
                   </div>
                   <span className={styles.dealCountBadge}>{stageDeals.length}</span>
@@ -263,6 +263,7 @@ export default function KanbanPipeline() {
                             onClick={() => moveDeal(deal.id, 'backward')}
                             disabled={stage.key === 'Discovery'}
                             style={{ opacity: stage.key === 'Discovery' ? 0.3 : 1 }}
+                            aria-label="Move deal back one stage"
                           >
                             ◀
                           </button>
@@ -272,6 +273,7 @@ export default function KanbanPipeline() {
                             onClick={() => moveDeal(deal.id, 'forward')}
                             disabled={stage.key === 'Closed'}
                             style={{ opacity: stage.key === 'Closed' ? 0.3 : 1 }}
+                            aria-label="Move deal forward one stage"
                           >
                             ▶
                           </button>
@@ -282,7 +284,7 @@ export default function KanbanPipeline() {
 
                   {stageDeals.length === 0 && (
                     <div style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-                      No active deals
+                      No deals in this stage
                     </div>
                   )}
                 </div>

@@ -124,20 +124,20 @@ export default function DocAuditor() {
         setAuditResult(data.audit);
         const count = data.audit?.discrepancies?.length ?? 0;
         if (count === 0) {
-          toast('Audit passed — no discrepancies found', 'success');
+          toast('Audit passed — no discrepancies', 'success');
         } else {
           toast(
-            `Audit complete — ${count} discrepanc${count === 1 ? 'y' : 'ies'} detected`,
+            `Audit complete — ${count} discrepanc${count === 1 ? 'y' : 'ies'} found`,
             'warning'
           );
         }
       } else {
         console.error('Audit failed:', data.error);
-        toast(data.error || 'Document audit failed', 'error');
+        toast(data.error || 'Audit failed — check both documents and try again', 'error');
       }
     } catch (error) {
       console.error('Error during document audit:', error);
-      toast(error instanceof Error ? error.message : 'Error running document audit', 'error');
+      toast(error instanceof Error ? error.message : 'Audit failed — try again', 'error');
     } finally {
       setLoading(false);
     }
@@ -175,13 +175,13 @@ export default function DocAuditor() {
 
       <div className={styles.splitGrid}>
         <DocColumn
-          label="Document A: Letter of Credit (L/C)"
-          typeBadge="UCP 600 Rules"
+          label="Document A — Letter of Credit (L/C)"
+          typeBadge="UCP 600"
           text={textA}
           file={fileA}
           isDragOver={isDragOverA}
-          dropPromptText="Drag & drop L/C document here, or click to upload"
-          textareaPlaceholder="Or paste Letter of Credit instructions here…"
+          dropPromptText="Drop L/C document, or click to upload"
+          textareaPlaceholder="Or paste Letter of Credit instructions here"
           onDragOver={(e) => {
             e.preventDefault();
             setIsDragOverA(true);
@@ -215,13 +215,13 @@ export default function DocAuditor() {
         />
 
         <DocColumn
-          label="Document B: Bill of Lading (B/L)"
-          typeBadge="Carrier Issue"
+          label="Document B — Bill of Lading (B/L)"
+          typeBadge="Carrier"
           text={textB}
           file={fileB}
           isDragOver={isDragOverB}
-          dropPromptText="Drag & drop B/L document here, or click to upload"
-          textareaPlaceholder="Or paste Bill of Lading cargo details here…"
+          dropPromptText="Drop B/L document, or click to upload"
+          textareaPlaceholder="Or paste Bill of Lading cargo details here"
           onDragOver={(e) => {
             e.preventDefault();
             setIsDragOverB(true);

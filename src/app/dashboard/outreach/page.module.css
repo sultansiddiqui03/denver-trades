@@ -174,3 +174,18 @@
   align-items: center;
   gap: var(--space-1);
 }
+
+@media (max-width: 600px) {
+  .outreachTitle {
+    font-size: 1.5rem;
+  }
+
+  .configCard,
+  .outputCard {
+    padding: var(--space-4);
+  }
+
+  .toggleRow {
+    flex-direction: column;
+  }
+}

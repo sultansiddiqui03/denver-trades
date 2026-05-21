@@ -156,6 +156,28 @@
   border-radius: var(--radius-sm);
 }
 
+@media (max-width: 600px) {
+  .docsTitle {
+    font-size: 1.5rem;
+  }
+
+  .uploadCard {
+    padding: var(--space-5);
+  }
+
+  .resultsSection {
+    padding: var(--space-4);
+  }
+
+  .discrepancyItem {
+    flex-direction: column;
+  }
+
+  .discrepancyCompare {
+    grid-template-columns: 1fr;
+  }
+}
+
 .compareLabel {
   font-size: 0.75rem;
   color: var(--text-muted);

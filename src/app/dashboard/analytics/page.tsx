@@ -94,9 +94,9 @@ export default function AnalyticsPage() {
   return (
     <div className={`${styles.analyticsContainer} fade-in`}>
       <header className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Trade Analytics</h1>
+        <h1 className={styles.pageTitle}>Analytics</h1>
         <p className={styles.pageSubtitle}>
-          Live metrics from your Supabase database — companies, deals, agent performance.
+          Live metrics from your database — companies, deals, agent performance.
         </p>
       </header>
 
@@ -110,13 +110,13 @@ export default function AnalyticsPage() {
         ) : (
           <>
             <div className={`card ${styles.statCard}`}>
-              <span className={styles.statLabel}>Total Pipeline Value</span>
+              <span className={styles.statLabel}>Total pipeline value</span>
               <span className={`mono ${styles.statValue}`}>{pipelineFormatted}</span>
               <span className="badge badge-green">Live from database</span>
             </div>
 
             <div className={`card ${styles.statCard}`}>
-              <span className={styles.statLabel}>Agent Success Rate</span>
+              <span className={styles.statLabel}>Agent success rate</span>
               <span className={`mono ${styles.statValue}`}>
                 {data?.agentSuccessRate?.rate ?? 0}%
               </span>
@@ -127,7 +127,7 @@ export default function AnalyticsPage() {
             </div>
 
             <div className={`card ${styles.statCard}`}>
-              <span className={styles.statLabel}>Lead Enrichment Rate</span>
+              <span className={styles.statLabel}>Lead enrichment rate</span>
               <span className={`mono ${styles.statValue}`}>{enrichRate}%</span>
               <span className="badge badge-lime">
                 {data?.enrichedCompanies ?? 0} / {data?.totalCompanies ?? 0} companies
@@ -139,7 +139,7 @@ export default function AnalyticsPage() {
 
       <div className={styles.chartGrid}>
         <div className={`card ${styles.chartCard}`}>
-          <h3 className={styles.chartTitle}>Deals by Pipeline Stage</h3>
+          <h3 className={styles.chartTitle}>Deals by pipeline stage</h3>
           {loading ? (
             <div className="skeleton" style={{ height: '320px', borderRadius: '12px' }} />
           ) : stageChartData.length === 0 ? (
@@ -152,7 +152,7 @@ export default function AnalyticsPage() {
         </div>
 
         <div className={`card ${styles.chartCard}`}>
-          <h3 className={styles.chartTitle}>Companies by Country</h3>
+          <h3 className={styles.chartTitle}>Companies by country</h3>
           {loading ? (
             <div className="skeleton" style={{ height: '320px', borderRadius: '12px' }} />
           ) : countryChartData.length === 0 ? (

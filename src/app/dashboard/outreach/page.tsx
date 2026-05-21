@@ -57,58 +57,60 @@ export default function OutreachCenter() {
     <div className={`${styles.outreachContainer} fade-in`}>
       {/* Header */}
       <div className={styles.outreachHeader}>
-        <h1 className={styles.outreachTitle}>AI Outreach Center</h1>
+        <h1 className={styles.outreachTitle}>Outreach center</h1>
         <p className="text-secondary" style={{ fontSize: '0.875rem' }}>
-          Compose personalized multilingual WhatsApp and email offers powered by Claude 3.5 Sonnet.
+          Draft personalized multilingual WhatsApp and email offers with Claude.
         </p>
       </div>
 
       <div className={styles.workspaceGrid}>
         {/* Configurations Card */}
         <div className={styles.configCard}>
-          <h2 className={styles.cardTitle}>Outreach Pitch Builder</h2>
+          <h2 className={styles.cardTitle}>Pitch builder</h2>
 
           {/* Recipient Selector */}
           <div className={styles.formGroup}>
-            <span className={styles.formLabel}>Target Company Name</span>
+            <span className={styles.formLabel}>Target company</span>
             <input
               type="text"
               className={styles.inputInput}
               value={recipientName}
               onChange={(e) => setRecipientName(e.target.value)}
               placeholder="e.g. Al-Rashid Foodstuff Trading LLC"
+              aria-label="Target company name"
             />
           </div>
 
           {/* Product Input */}
           <div className={styles.formGroup}>
-            <span className={styles.formLabel}>Commodity / Product Details</span>
+            <span className={styles.formLabel}>Commodity / product</span>
             <input
               type="text"
               className={styles.inputInput}
               value={product}
               onChange={(e) => setProduct(e.target.value)}
               placeholder="e.g. Black Pepper 550g/l ASTA"
+              aria-label="Commodity or product"
             />
           </div>
 
           {/* Channel Selector */}
           <div className={styles.formGroup}>
-            <span className={styles.formLabel}>Communication Channel</span>
+            <span className={styles.formLabel}>Channel</span>
             <div className={styles.toggleRow}>
               <button
                 type="button"
                 className={`${styles.toggleBtn} ${channel === 'WhatsApp' ? styles.toggleActive : ''}`}
                 onClick={() => setChannel('WhatsApp')}
               >
-                WhatsApp Message
+                WhatsApp
               </button>
               <button
                 type="button"
                 className={`${styles.toggleBtn} ${channel === 'Email' ? styles.toggleActive : ''}`}
                 onClick={() => setChannel('Email')}
               >
-                Email Template
+                Email
               </button>
             </div>
           </div>
@@ -120,6 +122,7 @@ export default function OutreachCenter() {
               className={styles.selectInput}
               value={tone}
               onChange={(e) => setTone(e.target.value)}
+              aria-label="Tone"
             >
               <option value="professional">Professional / formal</option>
               <option value="direct">Direct / transaction-focused</option>
@@ -129,11 +132,12 @@ export default function OutreachCenter() {
 
           {/* Language Selector */}
           <div className={styles.formGroup}>
-            <span className={styles.formLabel}>Output Language</span>
+            <span className={styles.formLabel}>Output language</span>
             <select
               className={styles.selectInput}
               value={language}
               onChange={(e) => setLanguage(e.target.value as 'en' | 'ar' | 'es')}
+              aria-label="Output language"
             >
               <option value="en">English</option>
               <option value="ar">Arabic (العربية)</option>
@@ -143,13 +147,14 @@ export default function OutreachCenter() {
 
           {/* Deal Value */}
           <div className={styles.formGroup}>
-            <span className={styles.formLabel}>Estimated Deal Value (USD)</span>
+            <span className={styles.formLabel}>Estimated deal value (USD)</span>
             <input
               type="number"
               className={styles.inputInput}
               value={dealValue}
               onChange={(e) => setDealValue(e.target.value)}
               placeholder="150000"
+              aria-label="Estimated deal value in USD"
             />
           </div>
 
@@ -159,14 +164,14 @@ export default function OutreachCenter() {
             onClick={handleGenerate}
             disabled={isGenerating || !product.trim()}
           >
-            {isGenerating ? 'Drafting with Claude...' : 'Generate Pitch Copy'}
+            {isGenerating ? 'Drafting…' : 'Generate pitch'}
           </button>
         </div>
 
         {/* Output Card */}
         <div className={styles.outputCard}>
           <div className={styles.cardTitle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>Generated Copy</span>
+            <span>Generated copy</span>
             {generatedDraft && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 {draftId && (
@@ -180,7 +185,7 @@ export default function OutreachCenter() {
                     ✓ Copied
                   </span>
                 ) : (
-                  'Copy to Clipboard'
+                  'Copy to clipboard'
                 )}
                 </button>
               </div>
@@ -203,7 +208,7 @@ export default function OutreachCenter() {
 
             {!isGenerating && !generatedDraft && (
               <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                Adjust the configurations and click Generate to build trade outreach templates.
+                Fill in the fields and click Generate to draft an outreach message.
               </div>
             )}
 
@@ -219,10 +224,10 @@ export default function OutreachCenter() {
       {/* WhatsApp Thread Inbox underneath */}
       <div style={{ marginTop: '40px' }}>
         <h2 className={styles.sectionTitle} style={{ marginBottom: '15px' }}>
-          Interactive Live WhatsApp Sandbox
+          WhatsApp sandbox
         </h2>
         <p className="text-secondary" style={{ fontSize: '0.875rem', marginBottom: '20px' }}>
-          View ongoing trade chat streams and simulate real-time replies through the Twilio webhook handler.
+          Read live threads and post simulated replies through the Twilio webhook.
         </p>
         <WhatsAppInbox />
       </div>

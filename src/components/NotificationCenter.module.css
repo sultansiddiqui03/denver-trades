@@ -160,7 +160,10 @@
 
 @media (max-width: 480px) {
   .dropdown {
-    width: calc(100vw - 32px);
-    right: -60px;
+    position: fixed;
+    top: 64px;
+    right: 12px;
+    left: 12px;
+    width: auto;
   }
 }

@@ -72,16 +72,16 @@ export default function PricesPage() {
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
       {/* Header */}
       <div>
-        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 800 }}>Commodity Market Rates</h1>
+        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 800 }}>Commodity prices</h1>
         <p className="text-secondary" style={{ fontSize: '0.875rem' }}>
-          Live benchmark prices for spices, nuts, and agricultural exports compiled from port registries and global exchanges.
+          Live benchmark prices for spices, nuts, and agri exports from port registries and global exchanges.
         </p>
       </div>
 
       {/* Interactive Price Chart Workspace */}
       <div className="card" style={{ padding: 'var(--space-5)' }}>
         <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.15rem', marginBottom: '15px' }}>
-          Interactive Exchange Index Analytics
+          Index analytics
         </h3>
         <PriceChart />
       </div>
@@ -89,7 +89,7 @@ export default function PricesPage() {
       {/* List Indices Grid */}
       <div>
         <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.15rem', marginBottom: '15px' }}>
-          Exchange Rate Index List
+          Exchange rates
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           {feeds.map((f) => (

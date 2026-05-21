@@ -215,7 +215,7 @@ export default function CompanyDossier() {
         <div className={styles.headerMetrics}>
           <div className={styles.metricBadge}>
             <span className={styles.metricValue}>{company.score}%</span>
-            <span className={styles.metricLabel}>Match Score</span>
+            <span className={styles.metricLabel}>Match score</span>
           </div>
         </div>
       </div>
@@ -226,28 +226,32 @@ export default function CompanyDossier() {
         <div className={styles.tabsContainer}>
           <div className={styles.tabsList}>
             <button
+              type="button"
               className={`${styles.tabItem} ${activeTab === 'overview' ? styles.tabActive : ''}`}
               onClick={() => setActiveTab('overview')}
             >
               Overview
             </button>
             <button
+              type="button"
               className={`${styles.tabItem} ${activeTab === 'shipments' ? styles.tabActive : ''}`}
               onClick={() => setActiveTab('shipments')}
             >
-              Shipments Log
+              Shipments
             </button>
             <button
+              type="button"
               className={`${styles.tabItem} ${activeTab === 'contacts' ? styles.tabActive : ''}`}
               onClick={() => setActiveTab('contacts')}
             >
               Contacts
             </button>
             <button
+              type="button"
               className={`${styles.tabItem} ${activeTab === 'insights' ? styles.tabActive : ''}`}
               onClick={() => setActiveTab('insights')}
             >
-              AI Trade Insights
+              AI insights
             </button>
           </div>
 
@@ -256,20 +260,20 @@ export default function CompanyDossier() {
             {activeTab === 'overview' && (
               <div className={`${styles.overviewGrid} fade-in`}>
                 <div>
-                  <h3 className={styles.panelTitle}>Profile Summary</h3>
+                  <h3 className={styles.panelTitle}>Profile summary</h3>
                   <p className={styles.descriptionBox}>{company.description}</p>
                 </div>
 
                 <div className={styles.infoGrid}>
                   <div className={styles.infoCard}>
-                    <span className={styles.infoCardLabel}>Sourcing Markets</span>
+                    <span className={styles.infoCardLabel}>Sourcing markets</span>
                     <div className={styles.infoCardValue}>
                       {company.sourcing.join(', ')}
                     </div>
                   </div>
 
                   <div className={styles.infoCard}>
-                    <span className={styles.infoCardLabel}>Distribution Markets</span>
+                    <span className={styles.infoCardLabel}>Distribution markets</span>
                     <div className={styles.infoCardValue}>
                       {company.markets.join(', ')}
                     </div>
@@ -280,16 +284,16 @@ export default function CompanyDossier() {
 
             {activeTab === 'shipments' && (
               <div className="fade-in">
-                <h3 className={styles.panelTitle}>Historical Shipments</h3>
+                <h3 className={styles.panelTitle}>Historical shipments</h3>
                 <div style={{ overflowX: 'auto' }}>
                   <table className={styles.shipmentsTable}>
                     <thead>
                       <tr>
                         <th>Date</th>
-                        <th>Product Details</th>
+                        <th>Product</th>
                         <th>Quantity</th>
-                        <th>Origin Port</th>
-                        <th>Destination Port</th>
+                        <th>Origin port</th>
+                        <th>Destination port</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -310,7 +314,7 @@ export default function CompanyDossier() {
 
             {activeTab === 'contacts' && (
               <div className={`${styles.contactsList} fade-in`}>
-                <h3 className={styles.panelTitle}>Verified Procurement Officers</h3>
+                <h3 className={styles.panelTitle}>Verified procurement officers</h3>
                 {company.contacts.map((c, index) => (
                   <div key={index} className={styles.contactRow}>
                     <div className={styles.contactProfile}>
@@ -329,7 +333,7 @@ export default function CompanyDossier() {
                     </div>
 
                     <div className={styles.contactMeta}>
-                      <span className={styles.contactRole}>Phone / Mobile</span>
+                      <span className={styles.contactRole}>Phone</span>
                       <span className={styles.contactName}>{c.phone}</span>
                     </div>
 
@@ -339,7 +343,7 @@ export default function CompanyDossier() {
                           <svg style={{ marginRight: '4px' }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
                           </svg>
-                          WhatsApp Verified
+                          WhatsApp verified
                         </span>
                       )}
                     </div>
@@ -350,25 +354,25 @@ export default function CompanyDossier() {
 
             {activeTab === 'insights' && (
               <div className={`${styles.overviewGrid} fade-in`}>
-                <h3 className={styles.panelTitle}>AI Strategic Intelligence</h3>
+                <h3 className={styles.panelTitle}>AI strategic intelligence</h3>
                 <div className={styles.infoGrid}>
                   <div className={styles.infoCard}>
-                    <span className={styles.infoCardLabel}>Strategic Buyer Profile</span>
+                    <span className={styles.infoCardLabel}>Strategic buyer profile</span>
                     <p className={styles.infoCardValue}>{company.insights.buyerProfile}</p>
                   </div>
 
                   <div className={styles.infoCard}>
-                    <span className={styles.infoCardLabel}>Estimated Sourcing Frequency</span>
+                    <span className={styles.infoCardLabel}>Estimated sourcing frequency</span>
                     <p className={styles.infoCardValue}>{company.insights.frequency}</p>
                   </div>
 
                   <div className={styles.infoCard}>
-                    <span className={styles.infoCardLabel}>Negotiation Strategy</span>
+                    <span className={styles.infoCardLabel}>Negotiation strategy</span>
                     <p className={styles.infoCardValue}>{company.insights.negotiationAdvice}</p>
                   </div>
 
                   <div className={styles.infoCard}>
-                    <span className={styles.infoCardLabel}>Payment Risk Audit</span>
+                    <span className={styles.infoCardLabel}>Payment risk audit</span>
                     <p className={styles.infoCardValue}>{company.insights.riskAudit}</p>
                   </div>
                 </div>
@@ -379,30 +383,30 @@ export default function CompanyDossier() {
 
         {/* Quick Details Sidebar Card */}
         <div className={styles.sideCard}>
-          <h3 className={styles.sideTitle}>Dossier Summary</h3>
+          <h3 className={styles.sideTitle}>Dossier summary</h3>
           <div className={styles.sideDetailsList}>
             <div className={styles.sideDetailRow}>
               <span className={styles.sideDetailLabel}>Status</span>
-              <span className="badge badge-green">Verified Importer</span>
+              <span className="badge badge-green">Verified importer</span>
             </div>
 
             <div className={styles.sideDetailRow}>
-              <span className={styles.sideDetailLabel}>Company Type</span>
+              <span className={styles.sideDetailLabel}>Company type</span>
               <span className={styles.sideDetailValue}>{company.type}</span>
             </div>
 
             <div className={styles.sideDetailRow}>
               <span className={styles.sideDetailLabel}>Confidence</span>
-              <span className={styles.sideDetailValue}>{company.score}% Match</span>
+              <span className={styles.sideDetailValue}>{company.score}% match</span>
             </div>
 
             <div className={styles.sideDetailRow}>
-              <span className={styles.sideDetailLabel}>Last Shipment</span>
+              <span className={styles.sideDetailLabel}>Last shipment</span>
               <span className={styles.sideDetailValue}>{company.shipments[0]?.date || 'N/A'}</span>
             </div>
           </div>
-          <button className="btn-primary" style={{ width: '100%' }}>
-            Add to Pipeline
+          <button type="button" className="btn-primary" style={{ width: '100%' }}>
+            Add to pipeline
           </button>
         </div>
       </div>

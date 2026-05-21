@@ -29,18 +29,18 @@ interface CommandItem {
 }
 
 const commands: CommandItem[] = [
-  { id: 'dashboard', label: 'Dashboard', description: 'Overview & stats', path: '/dashboard', category: 'Navigate', Icon: LayoutDashboard },
-  { id: 'search', label: 'AI Search', description: 'Find importers & exporters', path: '/dashboard/search', category: 'Navigate', Icon: Search },
-  { id: 'pipeline', label: 'Pipeline', description: 'Manage deals & stages', path: '/dashboard/pipeline', category: 'Navigate', Icon: KanbanSquare },
-  { id: 'outreach', label: 'Outreach', description: 'WhatsApp & email', path: '/dashboard/outreach', category: 'Navigate', Icon: Mail },
-  { id: 'documents', label: 'Documents', description: 'Compliance audit', path: '/dashboard/documents', category: 'Navigate', Icon: FileText },
-  { id: 'analytics', label: 'Analytics', description: 'Charts & metrics', path: '/dashboard/analytics', category: 'Navigate', Icon: BarChart3 },
-  { id: 'agents', label: 'Agents', description: 'AI scraper & automations', path: '/dashboard/agents', category: 'Navigate', Icon: Bot },
+  { id: 'dashboard', label: 'Dashboard', description: 'Overview and stats', path: '/dashboard', category: 'Navigate', Icon: LayoutDashboard },
+  { id: 'search', label: 'AI search', description: 'Find importers and exporters', path: '/dashboard/search', category: 'Navigate', Icon: Search },
+  { id: 'pipeline', label: 'Pipeline', description: 'Manage deals by stage', path: '/dashboard/pipeline', category: 'Navigate', Icon: KanbanSquare },
+  { id: 'outreach', label: 'Outreach', description: 'WhatsApp and email', path: '/dashboard/outreach', category: 'Navigate', Icon: Mail },
+  { id: 'documents', label: 'Documents', description: 'L/C and B/L audit', path: '/dashboard/documents', category: 'Navigate', Icon: FileText },
+  { id: 'analytics', label: 'Analytics', description: 'Charts and metrics', path: '/dashboard/analytics', category: 'Navigate', Icon: BarChart3 },
+  { id: 'agents', label: 'Agents', description: 'Scraper and automations', path: '/dashboard/agents', category: 'Navigate', Icon: Bot },
   { id: 'prices', label: 'Prices', description: 'Commodity price feeds', path: '/dashboard/prices', category: 'Navigate', Icon: LineChart },
-  { id: 'settings', label: 'Settings', description: 'API keys & config', path: '/dashboard/settings', category: 'Navigate', Icon: Settings },
-  { id: 'run-scraper', label: 'Run Lead Scraper', description: 'Trigger Apify agent', path: '/dashboard/agents', category: 'Action', Icon: Play },
-  { id: 'new-whatsapp', label: 'New WhatsApp Message', description: 'Send outbound message', path: '/dashboard/outreach', category: 'Action', Icon: MessageSquarePlus },
-  { id: 'export-csv', label: 'Export Companies CSV', description: 'Download search results', path: '/dashboard/search', category: 'Action', Icon: Download },
+  { id: 'settings', label: 'Settings', description: 'API keys and config', path: '/dashboard/settings', category: 'Navigate', Icon: Settings },
+  { id: 'run-scraper', label: 'Run lead scraper', description: 'Trigger the Apify agent', path: '/dashboard/agents', category: 'Action', Icon: Play },
+  { id: 'new-whatsapp', label: 'New WhatsApp message', description: 'Send an outbound message', path: '/dashboard/outreach', category: 'Action', Icon: MessageSquarePlus },
+  { id: 'export-csv', label: 'Export companies CSV', description: 'Download search results', path: '/dashboard/search', category: 'Action', Icon: Download },
 ];
 
 interface CommandPaletteProps {
@@ -174,7 +174,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
             placeholder="Type a command or search…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            aria-label="Command search"
+            aria-label="Search commands"
           />
           <kbd className={styles.kbd}>ESC</kbd>
         </div>

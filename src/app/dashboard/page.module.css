@@ -209,3 +209,14 @@
 .actionBtn:hover .actionArrow {
   color: var(--accent-lime);
 }
+
+@media (max-width: 600px) {
+  .welcomeTitle {
+    font-size: 1.5rem;
+  }
+
+  .activityCard,
+  .quickActionsCard {
+    padding: var(--space-4);
+  }
+}

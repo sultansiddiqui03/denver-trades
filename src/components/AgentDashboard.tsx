@@ -42,32 +42,32 @@ interface AgentRunResponse {
 const INITIAL_AGENTS: Agent[] = [
   {
     name: 'Lead Scraper Agent',
-    description: 'Scrapes trade portals & directories using Apify and enriches leads via Gemini.',
-    schedule: 'Daily at 02:00 AM UTC',
+    description: 'Scrapes trade portals and directories via Apify, enriches each lead with Gemini.',
+    schedule: 'Daily at 02:00 UTC',
     status: 'Idle',
     trigger: 'run',
   },
   {
     name: 'WhatsApp Parser Agent',
-    description: 'Processes incoming customer transcripts via Twilio and maps negotiations.',
-    schedule: 'Real-time webhook trigger',
+    description: 'Parses inbound Twilio messages and maps them to ongoing negotiations.',
+    schedule: 'Webhook (real-time)',
     status: 'Active',
     trigger: 'webhook',
     href: '/dashboard/outreach',
-    ctaLabel: 'Open Inbox',
+    ctaLabel: 'Open inbox',
   },
   {
     name: 'Doc Audit Agent',
-    description: 'Audits Bills of Lading and commercial documents against active Letters of Credit.',
-    schedule: 'On-demand via Documents page',
+    description: 'Audits B/L and commercial docs against the active L/C terms.',
+    schedule: 'On-demand from Documents',
     status: 'Idle',
     trigger: 'on-demand',
     href: '/dashboard/documents',
-    ctaLabel: 'Open Documents',
+    ctaLabel: 'Open documents',
   },
   {
     name: 'Price Ingest Agent',
-    description: 'Ingests global market pricing indices (spices, grains, coffee) to local feed.',
+    description: 'Pulls global price indices for spices, grains, and coffee into the local feed.',
     schedule: 'Every 6 hours',
     status: 'Idle',
     trigger: 'run',
@@ -154,19 +154,19 @@ export default function AgentDashboard() {
       if (mode === 'simulation') {
         setSimulationActive(true);
         toast(
-          data.message || `${agentName} completed in simulation mode (API key missing).`,
+          data.message || `${agentName} ran in simulation mode — API key missing`,
           'warning'
         );
       } else if (mode === 'idle') {
-        toast(data.message || `${agentName} has no work to do right now.`, 'info');
+        toast(data.message || `${agentName} has nothing to process right now`, 'info');
       } else {
-        toast(data.message || `${agentName} completed.`, 'success');
+        toast(data.message || `${agentName} completed`, 'success');
       }
 
       await fetchRuns();
     } catch (err) {
       console.error('Error running agent:', err);
-      toast(err instanceof Error ? err.message : `${agentName} failed to execute`, 'error');
+      toast(err instanceof Error ? err.message : `${agentName} failed to run`, 'error');
     } finally {
       setAgents((prev) =>
         prev.map((a) =>
@@ -188,7 +188,7 @@ export default function AgentDashboard() {
           onClick={() => handleRunAgent(agent.name)}
           disabled={triggering !== null}
         >
-          {agent.status === 'Running' ? 'Processing…' : 'Run Agent Now'}
+          {agent.status === 'Running' ? 'Running…' : 'Run now'}
         </button>
       );
     }
@@ -204,9 +204,9 @@ export default function AgentDashboard() {
     <div className={styles.container}>
       {simulationActive && (
         <div className={styles.simulationBanner} role="status">
-          <strong>Simulation mode active.</strong> Lead Scraper is using mock data because{' '}
-          <code>APIFY_TOKEN</code> is not set in this environment. Add it in Vercel project
-          settings to enable live scraping.
+          <strong>Simulation mode.</strong> Lead Scraper is returning mock data because{' '}
+          <code>APIFY_TOKEN</code> isn&apos;t set. Add it in Vercel project settings to enable live
+          scraping.
         </div>
       )}
 
@@ -224,7 +224,7 @@ export default function AgentDashboard() {
             {agent.name === 'Lead Scraper Agent' && (
               <div className={styles.queryField}>
                 <label htmlFor="scraper-query" className={styles.queryLabel}>
-                  Scraping Query
+                  Scraping query
                 </label>
                 <input
                   id="scraper-query"
@@ -232,7 +232,7 @@ export default function AgentDashboard() {
                   className={styles.queryInput}
                   value={scraperQuery}
                   onChange={(e) => setScraperQuery(e.target.value)}
-                  placeholder="e.g. Spice exporters in Vietnam"
+                  placeholder="e.g. spice exporters in Vietnam"
                   disabled={triggering !== null}
                 />
               </div>
@@ -248,9 +248,9 @@ export default function AgentDashboard() {
 
       <div className={styles.historySection}>
         <div className={styles.historyHeader}>
-          <h3>Audit Logs &amp; Run History</h3>
+          <h3>Run history</h3>
           <button type="button" className={styles.refreshBtn} onClick={fetchRuns}>
-            Refresh Logs
+            Refresh
           </button>
         </div>
 
@@ -259,11 +259,11 @@ export default function AgentDashboard() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Agent Name</th>
+                  <th>Agent</th>
                   <th>Status</th>
                   <th>Processed</th>
-                  <th>Created/Updated</th>
-                  <th>Execution Started</th>
+                  <th>Created</th>
+                  <th>Started</th>
                   <th>Detail</th>
                 </tr>
               </thead>
@@ -285,19 +285,19 @@ export default function AgentDashboard() {
           </div>
         ) : runs.length === 0 ? (
           <EmptyState
-            title="No Agent Runs Yet"
-            description="Trigger an agent above to see execution logs, processing stats, and lead creation results."
+            title="No agent runs yet"
+            description="Trigger an agent above to see run logs, processed counts, and any errors."
           />
         ) : (
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Agent Name</th>
+                  <th>Agent</th>
                   <th>Status</th>
                   <th>Processed</th>
-                  <th>Created/Updated</th>
-                  <th>Execution Started</th>
+                  <th>Created</th>
+                  <th>Started</th>
                   <th>Detail</th>
                 </tr>
               </thead>
@@ -327,7 +327,7 @@ export default function AgentDashboard() {
                           finished {new Date(run.completed_at).toLocaleTimeString()}
                         </span>
                       ) : (
-                        <span className={styles.dateCell}>in flight…</span>
+                        <span className={styles.dateCell}>running…</span>
                       )}
                     </td>
                   </tr>

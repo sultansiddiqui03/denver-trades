@@ -21,76 +21,81 @@ export default function SettingsPage() {
     <div className={`${styles.settingsContainer} fade-in`}>
       {/* Header */}
       <div className={styles.settingsHeader}>
-        <h1 className={styles.settingsTitle}>Configuration & Keys</h1>
+        <h1 className={styles.settingsTitle}>Settings</h1>
         <p className="text-secondary" style={{ fontSize: '0.875rem' }}>
-          Manage API credentials, databases, integrations, and CRM tokens.
+          Manage API credentials, databases, and integration tokens.
         </p>
       </div>
 
       <form onSubmit={handleSave} className={styles.settingsCard}>
         {/* Supabase Config */}
-        <h3 className={styles.cardSectionTitle}>Supabase Database Sync</h3>
+        <h3 className={styles.cardSectionTitle}>Supabase</h3>
         <div className={styles.formGrid}>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Supabase Project URL</label>
+            <label className={styles.formLabel}>Project URL</label>
             <input
               type="text"
               className="input"
               value={supabaseUrl}
               onChange={(e) => setSupabaseUrl(e.target.value)}
               placeholder="https://your-project.supabase.co"
+              aria-label="Supabase project URL"
             />
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Supabase Anon API Key</label>
+            <label className={styles.formLabel}>Anon API key</label>
             <input
               type="password"
               className="input"
               value={supabaseKey}
               onChange={(e) => setSupabaseKey(e.target.value)}
               placeholder="eyJhbGciOiJI..."
+              aria-label="Supabase anon API key"
             />
           </div>
         </div>
 
         {/* LLM Credentials */}
-        <h3 className={styles.cardSectionTitle}>LLM Provider Settings</h3>
+        <h3 className={styles.cardSectionTitle}>LLM providers</h3>
         <div className={styles.formGrid}>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Gemini Pro API Key</label>
+            <label className={styles.formLabel}>Gemini API key</label>
             <input
               type="password"
               className="input"
               value={geminiKey}
               onChange={(e) => setGeminiKey(e.target.value)}
               placeholder="AIzaSy..."
+              aria-label="Gemini API key"
             />
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>OpenAI Client Secret / API Key</label>
+            <label className={styles.formLabel}>OpenAI API key</label>
             <input
               type="password"
               className="input"
               value={openaiKey}
               onChange={(e) => setOpenaiKey(e.target.value)}
               placeholder="sk-proj-..."
+              aria-label="OpenAI API key"
             />
           </div>
         </div>
 
         {/* WhatsApp CRM Integration */}
-        <h3 className={styles.cardSectionTitle}>WhatsApp CRM Gateway</h3>
+        <h3 className={styles.cardSectionTitle}>WhatsApp</h3>
         <div className={styles.formGrid}>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>WhatsApp Business Access Token</label>
+            <label className={styles.formLabel}>Business access token</label>
             <input
               type="password"
               className="input"
               value={whatsappToken}
               onChange={(e) => setWhatsappToken(e.target.value)}
               placeholder="EAAW..."
+              aria-label="WhatsApp business access token"
             />
           </div>
         </div>
@@ -101,17 +106,17 @@ export default function SettingsPage() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            <span>Platform configurations saved successfully!</span>
+            <span>Settings saved</span>
           </div>
         )}
 
         {/* Actions */}
         <div className={styles.submitRow}>
           <button type="button" className="btn-secondary">
-            Reset Credentials
+            Reset
           </button>
           <button type="submit" className="btn-primary">
-            Save Configurations
+            Save settings
           </button>
         </div>
       </form>

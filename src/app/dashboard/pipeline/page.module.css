@@ -172,3 +172,32 @@
   color: var(--text-secondary);
   font-size: 0.875rem;
 }
+
+@media (max-width: 768px) {
+  .pipelineContainer {
+    height: auto;
+    min-height: calc(100vh - 64px - (var(--space-4) * 2));
+  }
+
+  .pipelineHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .boardWrapper {
+    flex-direction: column;
+    overflow-x: visible;
+    flex: none;
+  }
+
+  .column {
+    width: 100%;
+    min-width: 0;
+    max-height: none;
+  }
+
+  .cardList {
+    overflow-y: visible;
+  }
+}

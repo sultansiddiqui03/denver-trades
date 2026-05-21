@@ -253,6 +253,7 @@
 
 .tableWrapper {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .table {
@@ -283,6 +284,45 @@
 .agentNameCell {
   font-family: var(--font-heading);
   font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .historySection {
+    padding: var(--space-4);
+  }
+
+  .historyHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .agentCard {
+    padding: var(--space-4);
+  }
+
+  .metaRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .runBtn {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .table th:first-child,
+  .table td:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--bg-card);
+    z-index: 1;
+  }
+
+  .table td:first-child {
+    box-shadow: 1px 0 0 var(--border-primary);
+  }
 }
 
 .dateCell {
