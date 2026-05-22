@@ -27,7 +27,9 @@ const SAMPLE_COMPANIES: Omit<CompanyInsert, 'org_id'>[] = [
     is_enriched: true,
     enriched_at: new Date().toISOString(),
     enrichment_source: 'seed:onboarding',
-    confidence_score: 80,
+    // confidence_score is numeric(3,2) — a 0-1 decimal rendered as "N% match"
+    // (Math.round(score * 100)). NOT a 0-100 integer (that overflows the column).
+    confidence_score: 0.8,
     tags: ['sample'],
   },
   {
@@ -43,7 +45,7 @@ const SAMPLE_COMPANIES: Omit<CompanyInsert, 'org_id'>[] = [
     is_enriched: true,
     enriched_at: new Date().toISOString(),
     enrichment_source: 'seed:onboarding',
-    confidence_score: 85,
+    confidence_score: 0.85,
     tags: ['sample'],
   },
   {
@@ -59,7 +61,7 @@ const SAMPLE_COMPANIES: Omit<CompanyInsert, 'org_id'>[] = [
     is_enriched: true,
     enriched_at: new Date().toISOString(),
     enrichment_source: 'seed:onboarding',
-    confidence_score: 75,
+    confidence_score: 0.75,
     tags: ['sample'],
   },
 ];
