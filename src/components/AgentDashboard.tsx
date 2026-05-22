@@ -102,6 +102,10 @@ const ERROR_LOG_TRUNCATE_AT = 400;
  * the existing zero-cost behaviour for users who never touch this dropdown.
  */
 const SCRAPER_SOURCE_KEY = 'denver-trades.agents.scraper-source';
+// Customer-facing labels/hints only — NO internal cost or vendor codenames.
+// The `value` strings are the real Apify actor ids (validated server-side in
+// /api/agents/run + persisted in localStorage), so they must stay verbatim;
+// only the display label/hint are cosmetic and safe to reword.
 const SCRAPER_SOURCE_OPTIONS: {
   value: string;
   label: string;
@@ -109,18 +113,18 @@ const SCRAPER_SOURCE_OPTIONS: {
 }[] = [
   {
     value: '',
-    label: 'Default (Google Maps · directory)',
-    hint: 'Free per-result; broad business directory data.',
+    label: 'Business directory',
+    hint: 'Broad coverage — company names, websites, phone, and location.',
   },
   {
     value: 'zen-studio~importyeti-scraper',
-    label: 'ImportYeti — customs data (zen-studio)',
-    hint: 'Shipment-grade data with HS codes + trading partners. ~$7 / 1k results.',
+    label: 'Customs & shipment data',
+    hint: 'Verified shipment records with HS codes and top trading partners.',
   },
   {
     value: 'lulzasaur~importyeti-scraper',
-    label: 'ImportYeti — customs data (lulzasaur, budget)',
-    hint: 'Same data source as zen-studio, fewer fields per record. ~$5 / 1k results.',
+    label: 'Customs & shipment data — lite',
+    hint: 'Core shipment fields with a faster crawl.',
   },
 ];
 // Matches "dataset ffeKO5Oq7meoNAXLf" or "dataset: ffeKO5Oq7meoNAXLf"
