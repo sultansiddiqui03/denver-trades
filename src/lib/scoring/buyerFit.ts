@@ -106,6 +106,12 @@ function commodityMatches(commodity: string, product: string): boolean {
   return false;
 }
 
+/** True if a product matches any of the org's commodities (taxonomy-aware). */
+export function matchesOrgCommodity(product: string, commodities: string[]): boolean {
+  if (!product) return false;
+  return commodities.some((c) => commodityMatches(c, product));
+}
+
 /**
  * Target markets are also generic ("UAE", "Europe") while company locations
  * are specific country names ("United Arab Emirates", "Germany"). Map region /

@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { getSupabaseServiceClient } from '@/lib/supabase/admin';
 import { verifyTwilioRequest, isWebhookSecretAuthorized } from '@/lib/security/request';
 import { extractDemand, type ExtractedDemand } from '@/lib/agents/demandExtract';
+import { detectFromDemand } from '@/lib/opportunities/runDetect';
+import type { DemandLike } from '@/lib/opportunities/detect';
 import { getErrorMessage } from '@/lib/errors';
 
 const WhatsAppJsonSchema = z
@@ -203,6 +205,16 @@ export async function POST(request: Request) {
       }
     } catch (extractError) {
       console.error('WhatsApp demand extraction failed:', getErrorMessage(extractError));
+    }
+
+    // Real-time opportunity detection — a matching inbound demand is an
+    // act-now lead. Best-effort so it never blocks the Twilio ACK.
+    if (demand?.has_demand && insertedThread?.id) {
+      try {
+        await detectFromDemand(supabase, orgId, insertedThread.id, demand as DemandLike);
+      } catch (oppError) {
+        console.error('Opportunity detection (demand) failed:', getErrorMessage(oppError));
+      }
     }
 
     // If the buyer signaled a real demand, surface that in the notification so

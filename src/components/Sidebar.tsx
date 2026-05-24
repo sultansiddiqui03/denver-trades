@@ -8,6 +8,7 @@ import {
   Building2,
   ChevronLeft,
   FileText,
+  Flame,
   KanbanSquare,
   LayoutDashboard,
   LineChart,
@@ -53,6 +54,7 @@ const navGroups: NavGroup[] = [
   {
     heading: 'Market research',
     items: [
+      { label: 'Opportunities', path: '/dashboard/opportunities', Icon: Flame },
       { label: 'Live Feed', path: '/dashboard/live', Icon: Activity },
       { label: 'Find Buyers', path: '/dashboard/search?intent=buyers', Icon: ShoppingCart },
       { label: 'Find Sellers', path: '/dashboard/search?intent=sellers', Icon: Send },

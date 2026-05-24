@@ -483,6 +483,79 @@ export type Database = {
           },
         ]
       }
+      opportunities: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          dedupe_key: string
+          evidence: Json | null
+          id: string
+          org_id: string
+          priority: number
+          product: string | null
+          status: string
+          summary: string | null
+          thread_id: string | null
+          title: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          dedupe_key: string
+          evidence?: Json | null
+          id?: string
+          org_id: string
+          priority?: number
+          product?: string | null
+          status?: string
+          summary?: string | null
+          thread_id?: string | null
+          title: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          dedupe_key?: string
+          evidence?: Json | null
+          id?: string
+          org_id?: string
+          priority?: number
+          product?: string | null
+          status?: string
+          summary?: string | null
+          thread_id?: string | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           commodities: string[] | null

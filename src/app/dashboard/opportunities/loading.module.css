@@ -1,0 +1,81 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.headerSkel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.titleSkel {
+  width: 200px;
+  height: 28px;
+  border-radius: var(--radius-md);
+}
+
+.btnSkel {
+  width: 90px;
+  height: 34px;
+  border-radius: var(--radius-md);
+}
+
+.cardSkel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+}
+
+.cardSkelTop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.badgeSkel {
+  width: 80px;
+  height: 20px;
+  border-radius: var(--radius-full);
+}
+
+.pillSkel {
+  width: 44px;
+  height: 20px;
+  border-radius: var(--radius-full);
+}
+
+.titleLineSkel {
+  width: 65%;
+  height: 18px;
+  border-radius: var(--radius-sm);
+}
+
+.summaryLineSkel {
+  width: 100%;
+  height: 14px;
+  border-radius: var(--radius-sm);
+}
+
+.summaryLineSkelShort {
+  width: 70%;
+  height: 14px;
+  border-radius: var(--radius-sm);
+}
+
+.actionsSkel {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.actionSkel {
+  width: 130px;
+  height: 32px;
+  border-radius: var(--radius-md);
+}

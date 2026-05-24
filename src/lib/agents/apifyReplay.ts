@@ -4,6 +4,7 @@ import { generateJSON } from '@/lib/ai/gemini';
 import { computeAndStoreCompanyEmbedding } from '@/lib/ai/embedCompany';
 import { scoreOrgCompanies } from '@/lib/scoring/runScoring';
 import { computeAndStoreSourcingSignal } from '@/lib/signals/runSignals';
+import { detectFromCompany } from '@/lib/opportunities/runDetect';
 import type { Database, Json } from '@/lib/supabase/database.types';
 import {
   buildEnrichmentSource,
@@ -380,6 +381,14 @@ export async function enrichAndInsertScrapedItems(
       await scoreOrgCompanies(supabase, orgId, { companyIds: insertedIds });
     } catch (scoreError) {
       console.error('Apify enrich: buyer-fit scoring failed:', scoreError);
+    }
+    // Real-time: surface any high-fit / switching buyers as opportunities.
+    for (const id of insertedIds) {
+      try {
+        await detectFromCompany(supabase, orgId, id);
+      } catch (oppError) {
+        console.error(`Apify enrich: opportunity detection failed for ${id}:`, oppError);
+      }
     }
   }
 

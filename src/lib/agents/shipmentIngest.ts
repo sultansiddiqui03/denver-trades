@@ -14,6 +14,7 @@ import {
 import { computeAndStoreCompanyEmbedding } from '@/lib/ai/embedCompany';
 import { scoreOrgCompanies } from '@/lib/scoring/runScoring';
 import { computeAndStoreSourcingSignal } from '@/lib/signals/runSignals';
+import { detectFromCompany } from '@/lib/opportunities/runDetect';
 
 const toJson = (v: unknown): Json => (v === undefined || v === null ? null : (v as Json));
 
@@ -112,6 +113,11 @@ export async function recomputeCompanyTradeAggregates(
     await computeAndStoreSourcingSignal(supabase, companyId);
   } catch (e) {
     console.error(`Aggregates: signal failed for ${companyId}:`, e);
+  }
+  try {
+    await detectFromCompany(supabase, orgId, companyId);
+  } catch (e) {
+    console.error(`Aggregates: opportunity detection failed for ${companyId}:`, e);
   }
 }
 
