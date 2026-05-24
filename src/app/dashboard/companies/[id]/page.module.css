@@ -166,6 +166,14 @@
   border: 1px solid var(--border-primary);
 }
 
+/* Signal evidence — 1-2 muted bullet strings below the chip row */
+.signalEvidence {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: calc(var(--space-1) * -1);
+}
+
 .actionRow {
   display: inline-flex;
   align-items: center;

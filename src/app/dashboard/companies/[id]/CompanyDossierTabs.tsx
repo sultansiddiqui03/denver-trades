@@ -21,6 +21,8 @@ import EmptyState from '@/components/EmptyState';
 import { getIntent, type CompanyType } from '@/lib/intent';
 import { formatNumber, formatDate, relativeFromNow } from '@/lib/format';
 import ShipmentChart from './ShipmentChart';
+import ShipmentTimeline from './ShipmentTimeline';
+import { type ShipmentRow } from './ShipmentTimeline';
 import heroStyles from './page.module.css';
 import styles from './CompanyDossierTabs.module.css';
 
@@ -62,6 +64,19 @@ export interface ScoreBreakdownData {
   reasons?: string[];
 }
 
+export interface SourcingSignalData {
+  status?: string | null;
+  headline?: string | null;
+  intent?: string | null;
+  dropPct?: number;
+  decliningSupplier?: string;
+  topSupplierNow?: string;
+  newOrigins?: string[];
+  recentVolumeMt?: number;
+  priorVolumeMt?: number;
+  evidence?: string[];
+}
+
 export interface DossierCompany {
   id: string;
   name: string;
@@ -82,6 +97,10 @@ export interface DossierCompany {
   trademarks?: string[] | null;
   buyer_fit_score?: number | null;
   score_breakdown?: ScoreBreakdownData | null;
+  /** Per-shipment rows from the `shipments` table. */
+  shipments?: ShipmentRow[] | null;
+  /** Sourcing-shift signal (computed from shipments at ingest time). */
+  sourcing_signal?: SourcingSignalData | null;
 }
 
 interface CompanyDossierTabsProps {
@@ -184,31 +203,33 @@ export function HeroActions({
 }
 
 function ShipmentsTab({ company }: { company: DossierCompany }) {
-  const hasAnyData =
-    company.total_shipments != null ||
-    (company.hs_codes && company.hs_codes.length > 0) ||
-    (company.top_suppliers && company.top_suppliers.length > 0) ||
-    (company.top_trading_partners && company.top_trading_partners.length > 0) ||
-    (company.trademarks && company.trademarks.length > 0);
-
-  if (!hasAnyData) {
-    return (
-      <div className="fade-in">
-        <EmptyState
-          icon={<Ship size={48} strokeWidth={1} />}
-          title="No customs data yet."
-          description="Customs-grade shipment intelligence (ImportYeti) will appear here once this company is enriched from that source."
-        />
-      </div>
-    );
-  }
-
+  const shipmentRows = company.shipments ?? [];
   const hsCodes = company.hs_codes ?? [];
   const suppliers = company.top_suppliers ?? [];
   const partners = company.top_trading_partners ?? [];
   const marks = company.trademarks ?? [];
   const lastRel = relativeFromNow(company.last_shipment_date);
   const lastFmt = formatDate(company.last_shipment_date);
+
+  const hasAnyData =
+    shipmentRows.length > 0 ||
+    company.total_shipments != null ||
+    hsCodes.length > 0 ||
+    suppliers.length > 0 ||
+    partners.length > 0 ||
+    marks.length > 0;
+
+  if (!hasAnyData) {
+    return (
+      <div className="fade-in">
+        <EmptyState
+          icon={<Ship size={48} strokeWidth={1} />}
+          title="No shipment records yet."
+          description="Customs-grade shipment data will appear here once this company is enriched. Showing timelines, contract detail, and supplier history."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={`fade-in ${styles.shipmentsPanel}`}>
@@ -238,6 +259,67 @@ function ShipmentsTab({ company }: { company: DossierCompany }) {
           </a>
         )}
       </div>
+
+      {/* Shipments-per-month timeline (new) */}
+      {shipmentRows.length > 0 && (
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>
+            <Ship size={15} strokeWidth={1.8} />
+            Volume per month (MT)
+          </h3>
+          <ShipmentTimeline shipments={shipmentRows} />
+        </div>
+      )}
+
+      {/* Contracts & shipments table (new) */}
+      {shipmentRows.length > 0 && (
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>
+            <Package size={15} strokeWidth={1.8} />
+            Contracts &amp; shipments
+          </h3>
+          <div className={styles.contractsWrap}>
+            <table className={styles.contractsTable}>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Product</th>
+                  <th>Qty (MT)</th>
+                  <th>Value</th>
+                  <th>Lane</th>
+                  <th>Incoterm</th>
+                  <th>Supplier</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shipmentRows.map((s, i) => {
+                  const lane =
+                    s.origin_country && s.destination_country
+                      ? `${s.origin_country}${s.port_loading ? `/${s.port_loading}` : ''} → ${s.destination_country}${s.port_discharge ? `/${s.port_discharge}` : ''}`
+                      : s.origin_country ?? s.destination_country ?? '—';
+                  return (
+                    <tr key={s.id ?? i}>
+                      <td className={styles.tdDate}>{formatDate(s.shipment_date)}</td>
+                      <td>{s.product ?? '—'}</td>
+                      <td className={styles.tdQty}>
+                        {s.quantity_mt != null ? formatNumber(Math.round(s.quantity_mt)) : '—'}
+                      </td>
+                      <td className={styles.tdValue}>
+                        {s.value_usd != null
+                          ? `$${formatNumber(Math.round(s.value_usd))}`
+                          : '—'}
+                      </td>
+                      <td className={styles.tdLane}>{lane}</td>
+                      <td className={styles.tdIncoterm}>{s.incoterm ?? '—'}</td>
+                      <td className={styles.tdSupplier}>{s.supplier_name ?? '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* HS code chart */}
       {hsCodes.length > 0 && (

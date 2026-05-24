@@ -328,6 +328,97 @@
   border-radius: var(--radius-full);
 }
 
+/* ── Contracts & shipments table */
+.contractsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.contractsTable thead tr {
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.contractsTable th {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: var(--space-2) var(--space-3) var(--space-3) var(--space-3);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.contractsTable tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background var(--transition-fast);
+}
+
+.contractsTable tbody tr:last-child {
+  border-bottom: none;
+}
+
+.contractsTable tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.contractsTable td {
+  padding: var(--space-3);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.tdDate {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.tdQty {
+  font-weight: 600;
+  color: var(--accent-lime);
+  white-space: nowrap;
+}
+
+.tdValue {
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.tdLane {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.tdIncoterm {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tdSupplier {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contractsWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  -webkit-overflow-scrolling: touch;
+}
+
 /* ── HS codes section in Commodities tab */
 .hsSection {
   margin-top: var(--space-5);

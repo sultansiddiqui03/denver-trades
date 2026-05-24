@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LineChart,
   Mail,
+  Radar,
   Send,
   Settings,
   ShoppingCart,
@@ -55,6 +56,7 @@ const navGroups: NavGroup[] = [
       { label: 'Find Sellers', path: '/dashboard/search?intent=sellers', Icon: Send },
       { label: 'Companies', path: '/dashboard/companies', Icon: Building2 },
       { label: 'Buyer Match', path: '/dashboard/matches', Icon: Target },
+      { label: 'Demand Radar', path: '/dashboard/radar', Icon: Radar },
     ],
   },
   {

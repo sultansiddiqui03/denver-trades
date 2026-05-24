@@ -1,0 +1,45 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.headerSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.titleSkel {
+  width: 220px;
+  height: 32px;
+  border-radius: var(--radius-md);
+}
+
+.subtitleSkel {
+  width: 380px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+}
+
+.gridSkeleton {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
+}
+
+.cardSkel {
+  height: 180px;
+  border-radius: var(--radius-lg);
+}
+
+.listSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.rowSkel {
+  height: 100px;
+  border-radius: var(--radius-lg);
+}

@@ -14,11 +14,17 @@ import { getUserContext } from '@/lib/auth/server';
 import EmptyState from '@/components/EmptyState';
 import IntentChip from '@/components/IntentChip';
 import BuyerFitBadge from '@/components/BuyerFitBadge';
+import SourcingSignalBadge from '@/components/SourcingSignalBadge';
 import { type CompanyType } from '@/lib/intent';
 import { formatNumber, relativeFromNow } from '@/lib/format';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
+
+interface SourcingSignalLike {
+  status?: string | null;
+  headline?: string | null;
+}
 
 interface CompanyRow {
   id: string;
@@ -36,6 +42,7 @@ interface CompanyRow {
   total_shipments: number | null;
   last_shipment_date: string | null;
   buyer_fit_score: number | null;
+  sourcing_signal: SourcingSignalLike | null;
 }
 
 function formatEnrichedDate(iso: string | null): string {
@@ -63,7 +70,7 @@ export default async function CompaniesDirectory() {
   const { data: companies } = await supabase
     .from('companies')
     .select(
-      'id, name, type, hq_city, hq_country, website, products_dealt, origin_countries, destination_countries, is_enriched, enriched_at, created_at, total_shipments, last_shipment_date, buyer_fit_score'
+      'id, name, type, hq_city, hq_country, website, products_dealt, origin_countries, destination_countries, is_enriched, enriched_at, created_at, total_shipments, last_shipment_date, buyer_fit_score, sourcing_signal'
     )
     .eq('org_id', orgId)
     .order('buyer_fit_score', { ascending: false, nullsFirst: false })
@@ -140,6 +147,7 @@ export default async function CompaniesDirectory() {
                   <div className={styles.cardTopRight}>
                     <IntentChip type={c.type} />
                     <BuyerFitBadge score={c.buyer_fit_score} size="sm" />
+                    <SourcingSignalBadge signal={c.sourcing_signal} size="sm" />
                   </div>
                 </div>
 

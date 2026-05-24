@@ -11,6 +11,7 @@ import {
 import { getUserContext } from '@/lib/auth/server';
 import IntentChip from '@/components/IntentChip';
 import BuyerFitBadge from '@/components/BuyerFitBadge';
+import SourcingSignalBadge from '@/components/SourcingSignalBadge';
 import { type CompanyType } from '@/lib/intent';
 import { parseEnrichmentSource } from '@/lib/agents/scraperActors';
 import { formatNumber, relativeFromNow } from '@/lib/format';
@@ -50,6 +51,28 @@ interface ScoreBreakdownData {
   reasons?: string[];
 }
 
+interface ShipmentRow {
+  id: string;
+  shipment_date: string | null;
+  quantity_mt: number | null;
+  product: string | null;
+  supplier_name: string | null;
+  origin_country: string | null;
+  destination_country: string | null;
+  port_loading: string | null;
+  port_discharge: string | null;
+  value_usd: number | null;
+  incoterm: string | null;
+}
+
+interface SourcingSignalData {
+  status?: string | null;
+  headline?: string | null;
+  intent?: string | null;
+  evidence?: string[];
+  [key: string]: unknown;
+}
+
 interface CompanyRow {
   id: string;
   name: string;
@@ -75,6 +98,7 @@ interface CompanyRow {
   trademarks: unknown;
   buyer_fit_score: number | null;
   score_breakdown: unknown;
+  sourcing_signal: unknown;
 }
 
 function normaliseHsCodes(raw: unknown): HsCodeEntry[] {
@@ -100,6 +124,11 @@ function normaliseTrademarks(raw: unknown): string[] {
 function normaliseScoreBreakdown(raw: unknown): ScoreBreakdownData | null {
   if (!raw || typeof raw !== 'object') return null;
   return raw as ScoreBreakdownData;
+}
+
+function normaliseSourcingSignal(raw: unknown): SourcingSignalData | null {
+  if (!raw || typeof raw !== 'object') return null;
+  return raw as SourcingSignalData;
 }
 
 function formatEnrichedDate(iso: string | null): string {
@@ -157,14 +186,25 @@ export default async function CompanyDossierPage({ params }: PageProps) {
 
   const { orgId, supabase } = context;
 
-  const { data, error } = await supabase
-    .from('companies')
-    .select(
-      'id, name, type, hq_city, hq_country, website, description, origin_countries, destination_countries, products_dealt, contacts, is_enriched, is_favorited, enriched_at, enrichment_source, total_shipments, last_shipment_date, source_url, top_suppliers, hs_codes, top_trading_partners, trademarks, buyer_fit_score, score_breakdown',
-    )
-    .eq('id', id)
-    .eq('org_id', orgId)
-    .maybeSingle();
+  const [{ data, error }, { data: shipmentsData }] = await Promise.all([
+    supabase
+      .from('companies')
+      .select(
+        'id, name, type, hq_city, hq_country, website, description, origin_countries, destination_countries, products_dealt, contacts, is_enriched, is_favorited, enriched_at, enrichment_source, total_shipments, last_shipment_date, source_url, top_suppliers, hs_codes, top_trading_partners, trademarks, buyer_fit_score, score_breakdown, sourcing_signal',
+      )
+      .eq('id', id)
+      .eq('org_id', orgId)
+      .maybeSingle(),
+    supabase
+      .from('shipments')
+      .select(
+        'id, shipment_date, quantity_mt, product, supplier_name, origin_country, destination_country, port_loading, port_discharge, value_usd, incoterm',
+      )
+      .eq('company_id', id)
+      .eq('org_id', orgId)
+      .order('shipment_date', { ascending: false })
+      .limit(200),
+  ]);
 
   if (error) {
     console.error('Company dossier load error:', error);
@@ -185,6 +225,8 @@ export default async function CompanyDossierPage({ params }: PageProps) {
   const topTradingPartners = normaliseTradingPartners(company.top_trading_partners);
   const trademarks = normaliseTrademarks(company.trademarks);
   const scoreBreakdown = normaliseScoreBreakdown(company.score_breakdown);
+  const sourcingSignal = normaliseSourcingSignal(company.sourcing_signal);
+  const shipments = (shipmentsData ?? []) as ShipmentRow[];
 
   const lastShipRelative = relativeFromNow(company.last_shipment_date);
 
@@ -208,6 +250,8 @@ export default async function CompanyDossierPage({ params }: PageProps) {
     trademarks,
     buyer_fit_score: company.buyer_fit_score,
     score_breakdown: scoreBreakdown,
+    shipments,
+    sourcing_signal: sourcingSignal,
   };
 
   return (
@@ -265,6 +309,7 @@ export default async function CompanyDossierPage({ params }: PageProps) {
             <div className={styles.heroChips}>
               <IntentChip type={type} size="md" />
               <BuyerFitBadge score={company.buyer_fit_score} size="md" showLabel />
+              <SourcingSignalBadge signal={sourcingSignal} size="md" />
               {company.is_enriched ? (
                 <span
                   className={styles.enrichedStamp}
@@ -285,6 +330,11 @@ export default async function CompanyDossierPage({ params }: PageProps) {
                 </span>
               ) : null}
             </div>
+            {sourcingSignal?.evidence && sourcingSignal.evidence.length > 0 && (
+              <p className={styles.signalEvidence}>
+                {sourcingSignal.evidence.slice(0, 2).join(' · ')}
+              </p>
+            )}
 
             {scoreBreakdown ? (
               <ScoreBreakdown breakdown={scoreBreakdown} />
