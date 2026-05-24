@@ -2,12 +2,36 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { generateJSON } from '@/lib/ai/gemini';
 import { computeAndStoreCompanyEmbedding } from '@/lib/ai/embedCompany';
-import type { Database } from '@/lib/supabase/database.types';
+import { scoreOrgCompanies } from '@/lib/scoring/runScoring';
+import type { Database, Json } from '@/lib/supabase/database.types';
 import {
   buildEnrichmentSource,
   DEFAULT_SCRAPER_ACTOR_ID,
   mapItems,
+  pickActor,
+  type ScraperDataKind,
 } from '@/lib/agents/scraperActors';
+
+/** One supplier/buyer relationship pulled from customs records. */
+export interface ScrapedSupplier {
+  name: string;
+  country?: string;
+  shipments?: number;
+}
+
+/** One HS-coded product line from a customs profile. */
+export interface ScrapedHsCode {
+  code?: string;
+  description?: string;
+  shipments?: number;
+}
+
+/** A top trading partner (counterparty) from customs records. */
+export interface ScrapedTradingPartner {
+  name: string;
+  country?: string;
+  role?: string;
+}
 
 /**
  * Normalised shape of one scraped business record that the enrichment prompt
@@ -17,10 +41,13 @@ import {
  * enrichment prompt, the companies insert, the embedding job) only sees one
  * stable contract.
  *
- * Treat this as a presentation-layer DTO: optional fields are filled when the
- * source actor has them, omitted when it doesn't. Don't add fields that only
- * one actor produces — push that into the actor's `mapItem` description text
- * instead so the LLM gets the signal without coupling the schema.
+ * Two tiers of fields:
+ *   1. Directory fields (title…description) — present for every actor; the
+ *      free-text `description` is what the LLM classifies on.
+ *   2. Structured customs intelligence (totalShipments…trademarks) — present
+ *      only for customs-grade actors (ImportYeti). These are HARD FACTS and
+ *      must be persisted verbatim, NOT laundered through the LLM. They are the
+ *      defensible signal that proves "this buyer actually buys what we sell".
  */
 export interface ScrapedPlace {
   title?: string;
@@ -32,6 +59,18 @@ export interface ScrapedPlace {
   street?: string;
   address?: string;
   description?: string;
+  // --- structured customs intelligence (optional) ---
+  totalShipments?: number;
+  /** Date of most recent shipment, normalised to YYYY-MM-DD where possible. */
+  lastShipmentDate?: string;
+  topSuppliers?: ScrapedSupplier[];
+  hsCodes?: ScrapedHsCode[];
+  topTradingPartners?: ScrapedTradingPartner[];
+  trademarks?: string[];
+  /** Canonical source profile URL (e.g. ImportYeti detailUrl). */
+  sourceUrl?: string;
+  /** Catch-all for additional raw metrics not promoted to a named field. */
+  rawMetrics?: Record<string, unknown>;
 }
 
 /**
@@ -84,6 +123,42 @@ Phone: ${item.phone || 'N/A'}
 Address: ${item.address || item.street || 'N/A'}
 City: ${item.city || 'N/A'}
 Country Code: ${item.countryCode || 'N/A'}`;
+}
+
+/** Parse any source date string into a YYYY-MM-DD column value, or null. */
+function normaliseShipmentDate(value?: string): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Derive a 0-1 confidence score from the *source quality*, not a hardcoded
+ * constant. A customs record with hundreds of verified shipments is far more
+ * trustworthy than a bare directory listing — the score should say so.
+ */
+function deriveConfidence(item: ScrapedPlace, dataKind: ScraperDataKind): number {
+  let score = dataKind === 'customs' ? 0.82 : 0.6;
+  const shipments = item.totalShipments ?? 0;
+  if (shipments >= 500) score += 0.15;
+  else if (shipments >= 100) score += 0.1;
+  else if (shipments >= 10) score += 0.05;
+  if (item.website) score += 0.02;
+  if (item.hsCodes && item.hsCodes.length > 0) score += 0.02;
+  return Math.min(0.99, Number(score.toFixed(2)));
+}
+
+/**
+ * Coerce our structured DTO values into the Supabase `Json` column type.
+ * The DTO interfaces (ScrapedSupplier etc.) are structurally valid JSON but
+ * lack the index signature `Json` requires, so a cast is unavoidable here.
+ * Empty arrays / undefined collapse to null to keep jsonb columns clean.
+ */
+function toJson(value: unknown): Json {
+  if (value === undefined || value === null) return null;
+  if (Array.isArray(value) && value.length === 0) return null;
+  return value as Json;
 }
 
 /**
@@ -156,9 +231,11 @@ export async function enrichAndInsertScrapedItems(
 ): Promise<EnrichDatasetResult> {
   const { limit = 5, datasetId, actorId } = options;
   const effectiveActorId = actorId ?? DEFAULT_SCRAPER_ACTOR_ID;
+  const actor = pickActor(effectiveActorId);
   const items = mapItems(rawItems, effectiveActorId);
   const itemsToProcess = items.slice(0, limit);
   let createdCount = 0;
+  const insertedIds: string[] = [];
   const enrichmentSource = datasetId
     ? buildEnrichmentSource(datasetId, effectiveActorId)
     : `apify-lead-scraper:${effectiveActorId}`;
@@ -192,7 +269,17 @@ export async function enrichAndInsertScrapedItems(
           is_enriched: true,
           enriched_at: new Date().toISOString(),
           enrichment_source: enrichmentSource,
-          confidence_score: 0.92,
+          confidence_score: deriveConfidence(item, actor.dataKind),
+          // Structured customs intelligence — persisted verbatim from source,
+          // never LLM-laundered. Empty arrays collapse to null.
+          total_shipments: item.totalShipments ?? null,
+          last_shipment_date: normaliseShipmentDate(item.lastShipmentDate),
+          top_suppliers: toJson(item.topSuppliers),
+          hs_codes: toJson(item.hsCodes),
+          top_trading_partners: toJson(item.topTradingPartners),
+          trademarks: toJson(item.trademarks),
+          source_url: item.sourceUrl ?? null,
+          trade_metrics: toJson(item.rawMetrics),
         })
         .select('id')
         .single();
@@ -203,6 +290,7 @@ export async function enrichAndInsertScrapedItems(
       }
 
       createdCount++;
+      insertedIds.push(inserted.id);
 
       // Best-effort embedding so the company is searchable via
       // /api/search/semantic. A missing OPENAI_API_KEY or provider
@@ -217,6 +305,17 @@ export async function enrichAndInsertScrapedItems(
       }
     } catch (enrichError) {
       console.error('Failed to enrich scraped item:', item, enrichError);
+    }
+  }
+
+  // Auto-score the freshly inserted companies for buyer-fit so they surface
+  // in the Buyer-Match engine immediately. Best-effort: a scoring hiccup must
+  // not fail the scrape ingest.
+  if (insertedIds.length > 0) {
+    try {
+      await scoreOrgCompanies(supabase, orgId, { companyIds: insertedIds });
+    } catch (scoreError) {
+      console.error('Apify enrich: buyer-fit scoring failed:', scoreError);
     }
   }
 

@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server';
 import { requireOnboardingContext } from '@/lib/auth/server';
 import { getSupabaseServiceClient } from '@/lib/supabase/admin';
 import { getErrorMessage } from '@/lib/errors';
+import { scoreOrgCompanies } from '@/lib/scoring/runScoring';
 import type { TablesInsert } from '@/lib/supabase/database.types';
 
 type CompanyInsert = TablesInsert<'companies'>;
 type DealInsert = TablesInsert<'deals_pipeline'>;
+
+const daysAgo = (n: number): string =>
+  new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
 
 /**
  * Sample spice-trade data so a brand-new dashboard isn't empty.
@@ -30,6 +34,23 @@ const SAMPLE_COMPANIES: Omit<CompanyInsert, 'org_id'>[] = [
     // confidence_score is numeric(3,2) — a 0-1 decimal rendered as "N% match"
     // (Math.round(score * 100)). NOT a 0-100 integer (that overflows the column).
     confidence_score: 0.8,
+    total_shipments: 760,
+    last_shipment_date: daysAgo(16),
+    source_url: 'https://www.importyeti.com/company/al-khaleej-spice-imports',
+    hs_codes: [
+      { code: '0904.11', description: 'Pepper, Black; whole', shipments: 318 },
+      { code: '0908.31', description: 'Cardamom', shipments: 224 },
+      { code: '0910.30', description: 'Turmeric', shipments: 140 },
+    ],
+    top_suppliers: [
+      { name: 'Malabar Exports Pvt Ltd', country: 'India', shipments: 210 },
+      { name: 'Truong Phu Pepper Co.', country: 'Vietnam', shipments: 165 },
+    ],
+    top_trading_partners: [
+      { name: 'Malabar Exports Pvt Ltd', country: 'India', role: 'Supplier' },
+      { name: 'GCC Food Processors', country: 'Saudi Arabia', role: 'Buyer' },
+    ],
+    trademarks: [],
     tags: ['sample'],
   },
   {
@@ -46,6 +67,21 @@ const SAMPLE_COMPANIES: Omit<CompanyInsert, 'org_id'>[] = [
     enriched_at: new Date().toISOString(),
     enrichment_source: 'seed:onboarding',
     confidence_score: 0.85,
+    total_shipments: 540,
+    last_shipment_date: daysAgo(26),
+    source_url: 'https://www.importyeti.com/company/kerala-cardamom-exports',
+    hs_codes: [
+      { code: '0908.31', description: 'Cardamom', shipments: 260 },
+      { code: '0904.11', description: 'Pepper, Black', shipments: 150 },
+      { code: '0906.11', description: 'Cinnamon', shipments: 80 },
+      { code: '0907.00', description: 'Cloves', shipments: 50 },
+    ],
+    top_suppliers: [],
+    top_trading_partners: [
+      { name: 'Al Khaleej Spice Imports', country: 'United Arab Emirates', role: 'Buyer' },
+      { name: 'EuroFoods Import GmbH', country: 'Germany', role: 'Buyer' },
+    ],
+    trademarks: ['Idukki Gold'],
     tags: ['sample'],
   },
   {
@@ -62,6 +98,24 @@ const SAMPLE_COMPANIES: Omit<CompanyInsert, 'org_id'>[] = [
     enriched_at: new Date().toISOString(),
     enrichment_source: 'seed:onboarding',
     confidence_score: 0.75,
+    total_shipments: 410,
+    last_shipment_date: daysAgo(38),
+    source_url: 'https://www.importyeti.com/company/singapore-commodity-brokers',
+    hs_codes: [
+      { code: '0904.11', description: 'Pepper, Black', shipments: 180 },
+      { code: '0904.12', description: 'Pepper, White', shipments: 120 },
+      { code: '0908.11', description: 'Nutmeg', shipments: 60 },
+      { code: '0906.19', description: 'Cassia', shipments: 50 },
+    ],
+    top_suppliers: [
+      { name: 'PT Rempah Nusantara', country: 'Indonesia', shipments: 120 },
+      { name: 'Lao Cai Spice JSC', country: 'Vietnam', shipments: 95 },
+    ],
+    top_trading_partners: [
+      { name: 'East Asia Food Imports', country: 'China', role: 'Buyer' },
+      { name: 'Nippon Spice KK', country: 'Japan', role: 'Buyer' },
+    ],
+    trademarks: [],
     tags: ['sample'],
   },
 ];
@@ -210,6 +264,16 @@ export async function POST() {
           .insert(deals);
         if (dealsErr) throw dealsErr;
         createdDeals = deals.length;
+      }
+
+      // Score the demo companies so the Buyer-Match leaderboard + score badges
+      // aren't empty on a brand-new dashboard. Best-effort.
+      if (rows && rows.length > 0) {
+        try {
+          await scoreOrgCompanies(admin, orgId, { companyIds: rows.map((r) => r.id) });
+        } catch (scoreError) {
+          console.error('Onboarding seed: buyer-fit scoring failed', scoreError);
+        }
       }
     }
 

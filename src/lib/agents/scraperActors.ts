@@ -1,4 +1,9 @@
-import type { ScrapedPlace } from './apifyReplay';
+import type {
+  ScrapedPlace,
+  ScrapedSupplier,
+  ScrapedHsCode,
+  ScrapedTradingPartner,
+} from './apifyReplay';
 
 /**
  * Adapter layer for swappable Apify scraper actors.
@@ -66,26 +71,231 @@ function asNonEmptyArray(value: unknown): unknown[] | undefined {
   return Array.isArray(value) && value.length > 0 ? value : undefined;
 }
 
-/**
- * Pull a clean human-readable HS-code description from ImportYeti's
- * `hsCodeSummary` array. Items look like:
- *   { code: '0904.11', description: 'Pepper, Black; whole', shipments: 47 }
- * We take description first (more searchable) and fall back to code.
- */
-function describeHsItem(item: unknown): string | undefined {
-  const obj = asObject(item);
-  if (!obj) return undefined;
-  return asString(obj.description) ?? asString(obj.code) ?? asString(obj.hsCode);
+function asNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const n = Number(value.replace(/[, ]/g, ''));
+    return Number.isFinite(n) ? n : undefined;
+  }
+  return undefined;
+}
+
+function asUrl(value: unknown): string | undefined {
+  const s = asString(value);
+  if (!s) return undefined;
+  return /^https?:\/\//i.test(s) ? s : undefined;
 }
 
 /**
- * Extract a country name from one ImportYeti `topTradingPartners` entry.
- * Each entry is roughly `{ name: 'PEPPER FACTORY', country: 'Vietnam', ... }`.
+ * Parse a supplier list into ScrapedSupplier[]. Tolerates arrays of plain
+ * strings or objects with assorted key names across actors.
  */
-function partnerCountry(item: unknown): string | undefined {
-  const obj = asObject(item);
-  if (!obj) return undefined;
-  return asString(obj.country) ?? asString(obj.countryName);
+function parseSuppliers(value: unknown): ScrapedSupplier[] | undefined {
+  const arr = asNonEmptyArray(value);
+  if (!arr) return undefined;
+  const out: ScrapedSupplier[] = [];
+  for (const raw of arr.slice(0, 10)) {
+    if (typeof raw === 'string') {
+      const name = raw.trim();
+      if (name) out.push({ name });
+      continue;
+    }
+    const obj = asObject(raw);
+    if (!obj) continue;
+    const name =
+      asString(obj.name) ??
+      asString(obj.companyName) ??
+      asString(obj.supplierName) ??
+      asString(obj.supplier);
+    if (!name) continue;
+    out.push({
+      name,
+      country: asString(obj.country) ?? asString(obj.countryName),
+      shipments:
+        asNumber(obj.shipments) ?? asNumber(obj.totalShipments) ?? asNumber(obj.count),
+    });
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+function parsePartners(value: unknown): ScrapedTradingPartner[] | undefined {
+  const arr = asNonEmptyArray(value);
+  if (!arr) return undefined;
+  const out: ScrapedTradingPartner[] = [];
+  for (const raw of arr.slice(0, 10)) {
+    if (typeof raw === 'string') {
+      const name = raw.trim();
+      if (name) out.push({ name });
+      continue;
+    }
+    const obj = asObject(raw);
+    if (!obj) continue;
+    const name =
+      asString(obj.name) ?? asString(obj.companyName) ?? asString(obj.partner);
+    if (!name) continue;
+    out.push({
+      name,
+      country: asString(obj.country) ?? asString(obj.countryName),
+      role: asString(obj.role) ?? asString(obj.type),
+    });
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+/**
+ * Parse an HS-code list into ScrapedHsCode[]. Source items look like
+ *   { code: '0904.11', description: 'Pepper, Black; whole', shipments: 47 }
+ * but some actors emit plain product strings — handle both.
+ */
+function parseHsCodes(value: unknown): ScrapedHsCode[] | undefined {
+  const arr = asNonEmptyArray(value);
+  if (!arr) return undefined;
+  const out: ScrapedHsCode[] = [];
+  for (const raw of arr.slice(0, 12)) {
+    if (typeof raw === 'string') {
+      const description = raw.trim();
+      if (description) out.push({ description });
+      continue;
+    }
+    const obj = asObject(raw);
+    if (!obj) continue;
+    const code = asString(obj.code) ?? asString(obj.hsCode) ?? asString(obj.hs);
+    const description =
+      asString(obj.description) ?? asString(obj.product) ?? asString(obj.name);
+    if (!code && !description) continue;
+    out.push({ code, description, shipments: asNumber(obj.shipments) ?? asNumber(obj.count) });
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+function parseTrademarks(value: unknown): string[] | undefined {
+  const arr = asNonEmptyArray(value);
+  if (!arr) return undefined;
+  const out: string[] = [];
+  for (const raw of arr.slice(0, 20)) {
+    let name: string | undefined;
+    if (typeof raw === 'string') {
+      name = raw.trim() || undefined;
+    } else {
+      const obj = asObject(raw);
+      name = obj
+        ? asString(obj.name) ?? asString(obj.trademark) ?? asString(obj.mark)
+        : undefined;
+    }
+    if (name) out.push(name);
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+/**
+ * Build a prose description that surfaces the customs signal (volume, HS
+ * codes, partners) so the Gemini enrichment pass still has rich substrate to
+ * classify Importer vs Exporter — even though the structured fields are now
+ * persisted separately.
+ */
+function buildCustomsDescription(input: {
+  totalShipments?: number;
+  lastShipmentDate?: string;
+  hsCodes?: ScrapedHsCode[];
+  topTradingPartners?: ScrapedTradingPartner[];
+  topSuppliers?: ScrapedSupplier[];
+}): string | undefined {
+  const lines: string[] = [];
+  if (input.totalShipments !== undefined) {
+    const recent = input.lastShipmentDate ? `, most recent ${input.lastShipmentDate}` : '';
+    lines.push(`Customs records: ${input.totalShipments} shipments${recent}.`);
+  }
+  const hs = (input.hsCodes ?? [])
+    .map((h) => h.description ?? h.code)
+    .filter((s): s is string => Boolean(s))
+    .slice(0, 5);
+  if (hs.length > 0) lines.push(`Top HS-coded products: ${hs.join('; ')}.`);
+  const partners = (input.topTradingPartners ?? [])
+    .map((p) => p.country ?? p.name)
+    .filter((s): s is string => Boolean(s))
+    .slice(0, 5);
+  if (partners.length > 0) lines.push(`Top trading partners: ${partners.join(', ')}.`);
+  const suppliers = (input.topSuppliers ?? [])
+    .map((s) => s.name)
+    .filter(Boolean)
+    .slice(0, 5);
+  if (suppliers.length > 0) lines.push(`Top suppliers: ${suppliers.join(', ')}.`);
+  const text = lines.join(' ').trim();
+  return text.length > 0 ? text : undefined;
+}
+
+/**
+ * Map ONE raw ImportYeti-class customs record into our normalised
+ * {@link ScrapedPlace}, populating both directory fields AND the structured
+ * customs intelligence. Shared by every ImportYeti actor below so they can
+ * never drift. Defensive about field names because the zen-studio /
+ * lulzasaur / "US Import Records" actors each name things slightly
+ * differently; unknown shapes degrade gracefully to `null` fields.
+ */
+function mapImportYetiRecord(raw: unknown): ScrapedPlace | null {
+  const obj = asObject(raw);
+  if (!obj) return null;
+  // Some actors nest the bulk of the profile under a `profile` key.
+  const profile = asObject(obj.profile) ?? obj;
+
+  const name =
+    asString(obj.name) ??
+    asString(obj.companyName) ??
+    asString(profile.name) ??
+    asString(obj.title);
+  if (!name) return null;
+
+  const totalShipments =
+    asNumber(obj.totalShipments) ??
+    asNumber(obj.shipmentsCount) ??
+    asNumber(profile.totalShipments);
+  const lastShipmentDate =
+    asString(obj.mostRecentShipment) ??
+    asString(obj.lastShipment) ??
+    asString(obj.lastShipmentDate) ??
+    asString(profile.mostRecentShipment);
+  const topSuppliers = parseSuppliers(obj.topSuppliers ?? profile.topSuppliers);
+  const topTradingPartners = parsePartners(
+    obj.topTradingPartners ?? profile.topTradingPartners,
+  );
+  const hsCodes = parseHsCodes(
+    obj.hsCodeSummary ?? obj.hsCodes ?? profile.hsCodes ?? profile.topProducts,
+  );
+  const trademarks = parseTrademarks(obj.trademarks ?? profile.trademarks);
+  const sourceUrl =
+    asUrl(obj.detailUrl) ??
+    asUrl(obj.url) ??
+    asUrl(obj.profileUrl) ??
+    asUrl(obj.importYetiUrl);
+
+  return {
+    title: name,
+    // ImportYeti `type` ("Supplier" = overseas exporter, "Company" = US
+    // importer) is a strong classification hint for the enrichment LLM.
+    categoryName: asString(obj.type) ?? asString(profile.type),
+    website: asString(obj.website) ?? asString(profile.website),
+    phone: asString(obj.phone) ?? asString(profile.phone),
+    city: asString(obj.city) ?? asString(profile.city),
+    countryCode:
+      asString(obj.countryCode) ?? asString(obj.country) ?? asString(profile.country),
+    street: undefined,
+    address:
+      asString(obj.addressPlain) ?? asString(obj.address) ?? asString(profile.address),
+    description: buildCustomsDescription({
+      totalShipments,
+      lastShipmentDate,
+      hsCodes,
+      topTradingPartners,
+      topSuppliers,
+    }),
+    totalShipments,
+    lastShipmentDate,
+    topSuppliers,
+    hsCodes,
+    topTradingPartners,
+    trademarks,
+    sourceUrl,
+  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -146,53 +356,7 @@ const importYetiZenActor: ScraperActor = {
       maxResults,
     };
   },
-  mapItem(raw: unknown): ScrapedPlace | null {
-    const obj = asObject(raw);
-    if (!obj) return null;
-    const name = asString(obj.name);
-    if (!name) return null;
-
-    // Build a Gemini-friendly description that surfaces the customs-grade
-    // signal (HS codes, partner countries, shipment volume) so the enrichment
-    // pass has rich substrate to classify Importer vs Exporter.
-    const total = typeof obj.totalShipments === 'number' ? obj.totalShipments : undefined;
-    const mostRecent = asString(obj.mostRecentShipment);
-    const hsBits = asNonEmptyArray(obj.hsCodeSummary)
-      ?.slice(0, 5)
-      .map(describeHsItem)
-      .filter((s): s is string => Boolean(s));
-    const partners = asNonEmptyArray(obj.topTradingPartners)
-      ?.slice(0, 5)
-      .map(partnerCountry)
-      .filter((s): s is string => Boolean(s));
-    const lines: string[] = [];
-    if (total !== undefined) {
-      const recent = mostRecent ? `, most recent ${mostRecent}` : '';
-      lines.push(`Customs records: ${total} shipments${recent}.`);
-    }
-    if (hsBits && hsBits.length > 0) {
-      lines.push(`Top HS-coded products: ${hsBits.join('; ')}.`);
-    }
-    if (partners && partners.length > 0) {
-      lines.push(`Top trading-partner countries: ${partners.join(', ')}.`);
-    }
-    const description = lines.join(' ').trim() || undefined;
-
-    return {
-      title: name,
-      // `type` in ImportYeti = "Supplier" (overseas exporter) | "Company"
-      // (US importer). Surfaced as categoryName so the enrichment prompt
-      // can lean on it when deciding Importer vs Exporter.
-      categoryName: asString(obj.type),
-      website: asString(obj.website),
-      phone: asString(obj.phone),
-      city: asString(obj.city),
-      countryCode: asString(obj.countryCode),
-      street: undefined,
-      address: asString(obj.addressPlain) ?? asString(obj.address),
-      description,
-    };
-  },
+  mapItem: mapImportYetiRecord,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -215,44 +379,41 @@ const importYetiLulzActor: ScraperActor = {
       maxPages: 5,
     };
   },
-  mapItem(raw: unknown): ScrapedPlace | null {
-    const obj = asObject(raw);
-    if (!obj) return null;
-    const name = asString(obj.name) ?? asString(obj.companyName);
-    if (!name) return null;
+  mapItem: mapImportYetiRecord,
+};
 
-    const profileObj = asObject(obj.profile) ?? obj;
-    const topProducts = asNonEmptyArray(profileObj.topProducts)
-      ?.slice(0, 5)
-      .map((p) => asString(p) ?? describeHsItem(p))
-      .filter((s): s is string => Boolean(s));
-    const hsCodes = asNonEmptyArray(profileObj.hsCodes)
-      ?.slice(0, 5)
-      .map(describeHsItem)
-      .filter((s): s is string => Boolean(s));
-    const total = typeof obj.totalShipments === 'number' ? obj.totalShipments : undefined;
-    const lines: string[] = [];
-    if (total !== undefined) lines.push(`Customs records: ${total} shipments.`);
-    if (topProducts && topProducts.length > 0) {
-      lines.push(`Top products: ${topProducts.join('; ')}.`);
-    }
-    if (hsCodes && hsCodes.length > 0) {
-      lines.push(`HS codes: ${hsCodes.join(', ')}.`);
-    }
-    const description = lines.join(' ').trim() || undefined;
+/* -------------------------------------------------------------------------- */
+/* Actor 4: ImportYeti "US Import Records & Supplier Data" (object-id keyed)   */
+/* -------------------------------------------------------------------------- */
 
+/**
+ * The actor surfaced in the operator's Apify console screenshot
+ * (console.apify.com/actors/7sDq1LHYZAlHQS9yW). Its dataset records carry
+ * exactly the columns we want to capture: name, type, countryCode, address,
+ * totalShipments, mostRecentShipment, topSuppliers, trademarks, detailUrl —
+ * all handled by the shared {@link mapImportYetiRecord}.
+ *
+ * Keyed by Apify object-id (no `username~name` slug available from the console
+ * URL). `pickActor` matches this verbatim, and `/v2/acts/<id>/runs` accepts an
+ * object id, so APIFY_ACTOR_ID=7sDq1LHYZAlHQS9yW resolves here.
+ *
+ * NOTE: the input contract below is a best-effort guess (most ImportYeti
+ * actors take a free-text `query`/`searchQuery`). Verify against the actor's
+ * Input tab before promoting it to the dispatch default.
+ */
+const importYetiUsRecordsActor: ScraperActor = {
+  id: '7sDq1LHYZAlHQS9yW',
+  label: 'ImportYeti — US Import Records & Supplier Data',
+  dataKind: 'customs',
+  buildInput(searchQuery: string, maxResults: number) {
     return {
-      title: name,
-      categoryName: undefined,
-      website: asString(profileObj.website),
-      phone: asString(profileObj.phone),
-      city: undefined,
-      countryCode: asString(obj.country) ?? asString(profileObj.country),
-      street: undefined,
-      address: asString(obj.address),
-      description,
+      query: searchQuery,
+      searchQuery,
+      maxResults,
+      maxItems: maxResults,
     };
   },
+  mapItem: mapImportYetiRecord,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -271,6 +432,7 @@ export const SCRAPER_ACTORS: Record<string, ScraperActor> = {
   [googleMapsActor.id]: googleMapsActor,
   [importYetiZenActor.id]: importYetiZenActor,
   [importYetiLulzActor.id]: importYetiLulzActor,
+  [importYetiUsRecordsActor.id]: importYetiUsRecordsActor,
 };
 
 /**

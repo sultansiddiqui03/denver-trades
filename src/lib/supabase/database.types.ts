@@ -155,6 +155,7 @@ export type Database = {
       }
       companies: {
         Row: {
+          buyer_fit_score: number | null
           confidence_score: number | null
           contacts: Json | null
           created_at: string | null
@@ -165,19 +166,30 @@ export type Database = {
           enrichment_source: string | null
           hq_city: string | null
           hq_country: string | null
+          hs_codes: Json | null
           id: string
           is_enriched: boolean | null
           is_favorited: boolean | null
+          last_shipment_date: string | null
           name: string
           org_id: string
           origin_countries: string[] | null
           products_dealt: string[] | null
+          score_breakdown: Json | null
+          scored_at: string | null
+          source_url: string | null
           tags: string[] | null
+          top_suppliers: Json | null
+          top_trading_partners: Json | null
+          total_shipments: number | null
+          trade_metrics: Json | null
+          trademarks: Json | null
           type: string | null
           updated_at: string | null
           website: string | null
         }
         Insert: {
+          buyer_fit_score?: number | null
           confidence_score?: number | null
           contacts?: Json | null
           created_at?: string | null
@@ -188,19 +200,30 @@ export type Database = {
           enrichment_source?: string | null
           hq_city?: string | null
           hq_country?: string | null
+          hs_codes?: Json | null
           id?: string
           is_enriched?: boolean | null
           is_favorited?: boolean | null
+          last_shipment_date?: string | null
           name: string
           org_id: string
           origin_countries?: string[] | null
           products_dealt?: string[] | null
+          score_breakdown?: Json | null
+          scored_at?: string | null
+          source_url?: string | null
           tags?: string[] | null
+          top_suppliers?: Json | null
+          top_trading_partners?: Json | null
+          total_shipments?: number | null
+          trade_metrics?: Json | null
+          trademarks?: Json | null
           type?: string | null
           updated_at?: string | null
           website?: string | null
         }
         Update: {
+          buyer_fit_score?: number | null
           confidence_score?: number | null
           contacts?: Json | null
           created_at?: string | null
@@ -211,14 +234,24 @@ export type Database = {
           enrichment_source?: string | null
           hq_city?: string | null
           hq_country?: string | null
+          hs_codes?: Json | null
           id?: string
           is_enriched?: boolean | null
           is_favorited?: boolean | null
+          last_shipment_date?: string | null
           name?: string
           org_id?: string
           origin_countries?: string[] | null
           products_dealt?: string[] | null
+          score_breakdown?: Json | null
+          scored_at?: string | null
+          source_url?: string | null
           tags?: string[] | null
+          top_suppliers?: Json | null
+          top_trading_partners?: Json | null
+          total_shipments?: number | null
+          trade_metrics?: Json | null
+          trademarks?: Json | null
           type?: string | null
           updated_at?: string | null
           website?: string | null
