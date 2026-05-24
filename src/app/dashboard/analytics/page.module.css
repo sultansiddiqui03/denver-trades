@@ -90,3 +90,189 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ─── Trade Intelligence section ─── */
+
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.sectionTitle {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.sectionSubtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.tradeSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.headlineGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.hlCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.hlLabel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hlValue {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent-lime);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.hlSub {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.tradeChartGrid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: var(--space-5);
+}
+
+.bottomGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+}
+
+.importerList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.importerRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.importerMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.importerName {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 55%;
+}
+
+.importerStats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.importerVol {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.growthBadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-variant-numeric: tabular-nums;
+}
+
+.growthPos {
+  background: rgba(204, 255, 0, 0.12);
+  color: var(--accent-lime);
+}
+
+.growthNeg {
+  background: rgba(239, 68, 68, 0.12);
+  color: #EF4444;
+}
+
+.growthBar {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.growthBarFill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent-lime);
+  transition: width 0.4s ease;
+}
+
+.tradeChartCanvas {
+  width: 100%;
+  height: 280px;
+}
+
+.tradeChartEmpty {
+  height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+  border: 1px dashed var(--border-primary);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.tradeSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+@media (max-width: 1100px) {
+  .headlineGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tradeChartGrid {
+    grid-template-columns: 1fr;
+  }
+  .bottomGrid {
+    grid-template-columns: 1fr;
+  }
+}

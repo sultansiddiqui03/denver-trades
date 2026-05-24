@@ -40,7 +40,7 @@ export default async function MatchesPage() {
       .select('id, extracted_demand')
       .eq('org_id', orgId)
       .not('extracted_demand', 'is', null)
-      .eq('direction', 'inbound')
+      .eq('direction', 'Inbound')
       .order('created_at', { ascending: false })
       .limit(10),
   ]);

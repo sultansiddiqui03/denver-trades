@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  Activity,
   Bot,
   Building2,
   ChevronLeft,
@@ -52,6 +53,7 @@ const navGroups: NavGroup[] = [
   {
     heading: 'Market research',
     items: [
+      { label: 'Live Feed', path: '/dashboard/live', Icon: Activity },
       { label: 'Find Buyers', path: '/dashboard/search?intent=buyers', Icon: ShoppingCart },
       { label: 'Find Sellers', path: '/dashboard/search?intent=sellers', Icon: Send },
       { label: 'Companies', path: '/dashboard/companies', Icon: Building2 },

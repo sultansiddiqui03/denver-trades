@@ -1,0 +1,28 @@
+.wrap {
+  padding: var(--space-8) var(--space-6);
+  max-width: 720px;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.skelTitle {
+  width: 260px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+}
+
+.skelSubtitle {
+  width: 420px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
+}
+
+.skelCard {
+  height: 96px;
+  border-radius: var(--radius-md);
+}
