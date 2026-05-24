@@ -178,6 +178,8 @@ export type Database = {
           score_breakdown: Json | null
           scored_at: string | null
           source_url: string | null
+          sourcing_signal: Json | null
+          sourcing_signal_at: string | null
           tags: string[] | null
           top_suppliers: Json | null
           top_trading_partners: Json | null
@@ -212,6 +214,8 @@ export type Database = {
           score_breakdown?: Json | null
           scored_at?: string | null
           source_url?: string | null
+          sourcing_signal?: Json | null
+          sourcing_signal_at?: string | null
           tags?: string[] | null
           top_suppliers?: Json | null
           top_trading_partners?: Json | null
@@ -246,6 +250,8 @@ export type Database = {
           score_breakdown?: Json | null
           scored_at?: string | null
           source_url?: string | null
+          sourcing_signal?: Json | null
+          sourcing_signal_at?: string | null
           tags?: string[] | null
           top_suppliers?: Json | null
           top_trading_partners?: Json | null
@@ -670,15 +676,21 @@ export type Database = {
           company_id: string | null
           container_count: number | null
           created_at: string | null
+          destination_country: string | null
           hs_code: string | null
           id: string
+          incoterm: string | null
           org_id: string
+          origin_country: string | null
           port_discharge: string | null
           port_loading: string | null
           product: string
+          quantity_mt: number | null
           shipment_date: string | null
           source_reference: string | null
+          supplier_name: string | null
           updated_at: string | null
+          value_usd: number | null
           weight_kg: number | null
         }
         Insert: {
@@ -686,15 +698,21 @@ export type Database = {
           company_id?: string | null
           container_count?: number | null
           created_at?: string | null
+          destination_country?: string | null
           hs_code?: string | null
           id?: string
+          incoterm?: string | null
           org_id: string
+          origin_country?: string | null
           port_discharge?: string | null
           port_loading?: string | null
           product: string
+          quantity_mt?: number | null
           shipment_date?: string | null
           source_reference?: string | null
+          supplier_name?: string | null
           updated_at?: string | null
+          value_usd?: number | null
           weight_kg?: number | null
         }
         Update: {
@@ -702,15 +720,21 @@ export type Database = {
           company_id?: string | null
           container_count?: number | null
           created_at?: string | null
+          destination_country?: string | null
           hs_code?: string | null
           id?: string
+          incoterm?: string | null
           org_id?: string
+          origin_country?: string | null
           port_discharge?: string | null
           port_loading?: string | null
           product?: string
+          quantity_mt?: number | null
           shipment_date?: string | null
           source_reference?: string | null
+          supplier_name?: string | null
           updated_at?: string | null
+          value_usd?: number | null
           weight_kg?: number | null
         }
         Relationships: [

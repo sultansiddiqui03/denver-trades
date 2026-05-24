@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { generateJSON } from '@/lib/ai/gemini';
 import { computeAndStoreCompanyEmbedding } from '@/lib/ai/embedCompany';
 import { scoreOrgCompanies } from '@/lib/scoring/runScoring';
+import { computeAndStoreSourcingSignal } from '@/lib/signals/runSignals';
 import type { Database, Json } from '@/lib/supabase/database.types';
 import {
   buildEnrichmentSource,
@@ -31,6 +32,23 @@ export interface ScrapedTradingPartner {
   name: string;
   country?: string;
   role?: string;
+}
+
+/** One per-shipment / contract-level customs record, when the actor exposes it. */
+export interface ScrapedShipment {
+  product?: string;
+  hsCode?: string;
+  supplier?: string;
+  originCountry?: string;
+  destinationCountry?: string;
+  portLoading?: string;
+  portDischarge?: string;
+  quantityMt?: number;
+  weightKg?: number;
+  valueUsd?: number;
+  incoterm?: string;
+  date?: string;
+  carrier?: string;
 }
 
 /**
@@ -71,6 +89,8 @@ export interface ScrapedPlace {
   sourceUrl?: string;
   /** Catch-all for additional raw metrics not promoted to a named field. */
   rawMetrics?: Record<string, unknown>;
+  /** Per-shipment / contract-level rows, when the source actor exposes them. */
+  shipments?: ScrapedShipment[];
 }
 
 /**
@@ -302,6 +322,39 @@ export async function enrichAndInsertScrapedItems(
           `Apify enrich: embedding failed for company ${inserted.id} (${enriched.name}):`,
           embedError,
         );
+      }
+
+      // Persist per-shipment / contract rows when the actor exposed them, then
+      // derive the supplier-shift signal from this company's shipment history.
+      if (item.shipments && item.shipments.length > 0) {
+        try {
+          const shipRows = item.shipments.slice(0, 200).map((sh) => ({
+            org_id: orgId,
+            company_id: inserted.id,
+            product: sh.product || enriched.products_dealt[0] || enriched.name,
+            hs_code: sh.hsCode ?? null,
+            supplier_name: sh.supplier ?? null,
+            origin_country: sh.originCountry ?? null,
+            destination_country: sh.destinationCountry ?? null,
+            port_loading: sh.portLoading ?? null,
+            port_discharge: sh.portDischarge ?? null,
+            quantity_mt: sh.quantityMt ?? null,
+            weight_kg: sh.weightKg ?? null,
+            value_usd: sh.valueUsd ?? null,
+            incoterm: sh.incoterm ?? null,
+            shipment_date: normaliseShipmentDate(sh.date),
+            carrier: sh.carrier ?? null,
+            source_reference: enrichmentSource,
+          }));
+          const { error: shipError } = await supabase.from('shipments').insert(shipRows);
+          if (shipError) {
+            console.error(`Apify enrich: shipment insert failed for ${inserted.id}:`, shipError);
+          } else {
+            await computeAndStoreSourcingSignal(supabase, inserted.id);
+          }
+        } catch (shipErr) {
+          console.error(`Apify enrich: shipment/signal step failed for ${inserted.id}:`, shipErr);
+        }
       }
     } catch (enrichError) {
       console.error('Failed to enrich scraped item:', item, enrichError);

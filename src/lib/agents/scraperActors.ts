@@ -3,6 +3,7 @@ import type {
   ScrapedSupplier,
   ScrapedHsCode,
   ScrapedTradingPartner,
+  ScrapedShipment,
 } from './apifyReplay';
 
 /**
@@ -188,6 +189,53 @@ function parseTrademarks(value: unknown): string[] | undefined {
 }
 
 /**
+ * Parse a per-shipment / contract array, when the actor exposes shipment-level
+ * detail (some ImportYeti "shipments" modes do). Defensive about key names.
+ */
+function parseShipments(value: unknown): ScrapedShipment[] | undefined {
+  const arr = asNonEmptyArray(value);
+  if (!arr) return undefined;
+  const out: ScrapedShipment[] = [];
+  for (const raw of arr.slice(0, 200)) {
+    const obj = asObject(raw);
+    if (!obj) continue;
+    const date =
+      asString(obj.date) ?? asString(obj.shipmentDate) ?? asString(obj.arrivalDate);
+    const product =
+      asString(obj.product) ??
+      asString(obj.productDescription) ??
+      asString(obj.description);
+    if (!date && !product) continue;
+    out.push({
+      product,
+      hsCode: asString(obj.hsCode) ?? asString(obj.hs) ?? asString(obj.code),
+      supplier:
+        asString(obj.supplier) ??
+        asString(obj.supplierName) ??
+        asString(obj.shipper) ??
+        asString(obj.consignor),
+      originCountry:
+        asString(obj.originCountry) ??
+        asString(obj.origin) ??
+        asString(obj.countryOfOrigin),
+      destinationCountry:
+        asString(obj.destinationCountry) ??
+        asString(obj.destination) ??
+        asString(obj.countryOfDestination),
+      portLoading: asString(obj.portLoading) ?? asString(obj.originPort),
+      portDischarge: asString(obj.portDischarge) ?? asString(obj.destinationPort),
+      quantityMt: asNumber(obj.quantityMt) ?? asNumber(obj.quantityTons),
+      weightKg: asNumber(obj.weightKg) ?? asNumber(obj.weight),
+      valueUsd: asNumber(obj.valueUsd) ?? asNumber(obj.value),
+      incoterm: asString(obj.incoterm),
+      date,
+      carrier: asString(obj.carrier) ?? asString(obj.vessel),
+    });
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+/**
  * Build a prose description that surfaces the customs signal (volume, HS
  * codes, partners) so the Gemini enrichment pass still has rich substrate to
  * classify Importer vs Exporter — even though the structured fields are now
@@ -295,6 +343,9 @@ function mapImportYetiRecord(raw: unknown): ScrapedPlace | null {
     topTradingPartners,
     trademarks,
     sourceUrl,
+    shipments: parseShipments(
+      obj.shipments ?? obj.shipmentRecords ?? obj.recentShipments ?? profile.shipments,
+    ),
   };
 }
 
