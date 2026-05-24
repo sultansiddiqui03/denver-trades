@@ -1,0 +1,56 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   BuyerFitBadge — colour-coded 0-100 buyer-fit score pill. Shared across
+   company cards, the dossier hero, and the Buyer-Match leaderboard.
+   Tiers: hot (>=70, lime), warm (40-69, amber), cool (<40, neutral).
+   ═════════════════════════════════════════════════════════════════════ */
+
+.badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sizeSm {
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.75rem;
+  min-height: 22px;
+}
+
+.sizeMd {
+  padding: var(--space-2) var(--space-3);
+  font-size: 1rem;
+  min-height: 30px;
+}
+
+.label {
+  font-size: 0.625em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
+.tier_hot {
+  background: var(--accent-lime-muted);
+  color: var(--accent-lime);
+  border-color: rgba(204, 255, 0, 0.32);
+}
+
+.tier_warm {
+  background: var(--warning-muted);
+  color: var(--warning);
+  border-color: rgba(245, 158, 11, 0.32);
+}
+
+.tier_cool {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  border-color: var(--border-primary);
+}
