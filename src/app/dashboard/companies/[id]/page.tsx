@@ -6,18 +6,49 @@ import {
   CheckCircle2,
   ExternalLink,
   MapPin,
+  Ship,
 } from 'lucide-react';
 import { getUserContext } from '@/lib/auth/server';
 import IntentChip from '@/components/IntentChip';
+import BuyerFitBadge from '@/components/BuyerFitBadge';
 import { type CompanyType } from '@/lib/intent';
 import { parseEnrichmentSource } from '@/lib/agents/scraperActors';
+import { formatNumber, relativeFromNow } from '@/lib/format';
 import CompanyDossierTabs, {
   HeroActions,
   type DossierCompany,
 } from './CompanyDossierTabs';
+import ScoreBreakdown from './ScoreBreakdown';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
+
+interface HsCodeEntry {
+  code: string;
+  description?: string;
+  shipments?: number;
+}
+
+interface SupplierEntry {
+  name: string;
+  country?: string;
+  shipments?: number;
+}
+
+interface TradingPartnerEntry {
+  name: string;
+  country?: string;
+  role?: string;
+}
+
+interface ScoreBreakdownData {
+  commodityMatch?: number;
+  shipmentVolume?: number;
+  recency?: number;
+  tradeDirection?: number;
+  marketFit?: number;
+  reasons?: string[];
+}
 
 interface CompanyRow {
   id: string;
@@ -35,6 +66,40 @@ interface CompanyRow {
   is_favorited: boolean | null;
   enriched_at: string | null;
   enrichment_source: string | null;
+  total_shipments: number | null;
+  last_shipment_date: string | null;
+  source_url: string | null;
+  top_suppliers: unknown;
+  hs_codes: unknown;
+  top_trading_partners: unknown;
+  trademarks: unknown;
+  buyer_fit_score: number | null;
+  score_breakdown: unknown;
+}
+
+function normaliseHsCodes(raw: unknown): HsCodeEntry[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((e): e is HsCodeEntry => typeof e === 'object' && e !== null && 'code' in e);
+}
+
+function normaliseSuppliers(raw: unknown): SupplierEntry[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((e): e is SupplierEntry => typeof e === 'object' && e !== null && 'name' in e);
+}
+
+function normaliseTradingPartners(raw: unknown): TradingPartnerEntry[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((e): e is TradingPartnerEntry => typeof e === 'object' && e !== null && 'name' in e);
+}
+
+function normaliseTrademarks(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((t): t is string => typeof t === 'string');
+}
+
+function normaliseScoreBreakdown(raw: unknown): ScoreBreakdownData | null {
+  if (!raw || typeof raw !== 'object') return null;
+  return raw as ScoreBreakdownData;
 }
 
 function formatEnrichedDate(iso: string | null): string {
@@ -95,7 +160,7 @@ export default async function CompanyDossierPage({ params }: PageProps) {
   const { data, error } = await supabase
     .from('companies')
     .select(
-      'id, name, type, hq_city, hq_country, website, description, origin_countries, destination_countries, products_dealt, contacts, is_enriched, is_favorited, enriched_at, enrichment_source',
+      'id, name, type, hq_city, hq_country, website, description, origin_countries, destination_countries, products_dealt, contacts, is_enriched, is_favorited, enriched_at, enrichment_source, total_shipments, last_shipment_date, source_url, top_suppliers, hs_codes, top_trading_partners, trademarks, buyer_fit_score, score_breakdown',
     )
     .eq('id', id)
     .eq('org_id', orgId)
@@ -115,6 +180,14 @@ export default async function CompanyDossierPage({ params }: PageProps) {
     ? `Source: ${sourceInfo.actor.dataKind === 'customs' ? 'Customs data' : 'Directory'} — ${sourceInfo.actor.label}`
     : null;
 
+  const hsCodes = normaliseHsCodes(company.hs_codes);
+  const topSuppliers = normaliseSuppliers(company.top_suppliers);
+  const topTradingPartners = normaliseTradingPartners(company.top_trading_partners);
+  const trademarks = normaliseTrademarks(company.trademarks);
+  const scoreBreakdown = normaliseScoreBreakdown(company.score_breakdown);
+
+  const lastShipRelative = relativeFromNow(company.last_shipment_date);
+
   const dossierCompany: DossierCompany = {
     id: company.id,
     name: company.name,
@@ -126,6 +199,15 @@ export default async function CompanyDossierPage({ params }: PageProps) {
     destination_countries: company.destination_countries,
     products_dealt: company.products_dealt,
     contacts: normaliseContacts(company.contacts),
+    total_shipments: company.total_shipments,
+    last_shipment_date: company.last_shipment_date,
+    source_url: company.source_url,
+    top_suppliers: topSuppliers,
+    hs_codes: hsCodes,
+    top_trading_partners: topTradingPartners,
+    trademarks,
+    buyer_fit_score: company.buyer_fit_score,
+    score_breakdown: scoreBreakdown,
   };
 
   return (
@@ -164,6 +246,14 @@ export default async function CompanyDossierPage({ params }: PageProps) {
                   {host}
                 </a>
               ) : null}
+
+              {company.total_shipments != null ? (
+                <span className={styles.metaItem}>
+                  <Ship size={15} strokeWidth={1.6} className={styles.metaIcon} />
+                  {formatNumber(company.total_shipments)} shipments
+                  {lastShipRelative ? ` · ${lastShipRelative}` : ''}
+                </span>
+              ) : null}
             </div>
 
             {company.description ? (
@@ -174,6 +264,7 @@ export default async function CompanyDossierPage({ params }: PageProps) {
           <div className={styles.heroRight}>
             <div className={styles.heroChips}>
               <IntentChip type={type} size="md" />
+              <BuyerFitBadge score={company.buyer_fit_score} size="md" showLabel />
               {company.is_enriched ? (
                 <span
                   className={styles.enrichedStamp}
@@ -194,6 +285,10 @@ export default async function CompanyDossierPage({ params }: PageProps) {
                 </span>
               ) : null}
             </div>
+
+            {scoreBreakdown ? (
+              <ScoreBreakdown breakdown={scoreBreakdown} />
+            ) : null}
 
             <HeroActions
               companyId={company.id}

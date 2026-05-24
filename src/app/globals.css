@@ -591,8 +591,70 @@ small {
   h1 { font-size: 1.75rem; }
   h2 { font-size: 1.5rem; }
   h3 { font-size: 1.25rem; }
-  
+
   .container {
     padding: 0 var(--space-4);
   }
+}
+
+/* ═══════ MICRO-INTERACTION UTILITIES ═══════
+   Additive-only. Never remove tokens above this line.
+   ═══════════════════════════════════════════════ */
+
+/* .lift — card hover lift: slightly stronger than glass-hover, no background
+   tint. Use on interactive cards where the background is already set. */
+.lift {
+  transition:
+    transform var(--transition-base),
+    box-shadow var(--transition-base);
+}
+.lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Button press: scale down slightly on :active so every clickable element
+   gives tactile feedback. Applied on .btn-primary / .btn-secondary already;
+   these extend the behaviour to any interactive element that adds .press. */
+.press:active {
+  transform: scale(0.97);
+  transition: transform 80ms ease;
+}
+
+/* Staggered slide-up variants — apply delay via class suffix.
+   Usage: <div class="slide-up-2"> renders 150ms after slide-up-1. */
+.slide-up-1 { animation: slideUp var(--transition-slow) 100ms ease both; }
+.slide-up-2 { animation: slideUp var(--transition-slow) 200ms ease both; }
+.slide-up-3 { animation: slideUp var(--transition-slow) 300ms ease both; }
+.slide-up-4 { animation: slideUp var(--transition-slow) 400ms ease both; }
+
+/* Fade-in with configurable delay — for staggered list items. */
+.fade-in-1 { animation: fadeIn var(--transition-base) 80ms ease both; }
+.fade-in-2 { animation: fadeIn var(--transition-base) 160ms ease both; }
+.fade-in-3 { animation: fadeIn var(--transition-base) 240ms ease both; }
+.fade-in-4 { animation: fadeIn var(--transition-base) 320ms ease both; }
+
+/* .focus-ring — reusable focus utility for custom interactive elements that
+   need the lime focus ring but don't use :focus-visible (e.g. role=button
+   divs, kanban cards). Apply alongside :focus-visible in CSS modules. */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: var(--border-focus);
+}
+
+/* .text-gradient — lime-to-emerald gradient text, used for hero accents. */
+.text-gradient {
+  background: linear-gradient(90deg, var(--accent-lime), var(--accent-green));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* .surface — a quick elevation token for a subtle inset panel within a card. */
+.surface {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
 }

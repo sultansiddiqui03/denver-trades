@@ -123,6 +123,14 @@
   padding: 2px var(--space-2);
 }
 
+.cardTopRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
 .cardFooter {
   display: flex;
   align-items: center;
@@ -131,6 +139,24 @@
   margin-top: auto;
   padding-top: var(--space-3);
   border-top: 1px solid var(--border-primary);
+}
+
+.footerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.shipmentStat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .website,

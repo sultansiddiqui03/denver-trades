@@ -5,15 +5,22 @@ import Link from 'next/link';
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
+  ExternalLink,
+  Globe,
   Mail,
+  Package,
   Phone,
   Send,
+  Ship,
   Star,
+  Tag,
   Users,
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import EmptyState from '@/components/EmptyState';
 import { getIntent, type CompanyType } from '@/lib/intent';
+import { formatNumber, formatDate, relativeFromNow } from '@/lib/format';
+import ShipmentChart from './ShipmentChart';
 import heroStyles from './page.module.css';
 import styles from './CompanyDossierTabs.module.css';
 
@@ -28,6 +35,33 @@ interface ContactEntry {
   [key: string]: unknown;
 }
 
+export interface HsCodeEntry {
+  code: string;
+  description?: string;
+  shipments?: number;
+}
+
+export interface SupplierEntry {
+  name: string;
+  country?: string;
+  shipments?: number;
+}
+
+export interface TradingPartnerEntry {
+  name: string;
+  country?: string;
+  role?: string;
+}
+
+export interface ScoreBreakdownData {
+  commodityMatch?: number;
+  shipmentVolume?: number;
+  recency?: number;
+  tradeDirection?: number;
+  marketFit?: number;
+  reasons?: string[];
+}
+
 export interface DossierCompany {
   id: string;
   name: string;
@@ -39,6 +73,15 @@ export interface DossierCompany {
   destination_countries: string[] | null;
   products_dealt: string[] | null;
   contacts: ContactEntry[] | null;
+  total_shipments?: number | null;
+  last_shipment_date?: string | null;
+  source_url?: string | null;
+  top_suppliers?: SupplierEntry[] | null;
+  hs_codes?: HsCodeEntry[] | null;
+  top_trading_partners?: TradingPartnerEntry[] | null;
+  trademarks?: string[] | null;
+  buyer_fit_score?: number | null;
+  score_breakdown?: ScoreBreakdownData | null;
 }
 
 interface CompanyDossierTabsProps {
@@ -136,6 +179,133 @@ export function HeroActions({
         <Send size={16} strokeWidth={1.8} />
         Generate outreach
       </Link>
+    </div>
+  );
+}
+
+function ShipmentsTab({ company }: { company: DossierCompany }) {
+  const hasAnyData =
+    company.total_shipments != null ||
+    (company.hs_codes && company.hs_codes.length > 0) ||
+    (company.top_suppliers && company.top_suppliers.length > 0) ||
+    (company.top_trading_partners && company.top_trading_partners.length > 0) ||
+    (company.trademarks && company.trademarks.length > 0);
+
+  if (!hasAnyData) {
+    return (
+      <div className="fade-in">
+        <EmptyState
+          icon={<Ship size={48} strokeWidth={1} />}
+          title="No customs data yet."
+          description="Customs-grade shipment intelligence (ImportYeti) will appear here once this company is enriched from that source."
+        />
+      </div>
+    );
+  }
+
+  const hsCodes = company.hs_codes ?? [];
+  const suppliers = company.top_suppliers ?? [];
+  const partners = company.top_trading_partners ?? [];
+  const marks = company.trademarks ?? [];
+  const lastRel = relativeFromNow(company.last_shipment_date);
+  const lastFmt = formatDate(company.last_shipment_date);
+
+  return (
+    <div className={`fade-in ${styles.shipmentsPanel}`}>
+      {/* Headline stats */}
+      <div className={styles.shipmentStats}>
+        {company.total_shipments != null && (
+          <div className={styles.shipmentStat}>
+            <span className={styles.statValue}>{formatNumber(company.total_shipments)}</span>
+            <span className={styles.statLabel}>Total shipments</span>
+          </div>
+        )}
+        {lastFmt && (
+          <div className={styles.shipmentStat}>
+            <span className={styles.statValue}>{lastRel || lastFmt}</span>
+            <span className={styles.statLabel}>Last shipment{lastRel ? ` · ${lastFmt}` : ''}</span>
+          </div>
+        )}
+        {company.source_url && (
+          <a
+            href={company.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.sourceLink}
+          >
+            <ExternalLink size={13} strokeWidth={1.8} />
+            View source profile
+          </a>
+        )}
+      </div>
+
+      {/* HS code chart */}
+      {hsCodes.length > 0 && (
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>
+            <Package size={15} strokeWidth={1.8} />
+            Shipments by HS code
+          </h3>
+          <ShipmentChart hsCodes={hsCodes} />
+        </div>
+      )}
+
+      {/* Top suppliers */}
+      {suppliers.length > 0 && (
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>
+            <Globe size={15} strokeWidth={1.8} />
+            Top suppliers
+          </h3>
+          <div className={styles.supplierList}>
+            {suppliers.map((s, i) => (
+              <div key={`${s.name}-${i}`} className={styles.supplierRow}>
+                <span className={styles.supplierName}>{s.name}</span>
+                {s.country && <span className={styles.supplierCountry}>{s.country}</span>}
+                {s.shipments != null && (
+                  <span className={styles.supplierShipments}>
+                    {formatNumber(s.shipments)} shp
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Top trading partners */}
+      {partners.length > 0 && (
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>
+            <Ship size={15} strokeWidth={1.8} />
+            Top trading partners
+          </h3>
+          <div className={styles.supplierList}>
+            {partners.map((p, i) => (
+              <div key={`${p.name}-${i}`} className={styles.supplierRow}>
+                <span className={styles.supplierName}>{p.name}</span>
+                {p.country && <span className={styles.supplierCountry}>{p.country}</span>}
+                {p.role && <span className={styles.partnerRole}>{p.role}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Trademarks */}
+      {marks.length > 0 && (
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>
+            <Tag size={15} strokeWidth={1.8} />
+            Trademarks
+          </h3>
+          <div className={styles.trademarkChips}>
+            {marks.map((tm) => (
+              <span key={tm} className={styles.trademarkChip}>{tm}</span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -253,46 +423,60 @@ export default function CompanyDossierTabs({ company }: CompanyDossierTabsProps)
         )}
 
         {activeTab === 'shipments' && (
-          <div className={`fade-in ${styles.shipmentStub}`}>
-            <EmptyState
-              title="Shipment data not yet enriched."
-              description="Customs-data enrichment (ImportYeti / Panjiva-style actor) is roadmapped — when it lands you'll see this lead's last 12 months of port-of-entry shipments here, with origin port, destination port, container count, and commodity."
-            />
-            <div className={styles.shipmentStubBars} aria-hidden="true">
-              {[40, 64, 28, 80, 52, 72, 36, 90, 48, 60, 32, 76].map((h, i) => (
-                <div
-                  key={i}
-                  className={styles.shipmentStubBar}
-                  style={{ height: `${h}%` }}
-                />
-              ))}
-            </div>
-          </div>
+          <ShipmentsTab company={company} />
         )}
 
         {activeTab === 'commodities' && (
           <div className="fade-in">
-            {products.length === 0 ? (
+            {products.length === 0 && !company.hs_codes?.length ? (
               <EmptyState
                 title="No commodities enriched yet."
                 description="Run enrichment on this company to populate the products it deals in. Each product becomes a clickable chip that finds related buyers and sellers."
               />
             ) : (
               <>
-                <p className={styles.commodityHelp}>
-                  Click any commodity to find more buyers and sellers dealing in it.
-                </p>
-                <div className={styles.commodityChips}>
-                  {products.map((p) => (
-                    <Link
-                      key={p}
-                      href={`/dashboard/search?q=${encodeURIComponent(p)}`}
-                      className={styles.commodityChip}
-                    >
-                      {p}
-                    </Link>
-                  ))}
-                </div>
+                {products.length > 0 && (
+                  <>
+                    <p className={styles.commodityHelp}>
+                      Click any commodity to find more buyers and sellers dealing in it.
+                    </p>
+                    <div className={styles.commodityChips}>
+                      {products.map((p) => (
+                        <Link
+                          key={p}
+                          href={`/dashboard/search?q=${encodeURIComponent(p)}`}
+                          className={styles.commodityChip}
+                        >
+                          {p}
+                        </Link>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {company.hs_codes && company.hs_codes.length > 0 && (
+                  <div className={styles.hsSection}>
+                    <span className={styles.hsSectionTitle}>
+                      <Package size={14} strokeWidth={1.8} />
+                      HS Codes
+                    </span>
+                    <div className={styles.hsTable}>
+                      {company.hs_codes.map((hs) => (
+                        <div key={hs.code} className={styles.hsRow}>
+                          <span className={styles.hsCode}>{hs.code}</span>
+                          <span className={styles.hsDesc}>{hs.description ?? '—'}</span>
+                          {hs.shipments != null ? (
+                            <span className={styles.hsShipments}>
+                              {formatNumber(hs.shipments)} shp
+                            </span>
+                          ) : (
+                            <span />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>

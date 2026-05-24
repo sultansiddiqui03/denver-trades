@@ -19,8 +19,10 @@ import EmptyState from '@/components/EmptyState';
 import Button from '@/components/Button';
 import IntentChip from '@/components/IntentChip';
 import SearchSuggestions from '@/components/SearchSuggestions';
+import BuyerFitBadge from '@/components/BuyerFitBadge';
 import { exportToCsv } from '@/lib/exportCsv';
 import { intentSlugToType, type CompanyType } from '@/lib/intent';
+import { formatNumber, relativeFromNow } from '@/lib/format';
 import styles from './page.module.css';
 
 interface Company {
@@ -38,6 +40,9 @@ interface Company {
   is_favorited: boolean;
   is_enriched: boolean;
   enriched_at?: string | null;
+  total_shipments?: number | null;
+  last_shipment_date?: string | null;
+  buyer_fit_score?: number | null;
 }
 
 function formatEnrichedDate(iso: string | null | undefined): string {
@@ -491,6 +496,7 @@ function SearchWorkspace() {
                     </div>
                     <div className={styles.cardHeaderRight}>
                       <IntentChip type={c.type} />
+                      <BuyerFitBadge score={c.buyer_fit_score} size="sm" />
                       <div className={styles.scoreBadge}>
                         {Math.round(c.confidence_score * 100)}% match
                       </div>
@@ -538,6 +544,13 @@ function SearchWorkspace() {
 
                     {c.description ? (
                       <p className={styles.summaryText}>{c.description}</p>
+                    ) : null}
+
+                    {c.total_shipments != null ? (
+                      <p className={styles.shipmentMeta}>
+                        {formatNumber(c.total_shipments)} shipments
+                        {relativeFromNow(c.last_shipment_date) ? ` · ${relativeFromNow(c.last_shipment_date)}` : ''}
+                      </p>
                     ) : null}
 
                     <div className={styles.cardMeta}>

@@ -109,12 +109,24 @@ export default async function DashboardOverview() {
     day: 'numeric',
   });
 
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
   return (
     <div className="fade-in">
       {/* Header */}
       <div className={styles.headerSection}>
-        <h1 className={styles.welcomeTitle}>Welcome back</h1>
-        <span className={styles.dateSubtitle}>{currentDate}</span>
+        <div className={styles.headerTop}>
+          <h1 className={styles.welcomeTitle}>
+            {greeting}
+            <span className={styles.welcomePulse} aria-hidden="true" />
+          </h1>
+          <span className={styles.dateChip}>{currentDate}</span>
+        </div>
+        <p className={styles.headerSubtitle}>
+          Your trade intelligence dashboard — leads, pipeline and live buyer signals.
+        </p>
       </div>
 
       {/* Stats Cards Grid */}

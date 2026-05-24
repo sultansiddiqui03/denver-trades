@@ -14,6 +14,7 @@ import {
   Send,
   Settings,
   ShoppingCart,
+  Target,
   TrendingUp,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -53,6 +54,7 @@ const navGroups: NavGroup[] = [
       { label: 'Find Buyers', path: '/dashboard/search?intent=buyers', Icon: ShoppingCart },
       { label: 'Find Sellers', path: '/dashboard/search?intent=sellers', Icon: Send },
       { label: 'Companies', path: '/dashboard/companies', Icon: Building2 },
+      { label: 'Buyer Match', path: '/dashboard/matches', Icon: Target },
     ],
   },
   {

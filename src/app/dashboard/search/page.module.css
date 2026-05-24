@@ -397,6 +397,12 @@
   -webkit-box-orient: vertical;
 }
 
+.shipmentMeta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
 .websiteLink {
   display: inline-flex;
   align-items: center;

@@ -8,11 +8,14 @@ import {
   CheckCircle2,
   ExternalLink,
   MapPin,
+  Ship,
 } from 'lucide-react';
 import { getUserContext } from '@/lib/auth/server';
 import EmptyState from '@/components/EmptyState';
 import IntentChip from '@/components/IntentChip';
+import BuyerFitBadge from '@/components/BuyerFitBadge';
 import { type CompanyType } from '@/lib/intent';
+import { formatNumber, relativeFromNow } from '@/lib/format';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -30,6 +33,9 @@ interface CompanyRow {
   is_enriched: boolean | null;
   enriched_at: string | null;
   created_at: string | null;
+  total_shipments: number | null;
+  last_shipment_date: string | null;
+  buyer_fit_score: number | null;
 }
 
 function formatEnrichedDate(iso: string | null): string {
@@ -57,10 +63,10 @@ export default async function CompaniesDirectory() {
   const { data: companies } = await supabase
     .from('companies')
     .select(
-      'id, name, type, hq_city, hq_country, website, products_dealt, origin_countries, destination_countries, is_enriched, enriched_at, created_at'
+      'id, name, type, hq_city, hq_country, website, products_dealt, origin_countries, destination_countries, is_enriched, enriched_at, created_at, total_shipments, last_shipment_date, buyer_fit_score'
     )
     .eq('org_id', orgId)
-    .order('created_at', { ascending: false })
+    .order('buyer_fit_score', { ascending: false, nullsFirst: false })
     .limit(200);
 
   const rows: CompanyRow[] = (companies ?? []) as CompanyRow[];
@@ -108,6 +114,12 @@ export default async function CompaniesDirectory() {
             const dest = (c.destination_countries ?? []).filter(Boolean);
             const enrichedAt = formatEnrichedDate(c.enriched_at);
 
+            const shipmentStat = (() => {
+              if (c.total_shipments == null) return null;
+              const rel = relativeFromNow(c.last_shipment_date);
+              return `${formatNumber(c.total_shipments)} shp${rel ? ` · ${rel}` : ''}`;
+            })();
+
             return (
               <Link
                 key={c.id}
@@ -125,7 +137,10 @@ export default async function CompaniesDirectory() {
                       </span>
                     </div>
                   </div>
-                  <IntentChip type={c.type} />
+                  <div className={styles.cardTopRight}>
+                    <IntentChip type={c.type} />
+                    <BuyerFitBadge score={c.buyer_fit_score} size="sm" />
+                  </div>
                 </div>
 
                 {(origin.length > 0 || dest.length > 0) && (
@@ -175,14 +190,22 @@ export default async function CompaniesDirectory() {
                   ) : (
                     <span className={styles.websiteMuted}>No website</span>
                   )}
-                  {c.is_enriched ? (
-                    <span className={styles.enrichedTag}>
-                      <CheckCircle2 size={12} strokeWidth={2} />
-                      Enriched{enrichedAt ? ` · ${enrichedAt}` : ''}
-                    </span>
-                  ) : (
-                    <span className={styles.unenrichedTag}>Not enriched</span>
-                  )}
+                  <div className={styles.footerRight}>
+                    {shipmentStat ? (
+                      <span className={styles.shipmentStat}>
+                        <Ship size={12} strokeWidth={1.8} />
+                        {shipmentStat}
+                      </span>
+                    ) : null}
+                    {c.is_enriched ? (
+                      <span className={styles.enrichedTag}>
+                        <CheckCircle2 size={12} strokeWidth={2} />
+                        Enriched{enrichedAt ? ` · ${enrichedAt}` : ''}
+                      </span>
+                    ) : (
+                      <span className={styles.unenrichedTag}>Not enriched</span>
+                    )}
+                  </div>
                 </div>
               </Link>
             );

@@ -182,33 +182,208 @@
   margin-bottom: var(--space-3);
 }
 
-/* ── Shipment history — empty stub */
-.shipmentStub {
+/* ── Shipment history panel */
+.shipmentsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.shipmentStats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-5);
+  background: rgba(204, 255, 0, 0.04);
+  border: 1px solid rgba(204, 255, 0, 0.12);
+  border-radius: var(--radius-md);
+}
+
+.shipmentStat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statValue {
+  font-family: var(--font-heading);
+  font-size: 1.375rem;
+  font-weight: 800;
+  color: var(--accent-lime);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.statLabel {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sourceLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+  margin-left: auto;
+  transition: color var(--transition-fast);
+}
+
+.sourceLink:hover {
+  color: var(--accent-lime);
+}
+
+.section {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  align-items: stretch;
 }
 
-.shipmentStubBars {
+.sectionTitle {
   display: flex;
-  gap: var(--space-3);
-  margin-top: var(--space-5);
-  opacity: 0.4;
-  align-items: flex-end;
-  height: 96px;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-.shipmentStubBar {
-  flex: 1;
-  background: linear-gradient(
-    180deg,
-    rgba(204, 255, 0, 0.18) 0%,
-    rgba(204, 255, 0, 0.04) 100%
-  );
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+/* Supplier / trading partner rows */
+.supplierList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.supplierRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border-primary);
-  border-bottom: none;
+  border-radius: var(--radius-md);
+  flex-wrap: wrap;
+}
+
+.supplierName {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 140px;
+}
+
+.supplierCountry {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  padding: 2px var(--space-2);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.supplierShipments {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--accent-lime);
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.partnerRole {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--info);
+  background: var(--info-muted);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+/* Trademark chips */
+.trademarkChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.trademarkChip {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-primary);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+}
+
+/* ── HS codes section in Commodities tab */
+.hsSection {
+  margin-top: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hsSectionTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hsTable {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hsRow {
+  display: grid;
+  grid-template-columns: 100px 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+}
+
+.hsCode {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--accent-lime);
+}
+
+.hsDesc {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hsShipments {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 /* ── Contacts tab */
