@@ -4,6 +4,7 @@ import type {
   ScrapedHsCode,
   ScrapedTradingPartner,
   ScrapedShipment,
+  ScrapedShipmentRow,
 } from './apifyReplay';
 
 /**
@@ -31,27 +32,48 @@ import type {
  *
  * Adding a new actor = adding one entry to {@link SCRAPER_ACTORS}.
  */
-export type ScraperDataKind = 'directory' | 'customs';
+export type ScraperDataKind = 'directory' | 'customs' | 'shipments';
 
 export interface ScraperActor {
-  /** Apify actor technical id, e.g. `compass~crawler-google-places`. */
+  /**
+   * Registry key. Usually the Apify technical id (`compass~crawler-google-places`),
+   * but may be synthetic when one Apify actor backs two modes (see
+   * {@link apifyActorId}). This is what `enrichment_source` stores and what
+   * `pickActor`/the webhook callback resolve against.
+   */
   id: string;
+  /**
+   * The REAL Apify actor id used in the dispatch URL `/v2/acts/<id>/runs`.
+   * Defaults to {@link id}. Set this when the registry key is synthetic (e.g.
+   * the same ImportYeti actor in `company` vs `shipments` mode).
+   */
+  apifyActorId?: string;
   /** Short label surfaced in admin / logs / dossier "Source:" line. */
   label: string;
-  /** Coarse data-quality tier — drives copy on the dossier. */
+  /**
+   * Coarse data tier. `directory`/`customs` produce one record per company
+   * (mapped via {@link mapItem}); `shipments` produces a flat list of shipment
+   * rows (mapped via {@link mapShipmentRow}) that the ingestion groups by buyer.
+   */
   dataKind: ScraperDataKind;
+  /** Default number of records to request per run (shipments need many more). */
+  defaultRunSize?: number;
   /**
    * Build the request body posted to `/v2/acts/<id>/runs`. Every actor has its
    * own preferred input keys, so we centralise the field shape here.
    */
   buildInput(searchQuery: string, maxResults: number): unknown;
   /**
-   * Convert one raw Apify dataset record into our normalised {@link ScrapedPlace}
-   * shape (which the enrichment prompt and DB insert expect). Returns `null`
-   * when the record is unusable (e.g. missing name) so the caller can skip it
-   * cleanly.
+   * Convert one raw record into our normalised {@link ScrapedPlace} (company)
+   * shape. Required for `directory`/`customs` actors; omitted for `shipments`.
+   * Returns `null` for unusable records.
    */
-  mapItem(raw: unknown): ScrapedPlace | null;
+  mapItem?(raw: unknown): ScrapedPlace | null;
+  /**
+   * Convert one raw record into a {@link ScrapedShipmentRow}. Required for
+   * `shipments` actors. Returns `null` for unusable records (e.g. no buyer).
+   */
+  mapShipmentRow?(raw: unknown): ScrapedShipmentRow | null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -472,6 +494,92 @@ const importYetiUsRecordsActor: ScraperActor = {
 /* -------------------------------------------------------------------------- */
 
 /**
+ * Map one raw ImportYeti shipments-mode record into a {@link ScrapedShipmentRow}.
+ * Field names per the actor's documented output (buyerName, supplierName,
+ * productDescription, hsCode, shipmentDate, weight, quantity, portOfLading,
+ * portOfUnlading, country, vesselName) with defensive fallbacks. Returns null
+ * when there's no buyer to attribute the shipment to.
+ */
+function mapImportYetiShipment(raw: unknown): ScrapedShipmentRow | null {
+  const obj = asObject(raw);
+  if (!obj) return null;
+  const buyerName =
+    asString(obj.buyerName) ??
+    asString(obj.consignee) ??
+    asString(obj.consigneeName) ??
+    asString(obj.importer);
+  if (!buyerName) return null;
+
+  const weight = asNumber(obj.weight) ?? asNumber(obj.weightKg);
+  const originCountry =
+    asString(obj.country) ?? asString(obj.originCountry) ?? asString(obj.countryOfOrigin);
+  const destinationCountry =
+    asString(obj.destinationCountry) ??
+    asString(obj.arrivalCountry) ??
+    asString(obj.countryOfDestination);
+
+  return {
+    buyerName,
+    buyerCountry:
+      asString(obj.buyerCountry) ?? asString(obj.arrivalCountry) ?? destinationCountry,
+    buyerCity: asString(obj.buyerCity) ?? asString(obj.consigneeCity),
+    supplier:
+      asString(obj.supplierName) ??
+      asString(obj.shipper) ??
+      asString(obj.exporter) ??
+      asString(obj.supplier),
+    product:
+      asString(obj.productDescription) ??
+      asString(obj.product) ??
+      asString(obj.description),
+    hsCode: asString(obj.hsCode) ?? asString(obj.hs) ?? asString(obj.code),
+    originCountry,
+    destinationCountry,
+    portLoading: asString(obj.portOfLading) ?? asString(obj.portLoading),
+    portDischarge: asString(obj.portOfUnlading) ?? asString(obj.portDischarge),
+    weightKg: weight,
+    quantityMt:
+      weight !== undefined ? Math.round((weight / 1000) * 10) / 10 : asNumber(obj.quantityMt),
+    valueUsd: asNumber(obj.value) ?? asNumber(obj.valueUsd),
+    incoterm: asString(obj.incoterm),
+    date: asString(obj.shipmentDate) ?? asString(obj.date) ?? asString(obj.arrivalDate),
+    carrier: asString(obj.vesselName) ?? asString(obj.carrier) ?? asString(obj.vessel),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Actor 5: ImportYeti shipments mode (per-shipment / contract rows)          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Shipment-level ImportYeti data. Backed by the same lulzasaur Apify actor as
+ * {@link importYetiLulzActor} but run in `shipments` mode, which returns a flat
+ * list of individual shipments (buyer, supplier, product, HS, date, qty, ports)
+ * rather than one company summary. The ingestion groups these by buyer to build
+ * companies WITH a real per-shipment timeline + supplier-shift signal.
+ *
+ * Registry key is synthetic (`…~shipments`) so it can coexist with the
+ * company-mode entry; {@link ScraperActor.apifyActorId} carries the real Apify
+ * id used for dispatch. Verify the field mapping against a live run.
+ */
+const importYetiShipmentsActor: ScraperActor = {
+  id: 'lulzasaur~importyeti-scraper~shipments',
+  apifyActorId: 'lulzasaur~importyeti-scraper',
+  label: 'ImportYeti — shipment-level customs records',
+  dataKind: 'shipments',
+  defaultRunSize: 200,
+  buildInput(searchQuery: string, maxResults: number) {
+    return {
+      mode: 'shipments',
+      searchQuery,
+      limit: Math.max(1, Math.min(500, maxResults)),
+      maxPages: 10,
+    };
+  },
+  mapShipmentRow: mapImportYetiShipment,
+};
+
+/**
  * Canonical list of supported actors keyed by Apify technical id.
  *
  * The keys here must exactly match the value an operator would paste into
@@ -484,6 +592,7 @@ export const SCRAPER_ACTORS: Record<string, ScraperActor> = {
   [importYetiZenActor.id]: importYetiZenActor,
   [importYetiLulzActor.id]: importYetiLulzActor,
   [importYetiUsRecordsActor.id]: importYetiUsRecordsActor,
+  [importYetiShipmentsActor.id]: importYetiShipmentsActor,
 };
 
 /**
@@ -521,10 +630,30 @@ export function pickActor(envValue: string | undefined): ScraperActor {
  */
 export function mapItems(rawItems: unknown[], actorId: string | undefined): ScrapedPlace[] {
   const actor = pickActor(actorId);
+  if (!actor.mapItem) return [];
   const mapped: ScrapedPlace[] = [];
   for (const raw of rawItems) {
     const item = actor.mapItem(raw);
     if (item) mapped.push(item);
+  }
+  return mapped;
+}
+
+/**
+ * Map raw records via the actor's {@link ScraperActor.mapShipmentRow} — the
+ * shipments-mode counterpart to {@link mapItems}. Returns [] for actors that
+ * don't expose a shipment mapper.
+ */
+export function mapShipmentRows(
+  rawItems: unknown[],
+  actorId: string | undefined,
+): ScrapedShipmentRow[] {
+  const actor = pickActor(actorId);
+  if (!actor.mapShipmentRow) return [];
+  const mapped: ScrapedShipmentRow[] = [];
+  for (const raw of rawItems) {
+    const row = actor.mapShipmentRow(raw);
+    if (row) mapped.push(row);
   }
   return mapped;
 }

@@ -306,12 +306,17 @@ async function dispatchLeadScraper(params: {
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '');
-  const apifyUrl = `https://api.apify.com/v2/acts/${actor.id}/runs?token=${token}&webhooks=${webhooksParam}`;
+  // The registry key (actor.id) may be synthetic when one Apify actor backs two
+  // modes (e.g. ImportYeti company vs shipments). Dispatch against the REAL id.
+  const dispatchActorId = actor.apifyActorId ?? actor.id;
+  const apifyUrl = `https://api.apify.com/v2/acts/${dispatchActorId}/runs?token=${token}&webhooks=${webhooksParam}`;
 
   const apifyResponse = await fetch(apifyUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(actor.buildInput(searchQuery, 5)),
+    // Shipments mode needs many more records than company mode (each record is
+    // one shipment, not one company) — actors declare their own default size.
+    body: JSON.stringify(actor.buildInput(searchQuery, actor.defaultRunSize ?? 5)),
   });
 
   if (!apifyResponse.ok) {

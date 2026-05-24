@@ -41,11 +41,21 @@ export interface SourcingSignal {
   priorVolumeMt?: number;
   /** Bullet evidence strings for the UI. */
   evidence: string[];
+  /** Rough confidence based on how much shipment history backs the signal. */
+  confidence?: 'high' | 'medium' | 'low';
 }
 
 const DAY = 24 * 60 * 60 * 1000;
 const RECENT_DAYS = 120; // ~4 months
-const PRIOR_DAYS = 360; // the ~12 months before that
+const PRIOR_DAYS = 365; // the ~12 months before that
+
+// Tuning guards — raise the bar so we don't flag noise on thin histories.
+const MIN_TOTAL_SHIPMENTS = 5; // need a real history before asserting a trend
+const MIN_RECENT_SHIPMENTS = 2; // one stray recent shipment isn't a "switch"
+const SWITCH_DROP_PCT = 40; // prior-top supplier must fall at least this %
+const SWITCH_NEW_SHARE = 0.4; // and the new top must hold >= this recent-volume share
+const DECLINE_RATIO = 0.6; // recent rate < 60% of prior = declining
+const GROW_RATIO = 1.4; // recent rate > 140% of prior = growing
 
 function volumeOf(s: SignalShipment): number {
   if (typeof s.quantity_mt === 'number' && s.quantity_mt > 0) return s.quantity_mt;
@@ -112,32 +122,68 @@ export function computeSourcingSignal(
   const priorOrigins = originsOf(prior);
   const newOrigins = [...recentOrigins].filter((o) => !priorOrigins.has(o));
 
-  const evidence: string[] = [];
+  const confidence: 'high' | 'medium' | 'low' =
+    dated.length >= 12 ? 'high' : dated.length > MIN_TOTAL_SHIPMENTS ? 'medium' : 'low';
   const recentVolStr = round1(recentVol).toLocaleString('en-US');
   const priorVolStr = round1(priorVol).toLocaleString('en-US');
 
-  // No prior history → newly observed importer.
+  // Thin history → don't assert a trend we can't support.
+  if (dated.length < MIN_TOTAL_SHIPMENTS) {
+    return {
+      status: prior.length === 0 ? 'new' : 'stable',
+      headline: prior.length === 0 ? 'Newly observed importer' : 'Limited shipment history',
+      intent: 'low',
+      confidence: 'low',
+      topSupplierNow: recentTop?.key,
+      recentVolumeMt: round1(recentVol),
+      evidence: [
+        `${dated.length} shipment${dated.length === 1 ? '' : 's'} on record — limited history`,
+      ],
+    };
+  }
+
+  // Dormant: was importing, nothing recent — strong "lost their supplier" signal.
+  if (recent.length === 0 && prior.length > 0) {
+    return {
+      status: 'declining',
+      headline: 'Imports paused — no recent shipments',
+      intent: 'high',
+      confidence,
+      dropPct: 100,
+      decliningSupplier: priorTop?.key,
+      recentVolumeMt: 0,
+      priorVolumeMt: round1(priorVol),
+      evidence: [
+        `No shipments in the last ${RECENT_DAYS} days (previously active)`,
+        priorTop ? `Previously sourced from ${priorTop.key}` : '',
+      ].filter(Boolean),
+    };
+  }
+
+  // No prior history → newly observed importer (with enough recent to be real).
   if (prior.length === 0) {
     return {
       status: 'new',
       headline: 'Newly observed importer',
       intent: 'medium',
+      confidence,
       topSupplierNow: recentTop?.key,
       newOrigins: newOrigins.length ? newOrigins : undefined,
       recentVolumeMt: round1(recentVol),
       evidence: [
-        `${recent.length} shipment${recent.length === 1 ? '' : 's'} in the last ${RECENT_DAYS} days`,
+        `${recent.length} shipments in the last ${RECENT_DAYS} days`,
         recentTop ? `Sourcing from ${recentTop.key}` : '',
       ].filter(Boolean),
     };
   }
 
-  // Supplier switch: the established supplier is no longer the top in the
-  // recent window, and its rate has materially fallen.
+  // Supplier switch: established supplier dropped sharply AND a different
+  // supplier now holds a meaningful share of recent volume.
   if (
     priorTop &&
     recentTop &&
-    priorTop.key !== recentTop.key
+    priorTop.key !== recentTop.key &&
+    recent.length >= MIN_RECENT_SHIPMENTS
   ) {
     const priorTopPriorRate = (bySupplier(prior).get(priorTop.key) ?? 0) / PRIOR_DAYS;
     const priorTopRecentRate = (bySupplier(recent).get(priorTop.key) ?? 0) / RECENT_DAYS;
@@ -145,14 +191,18 @@ export function computeSourcingSignal(
       priorTopPriorRate > 0
         ? Math.max(0, Math.min(100, Math.round((1 - priorTopRecentRate / priorTopPriorRate) * 100)))
         : 100;
-    if (dropPct >= 35) {
-      evidence.push(`${priorTop.key} volume down ~${dropPct}%`);
-      evidence.push(`Now sourcing mainly from ${recentTop.key}`);
+    const newTopShare = recentVol > 0 ? recentTop.value / recentVol : 0;
+    if (dropPct >= SWITCH_DROP_PCT && newTopShare >= SWITCH_NEW_SHARE) {
+      const evidence = [
+        `${priorTop.key} volume down ~${dropPct}%`,
+        `Now sourcing mainly from ${recentTop.key}`,
+      ];
       if (newOrigins.length) evidence.push(`New origin: ${newOrigins.join(', ')}`);
       return {
         status: 'switching',
         headline: `Switching suppliers — ${priorTop.key} → ${recentTop.key}`,
         intent: 'high',
+        confidence,
         dropPct,
         decliningSupplier: priorTop.key,
         topSupplierNow: recentTop.key,
@@ -165,14 +215,15 @@ export function computeSourcingSignal(
   }
 
   // Overall volume trend.
-  if (priorRate > 0 && recentRate < priorRate * 0.7) {
+  if (priorRate > 0 && recentRate < priorRate * DECLINE_RATIO) {
     const dropPct = Math.round((1 - recentRate / priorRate) * 100);
-    evidence.push(`Import rate down ~${dropPct}% vs prior period`);
+    const evidence = [`Import rate down ~${dropPct}% vs prior period`];
     if (newOrigins.length) evidence.push(`Trying new origin: ${newOrigins.join(', ')}`);
     return {
       status: 'declining',
       headline: `Import volume declining (~${dropPct}%)`,
       intent: newOrigins.length ? 'high' : 'medium',
+      confidence,
       dropPct,
       decliningSupplier: priorTop?.key,
       topSupplierNow: recentTop?.key,
@@ -183,30 +234,30 @@ export function computeSourcingSignal(
     };
   }
 
-  if (priorRate > 0 && recentRate > priorRate * 1.3) {
+  if (priorRate > 0 && recentRate > priorRate * GROW_RATIO) {
     const upPct = Math.round((recentRate / priorRate - 1) * 100);
-    evidence.push(`Import rate up ~${upPct}% vs prior period`);
     return {
       status: 'growing',
       headline: `Import volume growing (~${upPct}%)`,
       intent: 'low',
+      confidence,
       topSupplierNow: recentTop?.key,
       newOrigins: newOrigins.length ? newOrigins : undefined,
       recentVolumeMt: round1(recentVol),
       priorVolumeMt: round1(priorVol),
-      evidence,
+      evidence: [`Import rate up ~${upPct}% vs prior period`],
     };
   }
 
-  evidence.push(`Steady volume (~${recentVolStr} MT recent vs ${priorVolStr} MT prior)`);
   return {
     status: 'stable',
     headline: 'Stable sourcing',
     intent: 'low',
+    confidence,
     topSupplierNow: recentTop?.key,
     recentVolumeMt: round1(recentVol),
     priorVolumeMt: round1(priorVol),
-    evidence,
+    evidence: [`Steady volume (~${recentVolStr} MT recent vs ${priorVolStr} MT prior)`],
   };
 }
 

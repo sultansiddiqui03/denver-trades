@@ -126,6 +126,11 @@ const SCRAPER_SOURCE_OPTIONS: {
     label: 'Customs & shipment data — lite',
     hint: 'Core shipment fields with a faster crawl.',
   },
+  {
+    value: 'lulzasaur~importyeti-scraper~shipments',
+    label: 'Full shipment history',
+    hint: 'Per-shipment records → buyer timelines + supplier-switching detection.',
+  },
 ];
 // Matches "dataset ffeKO5Oq7meoNAXLf" or "dataset: ffeKO5Oq7meoNAXLf"
 const DATASET_ID_RE = /dataset(?:\s+|:\s*)([a-zA-Z0-9_-]{10,})/i;

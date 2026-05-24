@@ -4,10 +4,8 @@ import { getSupabaseServiceClient } from '@/lib/supabase/admin';
 import { getErrorMessage } from '@/lib/errors';
 import { isAutomationAuthorized } from '@/lib/security/request';
 import { parseBody } from '@/lib/validation';
-import {
-  enrichAndInsertScrapedItems,
-  fetchApifyDatasetItems,
-} from '@/lib/agents/apifyReplay';
+import { fetchApifyDatasetItems } from '@/lib/agents/apifyReplay';
+import { ingestApifyDataset } from '@/lib/agents/shipmentIngest';
 
 /**
  * Admin escape hatch: re-process an Apify dataset against an existing
@@ -103,12 +101,11 @@ export async function POST(request: Request) {
       });
     }
 
-    const { processed, created } = await enrichAndInsertScrapedItems(
+    const { processed, created } = await ingestApifyDataset(
       supabase,
       orgId,
       items,
       {
-        limit: 5,
         datasetId,
         actorId,
       },

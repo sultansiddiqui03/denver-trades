@@ -52,6 +52,17 @@ export interface ScrapedShipment {
 }
 
 /**
+ * A shipment row from a *shipments-mode* actor. Unlike {@link ScrapedShipment}
+ * (which hangs off a company record), this carries the buyer identity so the
+ * shipments ingestion can group a flat list of shipments into companies.
+ */
+export interface ScrapedShipmentRow extends ScrapedShipment {
+  buyerName: string;
+  buyerCountry?: string;
+  buyerCity?: string;
+}
+
+/**
  * Normalised shape of one scraped business record that the enrichment prompt
  * consumes. Different Apify actors return wildly different fields — the
  * adapter layer in [src/lib/agents/scraperActors.ts](./scraperActors.ts) maps

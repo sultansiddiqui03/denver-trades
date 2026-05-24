@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     const { data: companies } = await supabase
       .from('companies')
       .select(
-        'id, name, type, hq_country, hq_city, products_dealt, origin_countries, destination_countries, total_shipments, last_shipment_date, hs_codes'
+        'id, name, type, hq_country, hq_city, products_dealt, origin_countries, destination_countries, total_shipments, last_shipment_date, hs_codes, sourcing_signal'
       )
       .eq('org_id', orgId)
       .or('total_shipments.not.is.null,buyer_fit_score.not.is.null')
@@ -103,6 +103,7 @@ export async function POST(request: Request) {
         score,
         tier: buyerFitTier(score),
         reasons,
+        sourcing_signal: c.sourcing_signal ?? null,
       };
     });
 

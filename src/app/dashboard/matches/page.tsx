@@ -30,7 +30,7 @@ export default async function MatchesPage() {
     supabase
       .from('companies')
       .select(
-        'id, name, type, hq_country, hq_city, products_dealt, origin_countries, destination_countries, total_shipments, last_shipment_date, hs_codes'
+        'id, name, type, hq_country, hq_city, products_dealt, origin_countries, destination_countries, total_shipments, last_shipment_date, hs_codes, sourcing_signal'
       )
       .eq('org_id', orgId)
       .or('total_shipments.not.is.null,buyer_fit_score.not.is.null')
@@ -99,6 +99,10 @@ export default async function MatchesPage() {
         score,
         tier: buyerFitTier(score),
         reasons,
+        sourcing_signal: (c.sourcing_signal ?? null) as unknown as {
+          status?: string | null;
+          headline?: string | null;
+        } | null,
       };
     })
     .sort((a, b) => b.score - a.score)

@@ -4,10 +4,8 @@ import { getSupabaseServiceClient } from '@/lib/supabase/admin';
 import { getErrorMessage } from '@/lib/errors';
 import { isWebhookSecretAuthorized } from '@/lib/security/request';
 import { parseBody } from '@/lib/validation';
-import {
-  enrichAndInsertScrapedItems,
-  fetchApifyDatasetItems,
-} from '@/lib/agents/apifyReplay';
+import { fetchApifyDatasetItems } from '@/lib/agents/apifyReplay';
+import { ingestApifyDataset } from '@/lib/agents/shipmentIngest';
 import { DEFAULT_SCRAPER_ACTOR_ID } from '@/lib/agents/scraperActors';
 
 // Apify's default webhook payload shape (when no custom payloadTemplate is
@@ -126,17 +124,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, message: 'No items to process' });
     }
 
-    // 2. Enrich + insert the top 5 scraped items (shared with /api/admin/apify/replay).
-    // Passing datasetId + actorId tags each inserted company with
-    // `enrichment_source = 'apify:<datasetId>:<actorId>'` so the agents
-    // dashboard can look up the exact companies created by this run AND the
-    // dossier can show the originating data source ("ImportYeti — customs").
-    const { processed, created } = await enrichAndInsertScrapedItems(
+    // 2. Ingest the dataset (shared with /api/admin/apify/replay). The branch
+    // point routes company-mode datasets to per-company enrichment and
+    // shipments-mode datasets to the grouped-by-buyer path. Passing datasetId +
+    // actorId tags each company with `enrichment_source = 'apify:<datasetId>:<actorId>'`
+    // so the agents dashboard can look up the run AND the dossier can show the source.
+    const { processed, created } = await ingestApifyDataset(
       supabase,
       orgId,
       items,
       {
-        limit: 5,
         datasetId,
         actorId: callbackActorId,
       },

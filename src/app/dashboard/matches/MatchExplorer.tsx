@@ -4,6 +4,7 @@ import React, { useState, useCallback, useTransition, useRef, useEffect } from '
 import Link from 'next/link';
 import { Target, Loader2, Inbox, Send, Medal } from 'lucide-react';
 import BuyerFitBadge from '@/components/BuyerFitBadge';
+import SourcingSignalBadge from '@/components/SourcingSignalBadge';
 import IntentChip from '@/components/IntentChip';
 import { formatNumber, relativeFromNow } from '@/lib/format';
 import styles from './MatchExplorer.module.css';
@@ -27,6 +28,7 @@ interface MatchResult {
   score: number;
   tier: 'hot' | 'warm' | 'cool';
   reasons: string[];
+  sourcing_signal?: { status?: string | null; headline?: string | null } | null;
 }
 
 interface DemandItem {
@@ -106,6 +108,7 @@ function MatchCard({
           <div className={styles.badgeRow}>
             <IntentChip type={match.type} size="sm" />
             <BuyerFitBadge score={match.score} size="md" showLabel />
+            <SourcingSignalBadge signal={match.sourcing_signal} size="sm" />
           </div>
         </div>
 
