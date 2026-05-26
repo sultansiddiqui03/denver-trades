@@ -31,7 +31,12 @@ jobs:
 
       - name: Build
         run: npm run build
+        # The build only needs the Supabase clients to *construct* — every
+        # dashboard route reads cookies(), so it renders dynamically at request
+        # time and nothing queries Supabase during prerender. Real secrets take
+        # precedence if set; the placeholders just keep the build green in CI
+        # (the public anon URL/key ship to the browser anyway and aren't secret).
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder-anon-key' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'ci-placeholder-service-role-key' }}
