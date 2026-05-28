@@ -432,35 +432,62 @@ const googleMapsActor: ScraperActor = {
 
 const importYetiZenActor: ScraperActor = {
   id: 'zen-studio~importyeti-scraper',
-  // Customs-mode default run size. ImportYeti returns 10 results/page and the
-  // `type` filter is applied within the fetched window, so a small size (the
-  // old global default of 5) can filter out *every* importer when the search's
-  // top results are supplier-heavy — which is exactly what happened for spice
-  // product keywords (the query came back empty). 25 matches the actor's own
-  // prefill and reliably surfaces buyers past the supplier rows.
   defaultRunSize: 25,
   label: 'ImportYeti — customs data (zen-studio)',
   dataKind: 'customs',
   buildInput(searchQuery: string, maxResults: number) {
-    // Input contract verified against the actor's live input schema
-    // (api.apify.com/v2/acts/zen-studio~importyeti-scraper/builds/default,
+    // Input contract verified against the actor's live input schema AND two
+    // live test runs (api.apify.com/v2/acts/zen-studio~importyeti-scraper,
     // 2026-05-29). `query` is the only required field.
     //
-    // WEDGE-CRITICAL: ImportYeti is built on US import bills of lading, so a
-    // `type: 'company'` result is a US IMPORTER (a BUYER), while `type:
-    // 'supplier'` is the overseas EXPORTER they buy from. Our product promise
-    // is "find buyers who provably import what you sell" — so we request
-    // `company`. The previous `type: 'any'` returned mostly suppliers (the
-    // exporter's competitors), which silently broke the core value prop.
+    // HOW IMPORTYETI ACTUALLY WORKS (proven against live data — see below):
+    //   - `type: 'company'` searches by COMPANY NAME and returns US importers
+    //     (buyers). A *product* query like "black pepper" matches no company
+    //     name → EMPTY dataset. So `type: 'company'` only works with a name
+    //     (use the `…~buyers` actor variant for that).
+    //   - `type: 'supplier'`/`'any'` does a PRODUCT/keyword search and returns
+    //     overseas SUPPLIERS (exporters) of that product. Each supplier record
+    //     carries `topTradingPartners` — the US importers who buy from them —
+    //     which is where the actual BUYERS live (see buyerDiscovery.ts).
     //
-    // `mostRecentShipment` enum is 'any' | '6mo' | '12mo'. '12mo' biases the
-    // result set toward buyers who are importing RIGHT NOW (also feeds
-    // buyer-fit recency) without being as strict as 6mo.
+    // This actor is therefore the "find suppliers of a product" mode. Forcing
+    // `type: 'company'` here (an earlier mistake) made every product scrape
+    // return nothing in production. Keep it `'any'` so the keyword search
+    // works; buyer extraction happens downstream from the suppliers' partners.
+    return {
+      query: searchQuery,
+      searchType: 'search',
+      type: 'any',
+      maxResults,
+    };
+  },
+  mapItem: mapImportYetiRecord,
+};
+
+/* -------------------------------------------------------------------------- */
+/* Actor 2b: zen-studio buyer-lookup mode (type=company, search by name)       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Same zen-studio Apify actor, run in `type: 'company'` mode. This searches by
+ * COMPANY NAME and returns the US importer's full customs profile (shipment
+ * volume, the suppliers they buy from, HS codes, growth, trademarks). Use it to
+ * pull a rich, accurate buyer dossier for a known/target company name — the
+ * clean counterpart to the noisy keyword product search. The `…~buyers`
+ * synthetic registry key keeps it distinct from the product-search entry while
+ * dispatching against the same real actor via {@link ScraperActor.apifyActorId}.
+ */
+const importYetiZenBuyersActor: ScraperActor = {
+  id: 'zen-studio~importyeti-scraper~buyers',
+  apifyActorId: 'zen-studio~importyeti-scraper',
+  defaultRunSize: 10,
+  label: 'ImportYeti — US buyer profiles (by name)',
+  dataKind: 'customs',
+  buildInput(searchQuery: string, maxResults: number) {
     return {
       query: searchQuery,
       searchType: 'search',
       type: 'company',
-      mostRecentShipment: '12mo',
       maxResults,
     };
   },
@@ -627,6 +654,7 @@ const importYetiShipmentsActor: ScraperActor = {
 export const SCRAPER_ACTORS: Record<string, ScraperActor> = {
   [googleMapsActor.id]: googleMapsActor,
   [importYetiZenActor.id]: importYetiZenActor,
+  [importYetiZenBuyersActor.id]: importYetiZenBuyersActor,
   [importYetiLulzActor.id]: importYetiLulzActor,
   [importYetiUsRecordsActor.id]: importYetiUsRecordsActor,
   [importYetiShipmentsActor.id]: importYetiShipmentsActor,
