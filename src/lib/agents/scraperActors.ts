@@ -432,22 +432,30 @@ const googleMapsActor: ScraperActor = {
 
 const importYetiZenActor: ScraperActor = {
   id: 'zen-studio~importyeti-scraper',
+  // Customs-mode default run size. ImportYeti returns 10 results/page and the
+  // `type` filter is applied within the fetched window, so a small size (the
+  // old global default of 5) can filter out *every* importer when the search's
+  // top results are supplier-heavy — which is exactly what happened for spice
+  // product keywords (the query came back empty). 25 matches the actor's own
+  // prefill and reliably surfaces buyers past the supplier rows.
+  defaultRunSize: 25,
   label: 'ImportYeti — customs data (zen-studio)',
   dataKind: 'customs',
   buildInput(searchQuery: string, maxResults: number) {
-    // Schema as published at https://apify.com/zen-studio/importyeti-scraper
-    // (verified 2026-05-29). `query` is the only required field.
+    // Input contract verified against the actor's live input schema
+    // (api.apify.com/v2/acts/zen-studio~importyeti-scraper/builds/default,
+    // 2026-05-29). `query` is the only required field.
     //
     // WEDGE-CRITICAL: ImportYeti is built on US import bills of lading, so a
     // `type: 'company'` result is a US IMPORTER (a BUYER), while `type:
     // 'supplier'` is the overseas EXPORTER they buy from. Our product promise
-    // is "find buyers who provably import what you sell" — so we MUST request
+    // is "find buyers who provably import what you sell" — so we request
     // `company`. The previous `type: 'any'` returned mostly suppliers (the
     // exporter's competitors), which silently broke the core value prop.
     //
-    // `mostRecentShipment` only accepts '6mo' | '12mo' | 'Any Time' — the old
-    // `'any'` was an invalid enum and got ignored. '12mo' biases the result set
-    // toward buyers who are importing RIGHT NOW (also feeds buyer-fit recency).
+    // `mostRecentShipment` enum is 'any' | '6mo' | '12mo'. '12mo' biases the
+    // result set toward buyers who are importing RIGHT NOW (also feeds
+    // buyer-fit recency) without being as strict as 6mo.
     return {
       query: searchQuery,
       searchType: 'search',

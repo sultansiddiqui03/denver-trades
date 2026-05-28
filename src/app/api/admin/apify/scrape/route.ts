@@ -36,6 +36,9 @@ const ScrapeSchema = z.object({
       message: `actorId must be one of: ${ACTOR_ID_VALUES.join(', ')}`,
     })
     .optional(),
+  // Raw Apify input override — when present, bypasses the actor's buildInput.
+  // Operator escape hatch for testing an exact input contract.
+  input: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function POST(request: Request) {
@@ -52,7 +55,7 @@ export async function POST(request: Request) {
 
     const parsed = await parseBody(request, ScrapeSchema);
     if (!parsed.ok) return parsed.response;
-    const { orgId, actorId } = parsed.data;
+    const { orgId, actorId, input } = parsed.data;
     const query = parsed.data.query || 'Spice importers United States';
 
     const { data: runRecord, error: insertError } = await supabase
@@ -76,7 +79,12 @@ export async function POST(request: Request) {
     }
     agentRunId = runRecord.id;
 
-    const dispatch = await dispatchApifyScrape({ runRecordId: agentRunId, query, actorId });
+    const dispatch = await dispatchApifyScrape({
+      runRecordId: agentRunId,
+      query,
+      actorId,
+      inputOverride: input,
+    });
 
     return NextResponse.json({
       success: true,

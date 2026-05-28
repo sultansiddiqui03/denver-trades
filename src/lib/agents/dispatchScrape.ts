@@ -39,8 +39,14 @@ export async function dispatchApifyScrape(params: {
   runRecordId: string;
   query: string;
   actorId: string | undefined;
+  /**
+   * Operator-supplied raw Apify input. When present it REPLACES the actor's
+   * buildInput output entirely — an escape hatch for the admin trigger to test
+   * an exact input contract without a redeploy. Normal dispatch leaves it unset.
+   */
+  inputOverride?: Record<string, unknown>;
 }): Promise<DispatchResult> {
-  const { runRecordId, query, actorId } = params;
+  const { runRecordId, query, actorId, inputOverride } = params;
   const token = process.env.APIFY_TOKEN || process.env.APIFY_API_TOKEN;
   if (!token) {
     throw new Error('APIFY_TOKEN not set — cannot dispatch a live scrape.');
@@ -73,10 +79,11 @@ export async function dispatchApifyScrape(params: {
   const dispatchActorId = actor.apifyActorId ?? actor.id;
   const apifyUrl = `https://api.apify.com/v2/acts/${dispatchActorId}/runs?token=${token}&webhooks=${webhooksParam}`;
 
+  const apifyInput = inputOverride ?? actor.buildInput(query, actor.defaultRunSize ?? 5);
   const apifyResponse = await fetch(apifyUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(actor.buildInput(query, actor.defaultRunSize ?? 5)),
+    body: JSON.stringify(apifyInput),
   });
 
   if (!apifyResponse.ok) {
