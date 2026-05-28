@@ -6,7 +6,8 @@ import { getErrorMessage } from '@/lib/errors';
 import { runPriceIngest } from '@/lib/agents/priceIngest';
 import { parseBody } from '@/lib/validation';
 import type { Database } from '@/lib/supabase/database.types';
-import { pickActor, SCRAPER_ACTORS } from '@/lib/agents/scraperActors';
+import { SCRAPER_ACTORS } from '@/lib/agents/scraperActors';
+import { dispatchApifyScrape } from '@/lib/agents/dispatchScrape';
 
 // APIFY_ACTOR_ID format: <username>~<actor-name> (the Apify "technical name").
 // The actor-specific input/output contracts live in scraperActors.ts so
@@ -50,16 +51,6 @@ const WHATSAPP_PARSER = 'WhatsApp Parser Agent';
 const KNOWN_AGENTS = new Set([LEAD_SCRAPER, PRICE_INGEST, DOC_AUDIT, WHATSAPP_PARSER]);
 
 const STALE_RUN_MS = 15 * 60 * 1000;
-
-function publicBaseUrl() {
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-}
 
 export async function POST(request: Request) {
   const { context, response: authResponse } = await requireUserContext();
@@ -264,84 +255,20 @@ async function dispatchLeadScraper(params: {
   }
 
   // Live Apify dispatch — actor + input shape are data-driven via
-  // scraperActors.ts. Resolution order:
+  // scraperActors.ts. Resolution order (handled inside dispatchApifyScrape):
   //   1. Per-request `actorId` (the UI source picker on the Lead Scraper card)
   //   2. APIFY_ACTOR_ID env var (operator-level default)
   //   3. Code default (Google Maps)
-  const actor = pickActor(actorId ?? process.env.APIFY_ACTOR_ID);
-  const webhookSecret = process.env.APIFY_WEBHOOK_SECRET;
-  // Thread the actor id back to the webhook receiver via the callback URL so
-  // it can run the correct `mapItem` adapter against the dataset. We never
-  // trust an actor id from the webhook body — Apify's `resource.actId` field
-  // is an opaque internal id, not the `username~name` form we register with.
-  const callbackUrl =
-    `${publicBaseUrl()}/api/webhooks/apify` +
-    `?agent_run_id=${runRecordId}` +
-    `&actor_id=${encodeURIComponent(actor.id)}`;
-
-  // Apify ad-hoc webhooks must be passed as a URL-safe base64-encoded JSON
-  // array in the `webhooks` QUERY PARAMETER, not in the request body.
-  // (Anything in the body that doesn't match the actor's input schema is
-  // silently ignored — which is what caused the original "Succeeded but no
-  // callback" bug.)  Ref: https://docs.apify.com/platform/integrations/webhooks/ad-hoc-webhooks
-  //
-  // We intentionally do NOT set a `payloadTemplate` here — ad-hoc webhooks
-  // delivered via `?webhooks=` only RELIABLY substitute templates for the
-  // default payload shape; a custom payloadTemplate came through with literal
-  // `{{eventTypeId}}` strings (un-interpolated), which broke the receiver.
-  // Apify's default payload includes `eventType` + `resource.defaultDatasetId`
-  // which the webhook receiver reads directly.
-  const webhooksConfig = [
-    {
-      eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.FAILED'],
-      requestUrl: callbackUrl,
-      // P1-1: pass secret via header, not query string
-      headersTemplate: webhookSecret
-        ? JSON.stringify({ 'x-denver-webhook-secret': webhookSecret })
-        : undefined,
-    },
-  ];
-  const webhooksParam = Buffer.from(JSON.stringify(webhooksConfig))
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-  // The registry key (actor.id) may be synthetic when one Apify actor backs two
-  // modes (e.g. ImportYeti company vs shipments). Dispatch against the REAL id.
-  const dispatchActorId = actor.apifyActorId ?? actor.id;
-  const apifyUrl = `https://api.apify.com/v2/acts/${dispatchActorId}/runs?token=${token}&webhooks=${webhooksParam}`;
-
-  const apifyResponse = await fetch(apifyUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    // Shipments mode needs many more records than company mode (each record is
-    // one shipment, not one company) — actors declare their own default size.
-    body: JSON.stringify(actor.buildInput(searchQuery, actor.defaultRunSize ?? 5)),
-  });
-
-  if (!apifyResponse.ok) {
-    const errText = await apifyResponse.text();
-    if (apifyResponse.status === 404) {
-      throw new Error(
-        `Apify actor not found (404) — check APIFY_ACTOR_ID env var. ` +
-        `Supported: compass~crawler-google-places (default), ` +
-        `zen-studio~importyeti-scraper, lulzasaur~importyeti-scraper. ` +
-        `Tried "${actor.id}" (${actor.label}). Raw: ${errText}`
-      );
-    }
-    throw new Error(`Apify dispatch failed (${apifyResponse.status}): ${errText}`);
-  }
-
-  const apifyRunData = (await apifyResponse.json()) as { data?: { id?: string } };
+  const dispatch = await dispatchApifyScrape({ runRecordId, query: searchQuery, actorId });
 
   // Run stays 'Running' until Apify calls back the webhook (or the timeout sweep claims it).
   return NextResponse.json({
     success: true,
     mode: 'live',
-    apifyRunId: apifyRunData.data?.id,
-    apifyActorId: actor.id,
-    apifyActorLabel: actor.label,
-    message: `Apify scrape dispatched (${actor.label}). Webhook will update the run when it completes.`,
+    apifyRunId: dispatch.apifyRunId,
+    apifyActorId: dispatch.actorId,
+    apifyActorLabel: dispatch.actorLabel,
+    message: `Apify scrape dispatched (${dispatch.actorLabel}). Webhook will update the run when it completes.`,
     run: {
       id: runRecordId,
       org_id: orgId,

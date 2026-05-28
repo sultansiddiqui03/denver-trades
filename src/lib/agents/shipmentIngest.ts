@@ -214,7 +214,9 @@ export async function enrichAndInsertShipments(
         incoterm: r.incoterm ?? null,
         shipment_date: normaliseDate(r.date),
         carrier: r.carrier ?? null,
-        source_reference: enrichmentSource,
+        // Prefer the real bill-of-lading number (the customs-record id) so each
+        // row is independently verifiable; fall back to the dataset tag.
+        source_reference: r.billOfLading ?? enrichmentSource,
       }));
       const { error: shipErr } = await supabase.from('shipments').insert(shipRows);
       if (shipErr) {

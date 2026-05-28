@@ -43,3 +43,5 @@ next-env.d.ts
 
 # claude code harness (worktrees, transcripts, etc.)
 .claude/
+
+.env*.local

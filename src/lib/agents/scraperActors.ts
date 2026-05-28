@@ -252,6 +252,8 @@ function parseShipments(value: unknown): ScrapedShipment[] | undefined {
       incoterm: asString(obj.incoterm),
       date,
       carrier: asString(obj.carrier) ?? asString(obj.vessel),
+      billOfLading:
+        asString(obj.billOfLading) ?? asString(obj.blNumber) ?? asString(obj.bolNumber),
     });
   }
   return out.length > 0 ? out : undefined;
@@ -324,12 +326,28 @@ function mapImportYetiRecord(raw: unknown): ScrapedPlace | null {
     asString(obj.lastShipment) ??
     asString(obj.lastShipmentDate) ??
     asString(profile.mostRecentShipment);
-  const topSuppliers = parseSuppliers(obj.topSuppliers ?? profile.topSuppliers);
+  // Supplier/partner/HS key names differ across actors: zen-studio emits
+  // `topSuppliers` / `topTradingPartners` / `hsCodeSummary`; lulzasaur company
+  // mode emits `suppliers` / `buyers` / `hsCodes`+`topProducts`. Fall through
+  // every known alias so the customs signal is captured regardless of source.
+  const topSuppliers = parseSuppliers(
+    obj.topSuppliers ?? obj.suppliers ?? profile.topSuppliers ?? profile.suppliers,
+  );
   const topTradingPartners = parsePartners(
-    obj.topTradingPartners ?? profile.topTradingPartners,
+    obj.topTradingPartners ??
+      profile.topTradingPartners ??
+      obj.buyers ??
+      obj.topCustomers ??
+      profile.buyers ??
+      profile.topCustomers,
   );
   const hsCodes = parseHsCodes(
-    obj.hsCodeSummary ?? obj.hsCodes ?? profile.hsCodes ?? profile.topProducts,
+    obj.hsCodeSummary ??
+      obj.hsCodes ??
+      obj.htsCodes ??
+      profile.hsCodes ??
+      profile.htsCodes ??
+      profile.topProducts,
   );
   const trademarks = parseTrademarks(obj.trademarks ?? profile.trademarks);
   const sourceUrl =
@@ -418,14 +436,23 @@ const importYetiZenActor: ScraperActor = {
   dataKind: 'customs',
   buildInput(searchQuery: string, maxResults: number) {
     // Schema as published at https://apify.com/zen-studio/importyeti-scraper
-    // (verified 2026-05-22). `query` is the only required field. We keep
-    // every result by default and cap with maxResults to control cost
-    // (pay-per-result at $6.99 / 1k profiles).
+    // (verified 2026-05-29). `query` is the only required field.
+    //
+    // WEDGE-CRITICAL: ImportYeti is built on US import bills of lading, so a
+    // `type: 'company'` result is a US IMPORTER (a BUYER), while `type:
+    // 'supplier'` is the overseas EXPORTER they buy from. Our product promise
+    // is "find buyers who provably import what you sell" — so we MUST request
+    // `company`. The previous `type: 'any'` returned mostly suppliers (the
+    // exporter's competitors), which silently broke the core value prop.
+    //
+    // `mostRecentShipment` only accepts '6mo' | '12mo' | 'Any Time' — the old
+    // `'any'` was an invalid enum and got ignored. '12mo' biases the result set
+    // toward buyers who are importing RIGHT NOW (also feeds buyer-fit recency).
     return {
       query: searchQuery,
       searchType: 'search',
-      type: 'any',
-      mostRecentShipment: 'any',
+      type: 'company',
+      mostRecentShipment: '12mo',
       maxResults,
     };
   },
@@ -544,6 +571,8 @@ function mapImportYetiShipment(raw: unknown): ScrapedShipmentRow | null {
     incoterm: asString(obj.incoterm),
     date: asString(obj.shipmentDate) ?? asString(obj.date) ?? asString(obj.arrivalDate),
     carrier: asString(obj.vesselName) ?? asString(obj.carrier) ?? asString(obj.vessel),
+    billOfLading:
+      asString(obj.billOfLading) ?? asString(obj.blNumber) ?? asString(obj.bolNumber),
   };
 }
 

@@ -50,6 +50,8 @@ export interface ScrapedShipment {
   incoterm?: string;
   date?: string;
   carrier?: string;
+  /** Bill-of-lading number — the canonical customs-record id, when exposed. */
+  billOfLading?: string;
 }
 
 /**
@@ -356,7 +358,7 @@ export async function enrichAndInsertScrapedItems(
             incoterm: sh.incoterm ?? null,
             shipment_date: normaliseShipmentDate(sh.date),
             carrier: sh.carrier ?? null,
-            source_reference: enrichmentSource,
+            source_reference: sh.billOfLading ?? enrichmentSource,
           }));
           const { error: shipError } = await supabase.from('shipments').insert(shipRows);
           if (shipError) {
