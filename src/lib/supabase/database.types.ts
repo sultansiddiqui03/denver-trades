@@ -123,6 +123,33 @@ export type Database = {
           },
         ]
       }
+      assistant_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          org_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          org_id: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          org_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       commodity_prices: {
         Row: {
           commodity: string
