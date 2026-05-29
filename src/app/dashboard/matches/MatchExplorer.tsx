@@ -2,12 +2,21 @@
 
 import React, { useState, useCallback, useTransition, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Target, Loader2, Inbox, Send, Medal } from 'lucide-react';
+import { Target, Loader2, Inbox, Send, Medal, Radar, Search, Sparkles } from 'lucide-react';
 import BuyerFitBadge from '@/components/BuyerFitBadge';
 import SourcingSignalBadge from '@/components/SourcingSignalBadge';
 import IntentChip from '@/components/IntentChip';
+import { useToast } from '@/components/Toast';
 import { formatNumber, relativeFromNow } from '@/lib/format';
 import styles from './MatchExplorer.module.css';
+
+interface DiscoverSummary {
+  product: string;
+  suppliersScanned: number;
+  relevantSuppliers: number;
+  candidateBuyers: number;
+  inserted: number;
+}
 
 interface HsCode {
   code?: string;
@@ -171,6 +180,13 @@ export default function MatchExplorer({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  // Live customs discovery — distinct from the (fast) re-ranking transition.
+  const [discoverInput, setDiscoverInput] = useState('');
+  const [discovering, setDiscovering] = useState(false);
+  const [enriching, setEnriching] = useState(false);
+  const [summary, setSummary] = useState<DiscoverSummary | null>(null);
 
   const runMatch = useCallback(
     (commodity: string | null, demandId?: string) => {
@@ -197,6 +213,73 @@ export default function MatchExplorer({
     },
     [],
   );
+
+  const runDiscover = useCallback(
+    async (product: string) => {
+      setDiscovering(true);
+      setError(null);
+      setSummary(null);
+      try {
+        const res = await fetch('/api/discover-buyers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? 'Discovery failed');
+        setSummary({
+          product,
+          suppliersScanned: json.suppliersScanned ?? 0,
+          relevantSuppliers: json.relevantSuppliers ?? 0,
+          candidateBuyers: json.candidateBuyers ?? 0,
+          inserted: json.inserted ?? 0,
+        });
+        toast(
+          `Found ${json.candidateBuyers ?? 0} buyer${(json.candidateBuyers ?? 0) === 1 ? '' : 's'} of ${product}` +
+            ` — ${json.inserted ?? 0} new`,
+          'success',
+        );
+        setSelected(null);
+        runMatch(product); // refresh the leaderboard to surface the new buyers
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Discovery failed';
+        setError(msg);
+        toast(msg, 'error');
+      } finally {
+        setDiscovering(false);
+      }
+    },
+    [runMatch, toast],
+  );
+
+  const runEnrich = useCallback(async () => {
+    setEnriching(true);
+    try {
+      const res = await fetch('/api/discover-buyers/enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit: 5 }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Enrichment failed');
+      toast(
+        `Enriched ${json.enriched ?? 0} of ${json.attempted ?? 0} lead${(json.attempted ?? 0) === 1 ? '' : 's'} with full customs profiles`,
+        (json.enriched ?? 0) > 0 ? 'success' : 'info',
+      );
+      if (summary) runMatch(summary.product);
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Enrichment failed', 'error');
+    } finally {
+      setEnriching(false);
+    }
+  }, [runMatch, toast, summary]);
+
+  const handleDiscoverSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = discoverInput.trim();
+    if (!val || discovering) return;
+    runDiscover(val);
+  };
 
   const selectChip = (c: string) => {
     setSelected(c);
@@ -261,6 +344,82 @@ export default function MatchExplorer({
             Match
           </button>
         </form>
+      </section>
+
+      <section className={styles.discoverSection}>
+        <div className={styles.pickerLabel}>
+          <Radar size={16} strokeWidth={1.8} />
+          <span>Discover new buyers from live customs records</span>
+        </div>
+        <p className={styles.discoverHint}>
+          Scans US import bills of lading for a product, keeps only the suppliers
+          that genuinely ship it, then surfaces the US importers buying from them —
+          real, customs-provable buyers you don&apos;t have yet.
+        </p>
+
+        <form onSubmit={handleDiscoverSubmit} className={styles.freeTextRow}>
+          <input
+            type="text"
+            className={`input ${styles.freeInput}`}
+            placeholder="Product to find buyers for, e.g. black pepper"
+            value={discoverInput}
+            onChange={(e) => setDiscoverInput(e.target.value)}
+            disabled={discovering}
+            aria-label="Product to discover buyers for"
+          />
+          <button
+            type="submit"
+            className={`btn-primary ${styles.actionBtn}`}
+            disabled={discovering || !discoverInput.trim()}
+          >
+            {discovering ? (
+              <>
+                <Loader2 size={14} className={styles.spin} /> Scanning…
+              </>
+            ) : (
+              <>
+                <Search size={14} strokeWidth={2} /> Discover buyers
+              </>
+            )}
+          </button>
+        </form>
+
+        {discovering && (
+          <p className={styles.discoverProgress}>
+            <Loader2 size={14} className={styles.spin} />
+            Scanning customs records — this can take up to a minute.
+          </p>
+        )}
+
+        {summary && (
+          <div className={styles.summaryBanner}>
+            <span>
+              <strong>{summary.suppliersScanned}</strong> suppliers scanned
+            </span>
+            <span>
+              <strong>{summary.relevantSuppliers}</strong> genuinely ship {summary.product}
+            </span>
+            <span>
+              <strong>{summary.candidateBuyers}</strong> buyers · <strong>{summary.inserted}</strong> new
+            </span>
+            <button
+              type="button"
+              className={`btn-secondary ${styles.actionBtn} ${styles.enrichBtn}`}
+              onClick={runEnrich}
+              disabled={enriching}
+            >
+              {enriching ? (
+                <>
+                  <Loader2 size={14} className={styles.spin} /> Enriching…
+                </>
+              ) : (
+                <>
+                  <Sparkles size={14} strokeWidth={2} /> Enrich profiles
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </section>
 
       {demandItems.length > 0 && (

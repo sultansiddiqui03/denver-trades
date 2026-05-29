@@ -74,6 +74,60 @@
   min-width: 0;
 }
 
+/* ═══ Discover (live customs) ═══ */
+.discoverSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: linear-gradient(180deg, rgba(204, 255, 0, 0.04), var(--bg-card));
+  border: 1px solid rgba(204, 255, 0, 0.35);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+
+.discoverHint {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  max-width: 72ch;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.discoverProgress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.8125rem;
+  color: var(--accent-lime);
+}
+
+.summaryBanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  background: var(--accent-lime-muted);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.summaryBanner strong {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.enrichBtn {
+  margin-left: auto;
+}
+
 /* ═══ Active Demand ═══ */
 .demandSection {
   display: flex;
