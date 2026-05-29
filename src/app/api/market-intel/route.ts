@@ -5,6 +5,7 @@ import { requireUserContext } from '@/lib/auth/server';
 import { getSupabaseServiceClient } from '@/lib/supabase/admin';
 import { parseBody } from '@/lib/validation';
 import { getMarketIntel } from '@/lib/agents/marketIntel';
+import { captureError } from '@/lib/observability/capture';
 
 /**
  * Market intelligence for a product: total market value, demand by destination,
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, ...result });
   } catch (error: unknown) {
-    console.error('Market-intel error:', error);
+    await captureError(error, { route: 'api/market-intel' });
     return NextResponse.json(
       { success: false, error: getErrorMessage(error) },
       { status: 500 },

@@ -4,6 +4,7 @@ import { getErrorMessage } from '@/lib/errors';
 import { requireUserContext } from '@/lib/auth/server';
 import { parseBody } from '@/lib/validation';
 import { discoverBuyersForProduct } from '@/lib/agents/buyerDiscovery';
+import { captureError } from '@/lib/observability/capture';
 
 /**
  * User-facing buyer discovery: "find buyers who import <product>". Runs a live
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, ...result });
   } catch (error: unknown) {
-    console.error('Discover-buyers error:', error);
+    await captureError(error, { route: 'api/discover-buyers' });
     return NextResponse.json(
       { success: false, error: getErrorMessage(error) },
       { status: 500 },

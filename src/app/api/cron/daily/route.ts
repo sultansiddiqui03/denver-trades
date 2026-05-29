@@ -5,6 +5,7 @@ import { isAutomationAuthorized } from '@/lib/security/request';
 import { detectAndStoreForOrg } from '@/lib/opportunities/runDetect';
 import { computeAndStoreSourcingSignal } from '@/lib/signals/runSignals';
 import { countSavedSearchMatches } from '@/lib/search/savedSearch';
+import { captureError } from '@/lib/observability/capture';
 
 /**
  * Daily maintenance sweep across ALL orgs (Vercel cron — auth via the native
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
       summary.opportunities += await detectAndStoreForOrg(supabase, orgId);
     } catch (e) {
       summary.errors++;
-      console.error(`cron/daily: opportunity sweep failed for ${orgId}:`, e);
+      await captureError(e, { route: 'cron/daily:opportunity-sweep', orgId });
     }
 
     // 2. Saved-search alerts.

@@ -6,6 +6,7 @@ import { isWebhookSecretAuthorized } from '@/lib/security/request';
 import { parseBody } from '@/lib/validation';
 import { fetchApifyDatasetItems } from '@/lib/agents/apifyReplay';
 import { ingestApifyDataset } from '@/lib/agents/shipmentIngest';
+import { captureError } from '@/lib/observability/capture';
 import { DEFAULT_SCRAPER_ACTOR_ID } from '@/lib/agents/scraperActors';
 
 // Apify's default webhook payload shape (when no custom payloadTemplate is
@@ -158,7 +159,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: unknown) {
-    console.error('Apify Webhook error:', error);
+    await captureError(error, { route: 'webhook/apify' });
 
     // Attempt to log failure in database
     const { searchParams } = new URL(request.url);

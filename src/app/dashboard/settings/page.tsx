@@ -102,6 +102,13 @@ export default async function SettingsPage() {
       connected: has('CRON_SECRET'),
       vars: [{ name: 'CRON_SECRET', present: has('CRON_SECRET') }],
     },
+    {
+      title: 'Error alerts',
+      icon: Shield,
+      powers: 'Real-time alert (Slack/Discord webhook) when something breaks for a user.',
+      connected: has('ERROR_WEBHOOK_URL'),
+      vars: [{ name: 'ERROR_WEBHOOK_URL', present: has('ERROR_WEBHOOK_URL'), optional: true }],
+    },
   ];
 
   const connectedCount = integrations.filter((i) => i.connected).length;

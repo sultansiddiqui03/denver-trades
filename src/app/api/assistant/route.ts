@@ -6,6 +6,7 @@ import { getSupabaseServiceClient } from '@/lib/supabase/admin';
 import { getErrorMessage } from '@/lib/errors';
 import { parseBody } from '@/lib/validation';
 import { buildAssistantTools } from '@/lib/assistant/tools';
+import { captureError } from '@/lib/observability/capture';
 
 // AI SDK reads ANTHROPIC_API_KEY; mirror our CLAUDE_API_KEY (same as claude.ts).
 if (process.env.CLAUDE_API_KEY && !process.env.ANTHROPIC_API_KEY) {
@@ -118,7 +119,7 @@ Workspace snapshot:
     });
     return result.toTextStreamResponse();
   } catch (error: unknown) {
-    console.error('Assistant error:', error);
+    await captureError(error, { route: 'api/assistant', orgId, userId: user.id });
     return Response.json({ success: false, error: getErrorMessage(error) }, { status: 500 });
   }
 }
