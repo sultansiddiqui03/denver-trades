@@ -99,6 +99,32 @@ interface CompanyRow {
   buyer_fit_score: number | null;
   score_breakdown: unknown;
   sourcing_signal: unknown;
+  trade_metrics: unknown;
+  sources: unknown;
+}
+
+interface DiscoveryEvidence {
+  product?: string;
+  supplier_count?: number;
+  via_suppliers?: string[];
+}
+
+interface SourceEntry {
+  source: string;
+  ref?: string | null;
+  at?: string | null;
+}
+
+function normaliseDiscoveryEvidence(raw: unknown): DiscoveryEvidence | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const d = (raw as Record<string, unknown>).discovery;
+  if (!d || typeof d !== 'object') return null;
+  return d as DiscoveryEvidence;
+}
+
+function normaliseSources(raw: unknown): SourceEntry[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((s): s is SourceEntry => typeof s === 'object' && s !== null && 'source' in s);
 }
 
 function normaliseHsCodes(raw: unknown): HsCodeEntry[] {
@@ -190,7 +216,7 @@ export default async function CompanyDossierPage({ params }: PageProps) {
     supabase
       .from('companies')
       .select(
-        'id, name, type, hq_city, hq_country, website, description, origin_countries, destination_countries, products_dealt, contacts, is_enriched, is_favorited, enriched_at, enrichment_source, total_shipments, last_shipment_date, source_url, top_suppliers, hs_codes, top_trading_partners, trademarks, buyer_fit_score, score_breakdown, sourcing_signal',
+        'id, name, type, hq_city, hq_country, website, description, origin_countries, destination_countries, products_dealt, contacts, is_enriched, is_favorited, enriched_at, enrichment_source, total_shipments, last_shipment_date, source_url, top_suppliers, hs_codes, top_trading_partners, trademarks, buyer_fit_score, score_breakdown, sourcing_signal, trade_metrics, sources',
       )
       .eq('id', id)
       .eq('org_id', orgId)
@@ -252,6 +278,8 @@ export default async function CompanyDossierPage({ params }: PageProps) {
     score_breakdown: scoreBreakdown,
     shipments,
     sourcing_signal: sourcingSignal,
+    discovery_evidence: normaliseDiscoveryEvidence(company.trade_metrics),
+    sources: normaliseSources(company.sources),
   };
 
   return (

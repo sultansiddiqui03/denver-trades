@@ -101,6 +101,26 @@ export interface DossierCompany {
   shipments?: ShipmentRow[] | null;
   /** Sourcing-shift signal (computed from shipments at ingest time). */
   sourcing_signal?: SourcingSignalData | null;
+  /** Discovery evidence trail (which suppliers prove the import). */
+  discovery_evidence?: {
+    product?: string;
+    supplier_count?: number;
+    via_suppliers?: string[];
+  } | null;
+  /** Data provenance — which sources contributed to this record. */
+  sources?: { source: string; ref?: string | null; at?: string | null }[] | null;
+}
+
+/** Friendly label for a provenance source key. */
+function sourceLabel(source: string): string {
+  if (source === 'discovery') return 'Customs discovery';
+  if (source.includes('importyeti') || source.includes('zen-studio') || source.includes('lulzasaur')) {
+    return 'ImportYeti customs';
+  }
+  if (source.startsWith('enrichment')) return 'Contact/firmographic enrichment';
+  if (source.startsWith('seed')) return 'Sample data';
+  if (source.includes('google-places') || source.includes('crawler')) return 'Business directory';
+  return source;
 }
 
 interface CompanyDossierTabsProps {
@@ -501,6 +521,42 @@ export default function CompanyDossierTabs({ company }: CompanyDossierTabsProps)
                 </div>
               )}
             </div>
+
+            {company.discovery_evidence?.via_suppliers &&
+              company.discovery_evidence.via_suppliers.length > 0 && (
+                <div className={styles.evidenceSection}>
+                  <span className={styles.fieldLabel}>
+                    Why this buyer (customs evidence)
+                  </span>
+                  <p className={styles.evidenceText}>
+                    Found importing{' '}
+                    <strong>{company.discovery_evidence.product ?? 'this commodity'}</strong> into
+                    the US — sourced from {company.discovery_evidence.via_suppliers.length} matching
+                    supplier
+                    {company.discovery_evidence.via_suppliers.length === 1 ? '' : 's'}:
+                  </p>
+                  <div className={styles.productChips}>
+                    {company.discovery_evidence.via_suppliers.map((s) => (
+                      <span key={s} className={styles.evidenceChip}>
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            {company.sources && company.sources.length > 0 && (
+              <div className={styles.evidenceSection}>
+                <span className={styles.fieldLabel}>Data sources</span>
+                <div className={styles.productChips}>
+                  {[...new Set(company.sources.map((s) => sourceLabel(s.source)))].map((label) => (
+                    <span key={label} className={styles.sourceChip}>
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
