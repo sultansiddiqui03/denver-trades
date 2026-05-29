@@ -4,6 +4,7 @@ import { getErrorMessage } from '@/lib/errors';
 import { requireUserContext } from '@/lib/auth/server';
 import { parseBody } from '@/lib/validation';
 import { mintNextDealCode } from '@/lib/pipeline/dealCode';
+import { evidenceToNote } from '@/lib/opportunities/evidenceNote';
 import type { TablesInsert } from '@/lib/supabase/database.types';
 
 const Schema = z.object({
@@ -115,17 +116,4 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       { status: 500 },
     );
   }
-}
-
-/** Render an opportunity's evidence jsonb into a short note for the deal. */
-function evidenceToNote(evidence: unknown): string | null {
-  if (!evidence || typeof evidence !== 'object') return null;
-  const e = evidence as Record<string, unknown>;
-  const parts: string[] = [];
-  for (const [k, v] of Object.entries(e)) {
-    if (v == null) continue;
-    const val = Array.isArray(v) ? v.slice(0, 5).join(', ') : String(v);
-    if (val) parts.push(`${k}: ${val}`);
-  }
-  return parts.length ? `Evidence — ${parts.slice(0, 6).join(' · ')}` : null;
 }

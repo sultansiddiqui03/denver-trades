@@ -95,7 +95,7 @@ const JUNK_NAME_PATTERNS: RegExp[] = [
   /^same as/i, /^no consignee/i, /^unidentified/i, /^withheld/i,
 ];
 
-function isJunkBuyerName(name: string): boolean {
+export function isJunkBuyerName(name: string): boolean {
   const t = name.trim();
   if (t.length < 3) return true;
   if (JUNK_NAME_PATTERNS.some((re) => re.test(t))) return true;
@@ -142,7 +142,7 @@ export interface DiscoverBuyersResult {
 const norm = (s: string): string => s.toLowerCase().trim();
 
 /** Resolve the customs HS chapters to filter on, from org commodities + the product term. */
-function resolveTargetChapters(product: string, orgCommodities: string[]): string[] {
+export function resolveTargetChapters(product: string, orgCommodities: string[]): string[] {
   const out = new Set<string>();
   for (const c of orgCommodities) {
     (COMMODITY_HS_CHAPTERS[norm(c)] ?? []).forEach((ch) => out.add(ch));
@@ -159,7 +159,10 @@ function resolveTargetChapters(product: string, orgCommodities: string[]): strin
  * (keep) when we have no chapter signal at all, so the engine still works for
  * commodities outside the chapter map.
  */
-function supplierDealsCommodity(hsCodes: ScrapedHsCode[] | undefined, chapters: Set<string>): boolean {
+export function supplierDealsCommodity(
+  hsCodes: ScrapedHsCode[] | undefined,
+  chapters: Set<string>,
+): boolean {
   if (chapters.size === 0) return true;
   if (!Array.isArray(hsCodes) || hsCodes.length === 0) return false;
   let total = 0;
