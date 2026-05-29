@@ -86,15 +86,7 @@ export function rateLimit({ key, max, windowSec }: RateLimitOptions): RateLimitR
   };
 }
 
-/**
- * Convenience wrapper for API routes: applies the limit and, if blocked,
- * returns a 429 response with the standard headers. Returns `null` when
- * the request is allowed (caller proceeds).
- */
-export function rateLimitOrThrow(opts: RateLimitOptions): NextResponse | null {
-  const result = rateLimit(opts);
-  if (result.allowed) return null;
-
+function tooManyRequests(result: RateLimitResult): NextResponse {
   return NextResponse.json(
     {
       success: false,
@@ -110,4 +102,89 @@ export function rateLimitOrThrow(opts: RateLimitOptions): NextResponse | null {
       },
     }
   );
+}
+
+/**
+ * Convenience wrapper for API routes: applies the (in-process) limit and, if
+ * blocked, returns a 429. Returns `null` when allowed. Synchronous — use for
+ * high-volume / latency-sensitive routes where a per-instance window is fine.
+ */
+export function rateLimitOrThrow(opts: RateLimitOptions): NextResponse | null {
+  const result = rateLimit(opts);
+  return result.allowed ? null : tooManyRequests(result);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Distributed (KV-backed) limiter                                            */
+/* -------------------------------------------------------------------------- */
+
+function kvCreds(): { url: string; token: string } | null {
+  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  return url && token ? { url: url.replace(/\/$/, ''), token } : null;
+}
+
+/**
+ * Fixed-window distributed limit via Upstash/Vercel-KV REST (INCR + EXPIRE).
+ * Returns null to signal "no KV configured / KV failed" so the caller falls
+ * back to the in-process limiter. Activates automatically the moment a KV store
+ * is provisioned (KV_REST_API_URL/TOKEN or UPSTASH_REDIS_REST_URL/TOKEN) — no
+ * code change needed then.
+ */
+async function kvRateLimit(opts: RateLimitOptions): Promise<RateLimitResult | null> {
+  const creds = kvCreds();
+  if (!creds) return null;
+  const headers = { Authorization: `Bearer ${creds.token}` };
+  const k = `rl:${opts.key}`;
+  try {
+    const incrRes = await fetch(`${creds.url}/incr/${encodeURIComponent(k)}`, {
+      headers,
+      cache: 'no-store',
+    });
+    if (!incrRes.ok) return null;
+    const count = Number((await incrRes.json())?.result ?? 0);
+    if (!Number.isFinite(count) || count <= 0) return null;
+
+    if (count === 1) {
+      // First hit in this window — set the TTL.
+      await fetch(`${creds.url}/expire/${encodeURIComponent(k)}/${opts.windowSec}`, {
+        headers,
+        cache: 'no-store',
+      });
+    }
+
+    if (count > opts.max) {
+      let retry = opts.windowSec;
+      try {
+        const ttlRes = await fetch(`${creds.url}/ttl/${encodeURIComponent(k)}`, {
+          headers,
+          cache: 'no-store',
+        });
+        const ttl = Number((await ttlRes.json())?.result ?? opts.windowSec);
+        if (ttl > 0) retry = ttl;
+      } catch {
+        /* keep window default */
+      }
+      return { allowed: false, remaining: 0, retryAfterSec: Math.max(1, retry), total: opts.max };
+    }
+    return {
+      allowed: true,
+      remaining: Math.max(0, opts.max - count),
+      retryAfterSec: 0,
+      total: opts.max,
+    };
+  } catch (e) {
+    console.error('kvRateLimit failed — falling back to in-process:', e);
+    return null;
+  }
+}
+
+/**
+ * Async limiter for expensive routes (AI generation, enrichment, doc audit):
+ * uses the distributed KV window when a KV store is configured, otherwise the
+ * in-process window. Returns a 429 when blocked, else null.
+ */
+export async function rateLimitOrThrowAsync(opts: RateLimitOptions): Promise<NextResponse | null> {
+  const result = (await kvRateLimit(opts)) ?? rateLimit(opts);
+  return result.allowed ? null : tooManyRequests(result);
 }

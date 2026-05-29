@@ -132,6 +132,10 @@ export interface DiscoverBuyersResult {
   inserted: number;
   /** How many of the inserted leads were enriched to a full profile inline. */
   enriched: number;
+  /** Resolved buyers that have a website → contact discovery can reach them. */
+  reachable: number;
+  /** Resolved buyers with no website yet → not contactable until enriched. */
+  unreachable: number;
   buyers: DiscoveredBuyer[];
 }
 
@@ -342,6 +346,19 @@ export async function discoverBuyersForProduct(
     }
   }
 
+  // Reachability: of the resolved buyers, how many have a website (so contact
+  // discovery can reach them) vs not — surfaced so the UI can prompt enrichment.
+  let reachable = 0;
+  let unreachable = 0;
+  const buyerIds = ranked.map((b) => b.companyId).filter((id): id is string => Boolean(id));
+  if (buyerIds.length > 0) {
+    const { data: rows } = await supabase.from('companies').select('website').in('id', buyerIds);
+    for (const r of rows ?? []) {
+      if (r.website) reachable++;
+      else unreachable++;
+    }
+  }
+
   return {
     product,
     targetChapters,
@@ -350,6 +367,8 @@ export async function discoverBuyersForProduct(
     candidateBuyers: buyers.length,
     inserted: insertedIds.length,
     enriched: ranked.filter((b) => b.enriched).length,
+    reachable,
+    unreachable,
     buyers: ranked,
   };
 }

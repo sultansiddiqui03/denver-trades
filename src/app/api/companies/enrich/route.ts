@@ -5,7 +5,7 @@ import { computeAndStoreCompanyEmbedding } from '@/lib/ai/embedCompany';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
 import { parseBody } from '@/lib/validation';
-import { rateLimitOrThrow } from '@/lib/security/rateLimit';
+import { rateLimitOrThrowAsync } from '@/lib/security/rateLimit';
 
 // NOTE: contacts are deliberately NOT part of AI enrichment. An LLM cannot know
 // a real decision-maker's email/phone, so asking it to "infer" them just
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
     const { orgId, supabase } = context;
 
-    const limited = rateLimitOrThrow({
+    const limited = await rateLimitOrThrowAsync({
       key: `${orgId}:companies.enrich`,
       max: 20,
       windowSec: 300,

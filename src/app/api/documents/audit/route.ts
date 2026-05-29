@@ -4,7 +4,7 @@ import { generateJSON, generateMultimodalJSON } from '@/lib/ai/gemini';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
 import { parseBody } from '@/lib/validation';
-import { rateLimitOrThrow } from '@/lib/security/rateLimit';
+import { rateLimitOrThrowAsync } from '@/lib/security/rateLimit';
 import type { Json } from '@/lib/supabase/database.types';
 
 const DiscrepancySchema = z.object({
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     const { orgId, supabase } = context;
 
     // Audits are expensive (Gemini multimodal). 10 per 5 min per org.
-    const limited = rateLimitOrThrow({
+    const limited = await rateLimitOrThrowAsync({
       key: `${orgId}:documents.audit`,
       max: 10,
       windowSec: 300,

@@ -4,7 +4,7 @@ import { streamText } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { requireUserContext } from '@/lib/auth/server';
 import { parseBody } from '@/lib/validation';
-import { rateLimitOrThrow } from '@/lib/security/rateLimit';
+import { rateLimitOrThrowAsync } from '@/lib/security/rateLimit';
 
 // Mirror the existing /api/outreach/generate env shim so Anthropic's SDK
 // finds its key under our canonical CLAUDE_API_KEY name.
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
   const { orgId, supabase } = context;
 
-  const limited = rateLimitOrThrow({
+  const limited = await rateLimitOrThrowAsync({
     key: `${orgId}:outreach.generate`,
     max: 30,
     windowSec: 300,
