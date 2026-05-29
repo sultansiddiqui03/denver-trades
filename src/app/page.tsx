@@ -166,6 +166,29 @@ export default async function LandingPage({ searchParams }: LoginPageProps) {
         </div>
       </section>
 
+      {/* ══════════════════════ TRADE COPILOT ══════════════════════ */}
+      <section className={styles.copilot}>
+        <div className={styles.sectionLabel}>New · Your AI edge</div>
+        <h2 className={styles.sectionTitle}>Meet your Trade Copilot</h2>
+        <p className={styles.copilotIntro}>
+          An agentic assistant that knows your trade, remembers your context, and
+          actually runs the work — grounded in real customs data, never guesswork.
+        </p>
+        <div className={`${styles.copilotCard} glass gradient-border`}>
+          <div className={`${styles.pillarIcon} ${styles.pillarIconLime}`}>
+            <Sparkles size={22} strokeWidth={1.6} />
+          </div>
+          <div className={styles.copilotChats}>
+            <p className={styles.copilotAsk}>&ldquo;Find US buyers for black pepper&rdquo;</p>
+            <p className={styles.copilotReply}>→ pulls real importers from customs records, scored and ready</p>
+            <p className={styles.copilotAsk}>&ldquo;What&apos;s the market for turmeric?&rdquo;</p>
+            <p className={styles.copilotReply}>→ demand by destination + benchmark prices</p>
+            <p className={styles.copilotAsk}>&ldquo;Draft outreach to my best buyer&rdquo;</p>
+            <p className={styles.copilotReply}>→ a personalised opener citing their real import history</p>
+          </div>
+        </div>
+      </section>
+
       {/* ══════════════════════ HOW IT WORKS ══════════════════════ */}
       <section className={styles.howItWorks}>
         <div className={styles.sectionLabel}>How it works</div>

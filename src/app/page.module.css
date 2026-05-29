@@ -278,6 +278,64 @@
   gap: var(--space-6);
 }
 
+/* ── Trade Copilot ── */
+.copilot {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--space-16) var(--space-6) var(--space-8);
+  text-align: center;
+}
+
+.copilotIntro {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 60ch;
+  margin: var(--space-4) auto 0;
+}
+
+.copilotCard {
+  margin-top: var(--space-8);
+  padding: var(--space-8) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  text-align: left;
+}
+
+.copilotChats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.copilotAsk {
+  align-self: flex-end;
+  max-width: 90%;
+  background: var(--accent-lime-muted);
+  border: 1px solid rgba(204, 255, 0, 0.25);
+  color: var(--text-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.copilotReply {
+  align-self: flex-start;
+  max-width: 90%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-primary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  font-size: 0.875rem;
+}
+
 .pillarCard {
   padding: var(--space-8) var(--space-6);
   display: flex;
