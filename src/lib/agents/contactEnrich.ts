@@ -53,13 +53,16 @@ export async function enrichCompanyContacts(
   const items = await runApifyActorSync(
     CONTACT_ACTOR,
     {
+      // Depth 2 so the crawler reaches /contact and /about pages where emails
+      // and phones actually live — a homepage-only crawl usually finds nothing.
       startUrls: [{ url: company.website }],
       mergeContacts: true,
-      maxDepth: 1,
-      maxRequestsPerStartUrl: 10,
+      maxDepth: 2,
+      maxRequestsPerStartUrl: 15,
+      sameDomain: true,
       proxyConfig: { useApifyProxy: true },
     },
-    { timeoutSecs: 90 },
+    { timeoutSecs: 110 },
   );
 
   const emails = new Set<string>();
