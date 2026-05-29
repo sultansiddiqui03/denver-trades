@@ -13,6 +13,7 @@ import {
   pickActor,
   type ScraperDataKind,
 } from '@/lib/agents/scraperActors';
+import { upsertCanonicalCompany } from '@/lib/entity/companyMatch';
 
 /** One supplier/buyer relationship pulled from customs records. */
 export interface ScrapedSupplier {
@@ -311,10 +312,13 @@ export async function enrichAndInsertScrapedItems(
       const customsType =
         actor.dataKind === 'customs' ? customsTypeOverride(item.categoryName) : null;
 
-      const { data: inserted, error: dbError } = await supabase
-        .from('companies')
-        .insert({
-          org_id: orgId,
+      // Resolve to a canonical company — merge into an existing row when one
+      // fuzzy-matches (so the same buyer from multiple sources/runs stays ONE
+      // record), else insert. Provenance is recorded on `companies.sources`.
+      const resolved = await upsertCanonicalCompany(
+        supabase,
+        orgId,
+        {
           name: enriched.name,
           type: customsType ?? enriched.type,
           hq_country: enriched.hq_country,
@@ -339,26 +343,27 @@ export async function enrichAndInsertScrapedItems(
           trademarks: toJson(item.trademarks),
           source_url: item.sourceUrl ?? null,
           trade_metrics: toJson(item.rawMetrics),
-        })
-        .select('id')
-        .single();
+        },
+        { source: effectiveActorId, ref: datasetId ?? null },
+      );
 
-      if (dbError || !inserted) {
-        console.error(`Error saving enriched company ${enriched.name}:`, dbError);
+      if (!resolved) {
+        console.error(`Error saving enriched company ${enriched.name}`);
         continue;
       }
 
-      createdCount++;
-      insertedIds.push(inserted.id);
+      const companyId = resolved.id;
+      if (!resolved.merged) createdCount++;
+      insertedIds.push(companyId);
 
       // Best-effort embedding so the company is searchable via
       // /api/search/semantic. A missing OPENAI_API_KEY or provider
       // hiccup must not fail the surrounding flow — log and continue.
       try {
-        await computeAndStoreCompanyEmbedding(supabase, inserted.id);
+        await computeAndStoreCompanyEmbedding(supabase, companyId);
       } catch (embedError) {
         console.error(
-          `Apify enrich: embedding failed for company ${inserted.id} (${enriched.name}):`,
+          `Apify enrich: embedding failed for company ${companyId} (${enriched.name}):`,
           embedError,
         );
       }
@@ -369,7 +374,7 @@ export async function enrichAndInsertScrapedItems(
         try {
           const shipRows = item.shipments.slice(0, 200).map((sh) => ({
             org_id: orgId,
-            company_id: inserted.id,
+            company_id: companyId,
             product: sh.product || enriched.products_dealt[0] || enriched.name,
             hs_code: sh.hsCode ?? null,
             supplier_name: sh.supplier ?? null,
@@ -387,12 +392,12 @@ export async function enrichAndInsertScrapedItems(
           }));
           const { error: shipError } = await supabase.from('shipments').insert(shipRows);
           if (shipError) {
-            console.error(`Apify enrich: shipment insert failed for ${inserted.id}:`, shipError);
+            console.error(`Apify enrich: shipment insert failed for ${companyId}:`, shipError);
           } else {
-            await computeAndStoreSourcingSignal(supabase, inserted.id);
+            await computeAndStoreSourcingSignal(supabase, companyId);
           }
         } catch (shipErr) {
-          console.error(`Apify enrich: shipment/signal step failed for ${inserted.id}:`, shipErr);
+          console.error(`Apify enrich: shipment/signal step failed for ${companyId}:`, shipErr);
         }
       }
     } catch (enrichError) {

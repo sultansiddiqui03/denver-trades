@@ -178,6 +178,7 @@ export type Database = {
           score_breakdown: Json | null
           scored_at: string | null
           source_url: string | null
+          sources: Json
           sourcing_signal: Json | null
           sourcing_signal_at: string | null
           tags: string[] | null
@@ -214,6 +215,7 @@ export type Database = {
           score_breakdown?: Json | null
           scored_at?: string | null
           source_url?: string | null
+          sources?: Json
           sourcing_signal?: Json | null
           sourcing_signal_at?: string | null
           tags?: string[] | null
@@ -250,6 +252,7 @@ export type Database = {
           score_breakdown?: Json | null
           scored_at?: string | null
           source_url?: string | null
+          sources?: Json
           sourcing_signal?: Json | null
           sourcing_signal_at?: string | null
           tags?: string[] | null

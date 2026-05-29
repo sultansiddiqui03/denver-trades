@@ -5,6 +5,12 @@ import { mapItems } from '@/lib/agents/scraperActors';
 import type { ScrapedHsCode, ScrapedPlace } from '@/lib/agents/apifyReplay';
 import { scoreOrgCompanies } from '@/lib/scoring/runScoring';
 import { detectFromCompany } from '@/lib/opportunities/runDetect';
+import {
+  fuzzySameName,
+  normalizeCoreName,
+  levenshtein,
+  upsertCanonicalCompany,
+} from '@/lib/entity/companyMatch';
 
 /**
  * Product → buyer discovery engine — the scalable wedge.
@@ -72,68 +78,6 @@ const PRODUCT_HS_CHAPTERS: Array<{ match: RegExp; chapters: string[] }> = [
   { match: /shrimp|prawn|fish|seafood|tuna|crab/i, chapters: ['03'] },
   { match: /palm oil|coconut oil|edible oil|olive oil|vegetable oil/i, chapters: ['15'] },
 ];
-
-/* -------------------------------------------------------------------------- */
-/* Fuzzy company-name dedupe                                                  */
-/* -------------------------------------------------------------------------- */
-
-const NAME_SUFFIXES = new Set([
-  'inc', 'incorporated', 'llc', 'ltd', 'limited', 'corp', 'corporation', 'co',
-  'company', 'international', 'intl', 'trade', 'trading', 'products', 'product',
-  'imports', 'import', 'exports', 'export', 'group', 'holdings', 'enterprises',
-  'enterprise', 'industries', 'foods', 'usa', 'us', 'the', 'and',
-]);
-
-/**
- * Strip punctuation, lowercase, and drop generic corporate/trade suffix words so
- * "Mcilhenny Co", "McIlhenny" and "MCILHENNY INC" collapse to one core token.
- */
-function normalizeCoreName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]+/g, ' ')
-    .split(/\s+/)
-    .filter((w) => w && !NAME_SUFFIXES.has(w))
-    .join(' ')
-    .trim();
-}
-
-/** Classic Levenshtein edit distance — small inputs only (company names). */
-function levenshtein(a: string, b: string): number {
-  if (a === b) return 0;
-  const m = a.length;
-  const n = b.length;
-  if (m === 0) return n;
-  if (n === 0) return m;
-  let prev = Array.from({ length: n + 1 }, (_, i) => i);
-  let curr = new Array<number>(n + 1);
-  for (let i = 1; i <= m; i++) {
-    curr[0] = i;
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
-    }
-    [prev, curr] = [curr, prev];
-  }
-  return prev[n];
-}
-
-/**
- * Two names are "the same buyer" when their normalized cores match exactly, or
- * are within a tight edit distance (≤2) on cores long enough that the closeness
- * is meaningful — catches OCR/spelling variants like "Mcilhenny"/"Mcllhenny" and
- * "Waterglider"/"Waterglinder" without over-merging short or distinct names.
- */
-function fuzzySameName(a: string, b: string): boolean {
-  const ca = normalizeCoreName(a);
-  const cb = normalizeCoreName(b);
-  if (!ca || !cb) return false;
-  if (ca === cb) return true;
-  if (Math.min(ca.length, cb.length) < 5) return false;
-  const dist = levenshtein(ca, cb);
-  const maxLen = Math.max(ca.length, cb.length);
-  return dist <= 2 && dist / maxLen <= 0.2;
-}
 
 const US_LIKE = new Set([
   'united states', 'usa', 'us', 'u.s.', 'u.s.a.', 'united states of america',
@@ -295,28 +239,16 @@ export async function discoverBuyersForProduct(
     .sort((a, b) => b.supplierCount - a.supplierCount || a.name.localeCompare(b.name))
     .slice(0, maxBuyers);
 
-  // 4. Upsert each as an Importer lead (dedupe by name within the org).
+  // 4. Resolve each to a canonical company (merge into an existing row when one
+  //    fuzzy-matches; otherwise insert a fresh Importer lead). `insertedIds`
+  //    holds only the brand-new rows — those are the ones worth (re)scoring.
   const insertedIds: string[] = [];
   for (const buyer of ranked) {
-    const { data: existing } = await supabase
-      .from('companies')
-      .select('id')
-      .eq('org_id', orgId)
-      .ilike('name', buyer.name)
-      .limit(1)
-      .maybeSingle();
-
-    if (existing) {
-      buyer.companyId = existing.id;
-      buyer.alreadyKnown = true;
-      continue;
-    }
-
     const suppliersList = buyer.viaSuppliers.slice(0, 5).join(', ');
-    const { data: inserted, error } = await supabase
-      .from('companies')
-      .insert({
-        org_id: orgId,
+    const result = await upsertCanonicalCompany(
+      supabase,
+      orgId,
+      {
         name: buyer.name,
         type: 'Importer',
         hq_country: 'United States',
@@ -341,16 +273,17 @@ export async function discoverBuyersForProduct(
             target_hs_chapters: targetChapters,
           },
         }),
-      })
-      .select('id')
-      .single();
+      },
+      { source: 'discovery', ref: product },
+    );
 
-    if (error || !inserted) {
-      console.error(`Buyer discovery: insert failed for "${buyer.name}":`, error);
-      continue;
+    if (!result) continue;
+    buyer.companyId = result.id;
+    if (result.merged) {
+      buyer.alreadyKnown = true;
+    } else {
+      insertedIds.push(result.id);
     }
-    buyer.companyId = inserted.id;
-    insertedIds.push(inserted.id);
   }
 
   // 5. Optionally enrich the top N inserted leads inline (fills their real
