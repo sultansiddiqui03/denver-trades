@@ -8,6 +8,7 @@ import CommandPalette from '@/components/CommandPalette';
 import ProgressBar from '@/components/ProgressBar';
 import NotificationCenter from '@/components/NotificationCenter';
 import TopBarUser from '@/components/TopBarUser';
+import AssistantWidget from '@/components/AssistantWidget';
 import styles from './layout.module.css';
 
 /**
@@ -87,6 +88,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
           <div className={`${styles.pageBody} dot-grid`}>{children}</div>
         </div>
+
+        <AssistantWidget />
       </div>
     </ToastProvider>
   );
