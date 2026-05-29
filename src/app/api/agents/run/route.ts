@@ -8,6 +8,7 @@ import { parseBody } from '@/lib/validation';
 import type { Database } from '@/lib/supabase/database.types';
 import { SCRAPER_ACTORS } from '@/lib/agents/scraperActors';
 import { dispatchApifyScrape } from '@/lib/agents/dispatchScrape';
+import { normalizeProductQuery } from '@/lib/agents/productQuery';
 
 // APIFY_ACTOR_ID format: <username>~<actor-name> (the Apify "technical name").
 // The actor-specific input/output contracts live in scraperActors.ts so
@@ -212,7 +213,10 @@ async function dispatchLeadScraper(params: {
   supabase: SupabaseClient<Database>;
 }) {
   const { runRecordId, orgId, query, actorId, supabase } = params;
-  const searchQuery = query || 'Spice exporters in Vietnam';
+  // Normalize natural-language queries ("rice exporters in usa" → "rice") so the
+  // customs/product search actually hits instead of slugifying to a non-existent
+  // company and returning nothing.
+  const searchQuery = normalizeProductQuery(query || 'Spice exporters in Vietnam');
   const token = process.env.APIFY_TOKEN || process.env.APIFY_API_TOKEN;
 
   // No Apify token → simulation mode (clearly labeled)

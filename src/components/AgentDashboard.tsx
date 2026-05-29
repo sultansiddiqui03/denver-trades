@@ -121,17 +121,14 @@ const SCRAPER_SOURCE_OPTIONS: {
     label: 'Customs & shipment data',
     hint: 'Verified shipment records with HS codes and top trading partners.',
   },
-  {
-    value: 'lulzasaur~importyeti-scraper',
-    label: 'Customs & shipment data — lite',
-    hint: 'Core shipment fields with a faster crawl.',
-  },
-  {
-    value: 'lulzasaur~importyeti-scraper~shipments',
-    label: 'Full shipment history',
-    hint: 'Per-shipment records → buyer timelines + supplier-switching detection.',
-  },
 ];
+// NOTE: the lulzasaur company/shipments actors are intentionally NOT offered
+// here. Their "shipments" mode treats the query as a COMPANY-NAME slug, so a
+// product search like "rice exporters in usa" returns "no records" — exactly the
+// dead-end users hit. They remain registered in SCRAPER_ACTORS for programmatic
+// company-name lookups, but the user-facing picker keeps only the two paths that
+// reliably work on a product/keyword search. To find BUYERS of a product, use
+// the "Discover buyers from customs" panel on Buyer Match (the discovery engine).
 // Matches "dataset ffeKO5Oq7meoNAXLf" or "dataset: ffeKO5Oq7meoNAXLf"
 const DATASET_ID_RE = /dataset(?:\s+|:\s*)([a-zA-Z0-9_-]{10,})/i;
 

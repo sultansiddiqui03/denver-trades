@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/lib/supabase/database.types';
 import { runApifyActorSync } from '@/lib/agents/dispatchScrape';
+import { normalizeProductQuery } from '@/lib/agents/productQuery';
 
 /**
  * Market-intelligence layer — price benchmarks + demand-by-destination.
@@ -107,7 +108,8 @@ export async function getMarketIntel(
   tradeType: 'import' | 'export',
   opts: { force?: boolean; maxItems?: number } = {},
 ): Promise<MarketIntelResult> {
-  const normalizedProduct = product.trim().toLowerCase();
+  const cleanProduct = normalizeProductQuery(product);
+  const normalizedProduct = cleanProduct.toLowerCase();
 
   if (!opts.force) {
     const { data: cached } = await supabase
@@ -124,7 +126,7 @@ export async function getMarketIntel(
 
   const raw = await runApifyActorSync(
     'parseforge~zauba-scraper',
-    { product, tradeType, maxItems: opts.maxItems ?? 100 },
+    { product: cleanProduct, tradeType, maxItems: opts.maxItems ?? 100 },
     { timeoutSecs: 150 },
   );
 

@@ -11,6 +11,7 @@ import {
   levenshtein,
   upsertCanonicalCompany,
 } from '@/lib/entity/companyMatch';
+import { normalizeProductQuery } from '@/lib/agents/productQuery';
 
 /**
  * Product → buyer discovery engine — the scalable wedge.
@@ -181,6 +182,8 @@ export async function discoverBuyersForProduct(
   product: string,
   options: DiscoverBuyersOptions = {},
 ): Promise<DiscoverBuyersResult> {
+  // "rice exporters in usa" → "rice" so the customs product search actually hits.
+  product = normalizeProductQuery(product);
   const maxSuppliers = options.maxSuppliers ?? 25;
   const maxBuyers = options.maxBuyers ?? 15;
   const enrichTop = options.enrichTop ?? 0;
