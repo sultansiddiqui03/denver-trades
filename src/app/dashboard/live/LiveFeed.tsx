@@ -186,19 +186,30 @@ export default function LiveFeed({ initialEvents, orgId }: LiveFeedProps) {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'shipments', filter: `org_id=eq.${orgId}` },
-        (payload) => {
+        async (payload) => {
           const row = payload.new as {
             id: string; company_id: string | null; product: string;
             supplier_name: string | null; origin_country: string | null;
             destination_country: string | null; quantity_mt: number | null;
             value_usd: number | null; shipment_date: string | null; created_at: string | null;
           };
+          // The realtime payload only carries company_id — resolve the real
+          // buyer name so live cards don't read a placeholder "New Buyer".
+          let companyName = 'New shipment';
+          if (row.company_id) {
+            const { data } = await supabase
+              .from('companies')
+              .select('name')
+              .eq('id', row.company_id)
+              .maybeSingle();
+            if (data?.name) companyName = data.name;
+          }
           const ev: FeedEvent = {
             type: 'contract',
             id: row.id,
             at: row.shipment_date ?? row.created_at ?? new Date().toISOString(),
             companyId: row.company_id,
-            companyName: 'New Buyer',
+            companyName,
             product: row.product,
             quantityMt: row.quantity_mt,
             supplier: row.supplier_name,

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import WhatsAppInbox from '@/components/WhatsAppInbox';
 import Button from '@/components/Button';
+import { useToast } from '@/components/Toast';
 import styles from './page.module.css';
 
 // Next 16 prerender step requires `useSearchParams()` to be inside a Suspense
@@ -25,6 +26,7 @@ export default function OutreachCenterPage() {
 }
 
 function OutreachCenter() {
+  const { toast } = useToast();
   const searchParams = useSearchParams();
   // Two entry points land here with prefill query params:
   //   - Dossier "Generate outreach" → ?companyId=...&companyName=...
@@ -86,6 +88,7 @@ function OutreachCenter() {
       if (!response.ok || !response.body) {
         const errorText = await response.text();
         console.error('Error generating pitch:', errorText);
+        toast('Could not generate the pitch. Please try again.', 'error');
         return;
       }
 
@@ -102,17 +105,24 @@ function OutreachCenter() {
         buffered += decoder.decode(value, { stream: true });
         setGeneratedDraft(buffered);
       }
+      if (buffered.trim()) toast(`${channel} pitch ready for ${recipientName}.`, 'success');
     } catch (error) {
       console.error('Network error during pitch generation:', error);
+      toast('Network error while generating. Please try again.', 'error');
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(generatedDraft);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedDraft);
+      setCopied(true);
+      toast('Copied to clipboard.', 'success');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast('Could not copy — select and copy manually.', 'error');
+    }
   };
 
   return (
