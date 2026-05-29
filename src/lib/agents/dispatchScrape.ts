@@ -106,3 +106,43 @@ export async function dispatchApifyScrape(params: {
     actorLabel: actor.label,
   };
 }
+
+/**
+ * Run an Apify actor SYNCHRONOUSLY and return its dataset items, blocking until
+ * the run finishes. Unlike {@link dispatchApifyScrape} (fire-and-forget with a
+ * webhook callback), this is for request-scoped flows that need the result
+ * inline — e.g. the buyer-discovery engine, which has to read a product
+ * search's suppliers, harvest their US trading partners, and ingest the buyers
+ * all within one request. Safe under Vercel's 300s function limit for the small
+ * run sizes discovery uses.
+ *
+ * Uses Apify's `run-sync-get-dataset-items` endpoint, which returns the dataset
+ * array directly (no separate fetch). Throws on a missing token or a non-OK
+ * response so the caller can surface the failure.
+ */
+export async function runApifyActorSync(
+  apifyActorId: string,
+  input: unknown,
+  opts: { timeoutSecs?: number } = {},
+): Promise<unknown[]> {
+  const token = process.env.APIFY_TOKEN || process.env.APIFY_API_TOKEN;
+  if (!token) {
+    throw new Error('APIFY_TOKEN not set — cannot run a synchronous scrape.');
+  }
+  const timeout = opts.timeoutSecs ?? 120;
+  const url =
+    `https://api.apify.com/v2/acts/${apifyActorId}/run-sync-get-dataset-items` +
+    `?token=${token}&timeout=${timeout}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Apify sync run failed (${response.status}): ${await response.text()}`,
+    );
+  }
+  const parsed = (await response.json()) as unknown;
+  return Array.isArray(parsed) ? parsed : [];
+}
