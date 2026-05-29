@@ -128,8 +128,8 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
-        mode: 'live',
-        message: `Ingested ${created} price ticks across ${processed} commodities.`,
+        mode: 'simulation',
+        message: `Added ${created} simulated price ticks across ${processed} commodities. (No live exchange feed is wired — for real per-unit prices use Market Intel.)`,
         run: updatedRun ?? runRecord,
       });
     }

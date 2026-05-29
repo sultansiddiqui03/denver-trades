@@ -7,21 +7,17 @@ import { getErrorMessage } from '@/lib/errors';
 import { parseBody } from '@/lib/validation';
 import { rateLimitOrThrow } from '@/lib/security/rateLimit';
 
+// NOTE: contacts are deliberately NOT part of AI enrichment. An LLM cannot know
+// a real decision-maker's email/phone, so asking it to "infer" them just
+// fabricates PII that outreach would then send to. Real contacts come only from
+// the website-crawl path (lib/agents/contactEnrich.ts). This enrichment fills
+// the INFERABLE profile fields (description/products/markets/tags) from public
+// signals.
 const EnrichmentResultSchema = z.object({
   description: z.string().default(''),
   products_dealt: z.array(z.string()).default([]),
   origin_countries: z.array(z.string()).default([]),
   destination_countries: z.array(z.string()).default([]),
-  contacts: z
-    .array(
-      z.object({
-        name: z.string(),
-        role: z.string(),
-        email: z.string().nullable(),
-        phone: z.string().nullable(),
-      })
-    )
-    .default([]),
   tags: z.array(z.string()).default([]),
 });
 
@@ -65,13 +61,14 @@ export async function POST(request: Request) {
     }
 
     // 2. Use Gemini to enrich the company data
-    const systemPrompt = `You are a B2B trade intelligence analyst. Given the company details below, produce an enriched profile.
-Research and infer:
-- A detailed 3-4 sentence business description focusing on their trade operations
+    const systemPrompt = `You are a B2B trade intelligence analyst. Given the company details below, produce an enriched profile from PUBLIC signals (name, country, type, website).
+Infer ONLY what's reasonably supportable:
+- A factual 3-4 sentence business description of their trade operations
 - Products they likely deal in (based on name, country, and type)
 - Countries they source from and export to
-- Probable key contacts (name, role, email, phone) — generate realistic but plausible placeholders if unknown
 - Tags (e.g., "organic", "bulk", "premium", "FMCG", "commodity")
+
+Do NOT invent contact names, emails, or phone numbers. Do NOT fabricate specifics you cannot support.
 
 Output as JSON:
 {
@@ -79,7 +76,6 @@ Output as JSON:
   "products_dealt": ["array"],
   "origin_countries": ["array"],
   "destination_countries": ["array"],
-  "contacts": [{ "name": "string", "role": "string", "email": "string|null", "phone": "string|null" }],
   "tags": ["array"]
 }`;
 
@@ -98,7 +94,13 @@ Current Description: ${company.description || 'None'}`;
       systemPrompt
     );
 
-    // 3. Update company record in Supabase
+    // 3. Update company record in Supabase.
+    //  - Never touch `contacts` here (real contacts come from the crawler).
+    //  - Preserve customs provenance: don't overwrite an `apify:`/customs
+    //    enrichment_source with the AI label, and don't downgrade a higher
+    //    customs-derived confidence — AI-inferred profile data is low-confidence.
+    const hadCustomsSource = (company.enrichment_source ?? '').startsWith('apify');
+    const existingConfidence = Number(company.confidence_score ?? 0);
     const { data: updated, error: updateError } = await supabase
       .from('companies')
       .update({
@@ -106,12 +108,11 @@ Current Description: ${company.description || 'None'}`;
         products_dealt: enriched.products_dealt,
         origin_countries: enriched.origin_countries,
         destination_countries: enriched.destination_countries,
-        contacts: enriched.contacts,
         tags: enriched.tags,
         is_enriched: true,
         enriched_at: new Date().toISOString(),
-        enrichment_source: 'gemini-ai',
-        confidence_score: 0.92,
+        enrichment_source: hadCustomsSource ? company.enrichment_source : 'gemini-ai-inferred',
+        confidence_score: Math.max(existingConfidence, 0.6),
       })
       .eq('id', companyId)
       .eq('org_id', orgId)
