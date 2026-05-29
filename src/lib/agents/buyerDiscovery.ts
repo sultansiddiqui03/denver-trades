@@ -40,20 +40,100 @@ import { detectFromCompany } from '@/lib/opportunities/runDetect';
  */
 const COMMODITY_HS_CHAPTERS: Record<string, string[]> = {
   spices: ['09'],
-  coffee: ['09'], // 0901
+  coffee: ['09'], // coffee = 0901, tea/maté/spices share chapter 09
+  tea: ['09'],
   grains: ['10', '11'],
+  cereals: ['10', '11'],
+  pulses: ['07'], // dried leguminous vegetables = 0713
   oilseeds: ['12'],
   nuts: ['08'],
+  'dried fruits': ['08'],
+  sugar: ['17'],
+  cocoa: ['18'],
+  rubber: ['40'],
+  cotton: ['52'],
+  textiles: ['52', '61', '62'],
+  seafood: ['03'],
+  'edible oils': ['15'],
 };
 
 /** Free product term → HS chapter, for when the caller passes a product, not an org category. */
 const PRODUCT_HS_CHAPTERS: Array<{ match: RegExp; chapters: string[] }> = [
-  { match: /pepper|spice|cumin|coriander|cardamom|cinnamon|cassia|clove|chilli|chili|ginger|turmeric|nutmeg|fennel|fenugreek|anise|mace|paprika|saffron/i, chapters: ['09'] },
-  { match: /coffee|arabica|robusta/i, chapters: ['09'] },
-  { match: /rice|wheat|maize|corn|barley|sorghum|millet|oats|grain|cereal/i, chapters: ['10', '11'] },
-  { match: /sesame|groundnut|peanut|soybean|soya|sunflower|mustard|rapeseed|canola|oilseed/i, chapters: ['12'] },
-  { match: /cashew|almond|walnut|pistachio|hazelnut|\bnut\b/i, chapters: ['08'] },
+  { match: /pepper|spice|cumin|coriander|cardamom|cinnamon|cassia|clove|chilli|chili|ginger|turmeric|nutmeg|fennel|fenugreek|anise|mace|paprika|saffron|vanilla/i, chapters: ['09'] },
+  { match: /coffee|arabica|robusta|\btea\b|mate/i, chapters: ['09'] },
+  { match: /rice|wheat|maize|corn|barley|sorghum|millet|oats|grain|cereal|flour|malt|starch/i, chapters: ['10', '11'] },
+  { match: /lentil|chickpea|pulse|bean|pea\b|gram\b/i, chapters: ['07'] },
+  { match: /sesame|groundnut|peanut|soybean|soya|sunflower|mustard|rapeseed|canola|castor|oilseed|copra/i, chapters: ['12'] },
+  { match: /cashew|almond|walnut|pistachio|hazelnut|raisin|date\b|dried fruit|\bnut\b/i, chapters: ['08'] },
+  { match: /sugar|jaggery|molasses/i, chapters: ['17'] },
+  { match: /cocoa|cacao|cacao/i, chapters: ['18'] },
+  { match: /\brubber\b|latex/i, chapters: ['40'] },
+  { match: /cotton|yarn|fabric|textile|garment|apparel/i, chapters: ['52', '61', '62'] },
+  { match: /shrimp|prawn|fish|seafood|tuna|crab/i, chapters: ['03'] },
+  { match: /palm oil|coconut oil|edible oil|olive oil|vegetable oil/i, chapters: ['15'] },
 ];
+
+/* -------------------------------------------------------------------------- */
+/* Fuzzy company-name dedupe                                                  */
+/* -------------------------------------------------------------------------- */
+
+const NAME_SUFFIXES = new Set([
+  'inc', 'incorporated', 'llc', 'ltd', 'limited', 'corp', 'corporation', 'co',
+  'company', 'international', 'intl', 'trade', 'trading', 'products', 'product',
+  'imports', 'import', 'exports', 'export', 'group', 'holdings', 'enterprises',
+  'enterprise', 'industries', 'foods', 'usa', 'us', 'the', 'and',
+]);
+
+/**
+ * Strip punctuation, lowercase, and drop generic corporate/trade suffix words so
+ * "Mcilhenny Co", "McIlhenny" and "MCILHENNY INC" collapse to one core token.
+ */
+function normalizeCoreName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w && !NAME_SUFFIXES.has(w))
+    .join(' ')
+    .trim();
+}
+
+/** Classic Levenshtein edit distance — small inputs only (company names). */
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  let curr = new Array<number>(n + 1);
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+    }
+    [prev, curr] = [curr, prev];
+  }
+  return prev[n];
+}
+
+/**
+ * Two names are "the same buyer" when their normalized cores match exactly, or
+ * are within a tight edit distance (≤2) on cores long enough that the closeness
+ * is meaningful — catches OCR/spelling variants like "Mcilhenny"/"Mcllhenny" and
+ * "Waterglider"/"Waterglinder" without over-merging short or distinct names.
+ */
+function fuzzySameName(a: string, b: string): boolean {
+  const ca = normalizeCoreName(a);
+  const cb = normalizeCoreName(b);
+  if (!ca || !cb) return false;
+  if (ca === cb) return true;
+  if (Math.min(ca.length, cb.length) < 5) return false;
+  const dist = levenshtein(ca, cb);
+  const maxLen = Math.max(ca.length, cb.length);
+  return dist <= 2 && dist / maxLen <= 0.2;
+}
 
 const US_LIKE = new Set([
   'united states', 'usa', 'us', 'u.s.', 'u.s.a.', 'united states of america',
@@ -70,6 +150,8 @@ export interface DiscoveredBuyer {
   companyId?: string;
   /** True when a same-named company already existed in the org (not re-inserted). */
   alreadyKnown?: boolean;
+  /** True when a type=company lookup successfully filled the full customs profile. */
+  enriched?: boolean;
 }
 
 export interface DiscoverBuyersResult {
@@ -79,6 +161,8 @@ export interface DiscoverBuyersResult {
   relevantSuppliers: number;
   candidateBuyers: number;
   inserted: number;
+  /** How many of the inserted leads were enriched to a full profile inline. */
+  enriched: number;
   buyers: DiscoveredBuyer[];
 }
 
@@ -133,6 +217,13 @@ export interface DiscoverBuyersOptions {
   maxSuppliers?: number;
   /** Max ranked buyers to persist (default 15). */
   maxBuyers?: number;
+  /**
+   * Enrich the top N freshly-inserted leads inline with a `type=company` lookup
+   * (fills shipment volume / HS codes / suppliers so they score on their real
+   * customs footprint). Each adds one synchronous Apify run (~40s), so keep it
+   * small under the 300s function ceiling. Default 0 (discovery only).
+   */
+  enrichTop?: number;
 }
 
 /**
@@ -148,6 +239,7 @@ export async function discoverBuyersForProduct(
 ): Promise<DiscoverBuyersResult> {
   const maxSuppliers = options.maxSuppliers ?? 25;
   const maxBuyers = options.maxBuyers ?? 15;
+  const enrichTop = options.enrichTop ?? 0;
 
   const { data: org } = await supabase
     .from('organizations')
@@ -170,33 +262,36 @@ export async function discoverBuyersForProduct(
   // 2. Keep suppliers that genuinely deal the commodity (HS-chapter dominance).
   const relevant = suppliers.filter((s) => supplierDealsCommodity(s.hsCodes, chapterSet));
 
-  // 3. Harvest US trading partners → rank by # of relevant suppliers shipping to them.
-  const byBuyer = new Map<string, DiscoveredBuyer>();
+  // 3. Harvest US trading partners → rank by # of relevant suppliers shipping
+  //    to them. Merge name variants fuzzily so "Mcilhenny"/"Mcllhenny" count once.
+  const buyers: DiscoveredBuyer[] = [];
+  const addSupplier = (buyer: DiscoveredBuyer, supplierName?: string) => {
+    if (supplierName && !buyer.viaSuppliers.includes(supplierName)) {
+      buyer.viaSuppliers.push(supplierName);
+      buyer.supplierCount = buyer.viaSuppliers.length;
+    }
+  };
   for (const supplier of relevant) {
-    const partners = supplier.topTradingPartners ?? [];
-    for (const p of partners) {
+    for (const p of supplier.topTradingPartners ?? []) {
       if (!p.name) continue;
-      const country = p.country ?? '';
-      if (!US_LIKE.has(norm(country))) continue; // ImportYeti buyers are US importers
-      const key = norm(p.name);
-      const existing = byBuyer.get(key);
-      if (existing) {
-        if (supplier.title && !existing.viaSuppliers.includes(supplier.title)) {
-          existing.viaSuppliers.push(supplier.title);
-          existing.supplierCount = existing.viaSuppliers.length;
-        }
+      if (!US_LIKE.has(norm(p.country ?? ''))) continue; // ImportYeti buyers are US importers
+      const match = buyers.find((b) => fuzzySameName(b.name, p.name));
+      if (match) {
+        addSupplier(match, supplier.title);
       } else {
-        byBuyer.set(key, {
+        const buyer: DiscoveredBuyer = {
           name: p.name,
           country: 'United States',
-          supplierCount: 1,
-          viaSuppliers: supplier.title ? [supplier.title] : [],
-        });
+          supplierCount: 0,
+          viaSuppliers: [],
+        };
+        addSupplier(buyer, supplier.title);
+        buyers.push(buyer);
       }
     }
   }
 
-  const ranked = [...byBuyer.values()]
+  const ranked = buyers
     .sort((a, b) => b.supplierCount - a.supplierCount || a.name.localeCompare(b.name))
     .slice(0, maxBuyers);
 
@@ -258,7 +353,20 @@ export async function discoverBuyersForProduct(
     insertedIds.push(inserted.id);
   }
 
-  // 5. Score + detect opportunities for the freshly-inserted buyers (best-effort).
+  // 5. Optionally enrich the top N inserted leads inline (fills their real
+  //    customs footprint) BEFORE scoring, so scores reflect enriched data.
+  if (enrichTop > 0) {
+    const toEnrich = ranked.filter((b) => b.companyId && !b.alreadyKnown).slice(0, enrichTop);
+    for (const buyer of toEnrich) {
+      try {
+        buyer.enriched = await enrichBuyerByName(supabase, buyer.companyId!, buyer.name);
+      } catch (e) {
+        console.error(`Buyer discovery: enrichment failed for "${buyer.name}":`, e);
+      }
+    }
+  }
+
+  // 6. Score + detect opportunities for the freshly-inserted buyers (best-effort).
   if (insertedIds.length > 0) {
     try {
       await scoreOrgCompanies(supabase, orgId, { companyIds: insertedIds });
@@ -279,8 +387,158 @@ export async function discoverBuyersForProduct(
     targetChapters,
     suppliersScanned: suppliers.length,
     relevantSuppliers: relevant.length,
-    candidateBuyers: byBuyer.size,
+    candidateBuyers: buyers.length,
     inserted: insertedIds.length,
+    enriched: ranked.filter((b) => b.enriched).length,
     buyers: ranked,
   };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Enrichment — turn a thin lead into a full customs profile                  */
+/* -------------------------------------------------------------------------- */
+
+/** Parse a source date string into a YYYY-MM-DD column value, or null. */
+function normaliseShipmentDate(value?: string): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+
+/**
+ * From the candidates a `type=company` lookup returns for a name, pick the best
+ * match: prefer the closest normalized-name match, breaking ties by the largest
+ * shipment footprint (the canonical entity, not a tiny namesake).
+ */
+function pickBestMatch(name: string, candidates: ScrapedPlace[]): ScrapedPlace | null {
+  const target = normalizeCoreName(name);
+  let best: ScrapedPlace | null = null;
+  let bestScore = -Infinity;
+  for (const c of candidates) {
+    const core = normalizeCoreName(c.title ?? '');
+    if (!core) continue;
+    const dist = levenshtein(target, core);
+    // Lower distance is better; large shipment counts break ties (log-scaled).
+    const score = -dist * 100 + Math.log10((c.totalShipments ?? 0) + 1);
+    if (score > bestScore) {
+      bestScore = score;
+      best = c;
+    }
+  }
+  return best;
+}
+
+/**
+ * Enrich one already-inserted discovery lead by re-running the ImportYeti
+ * `type=company` lookup on its name and folding the matched profile's customs
+ * facts (shipment volume, recency, HS codes, suppliers, partners, trademarks,
+ * profile URL) onto the row. Returns true when a profile was applied. The
+ * existing `trade_metrics.discovery` evidence trail is preserved.
+ */
+export async function enrichBuyerByName(
+  supabase: SupabaseClient<Database>,
+  companyId: string,
+  name: string,
+): Promise<boolean> {
+  const raw = await runApifyActorSync('zen-studio~importyeti-scraper', {
+    query: name,
+    searchType: 'search',
+    type: 'company',
+    maxResults: 5,
+  });
+  const candidates = mapItems(raw, 'zen-studio~importyeti-scraper~buyers');
+  const best = pickBestMatch(name, candidates);
+  if (!best) return false;
+
+  // Preserve the discovery evidence trail already on the row.
+  const { data: current } = await supabase
+    .from('companies')
+    .select('trade_metrics')
+    .eq('id', companyId)
+    .maybeSingle();
+  const existingMetrics =
+    current?.trade_metrics && typeof current.trade_metrics === 'object'
+      ? (current.trade_metrics as Record<string, unknown>)
+      : {};
+
+  const shipments = best.totalShipments ?? 0;
+  const confidence = Math.min(
+    0.95,
+    0.6 + (shipments >= 500 ? 0.25 : shipments >= 100 ? 0.18 : shipments >= 10 ? 0.1 : 0),
+  );
+
+  const { error } = await supabase
+    .from('companies')
+    .update({
+      total_shipments: best.totalShipments ?? null,
+      last_shipment_date: normaliseShipmentDate(best.lastShipmentDate),
+      top_suppliers: toJson(best.topSuppliers ?? null),
+      hs_codes: toJson(best.hsCodes ?? null),
+      top_trading_partners: toJson(best.topTradingPartners ?? null),
+      trademarks: toJson(best.trademarks ?? null),
+      source_url: best.sourceUrl ?? null,
+      hq_city: best.city ?? '',
+      is_enriched: true,
+      enriched_at: new Date().toISOString(),
+      confidence_score: Number(confidence.toFixed(2)),
+      trade_metrics: toJson({ ...existingMetrics, enriched_via: 'importyeti-company-lookup' }),
+    })
+    .eq('id', companyId);
+
+  if (error) {
+    console.error(`enrichBuyerByName: update failed for ${companyId}:`, error);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Backfill enrichment for existing thin discovery leads in an org (those still
+ * `is_enriched=false` with an `apify-discovery:` source). Enriches up to `limit`
+ * of them, then re-scores + re-detects. Used by the admin enrich endpoint.
+ */
+export async function enrichThinDiscoveryLeads(
+  supabase: SupabaseClient<Database>,
+  orgId: string,
+  limit = 10,
+): Promise<{ attempted: number; enriched: number }> {
+  const { data: leads } = await supabase
+    .from('companies')
+    .select('id, name')
+    .eq('org_id', orgId)
+    .eq('is_enriched', false)
+    .like('enrichment_source', 'apify-discovery:%')
+    .limit(limit);
+
+  if (!leads || leads.length === 0) return { attempted: 0, enriched: 0 };
+
+  let enriched = 0;
+  const touched: string[] = [];
+  for (const lead of leads) {
+    try {
+      if (await enrichBuyerByName(supabase, lead.id, lead.name)) {
+        enriched++;
+        touched.push(lead.id);
+      }
+    } catch (e) {
+      console.error(`enrichThinDiscoveryLeads: failed for ${lead.name}:`, e);
+    }
+  }
+
+  if (touched.length > 0) {
+    try {
+      await scoreOrgCompanies(supabase, orgId, { companyIds: touched });
+    } catch (e) {
+      console.error('enrichThinDiscoveryLeads: scoring failed:', e);
+    }
+    for (const id of touched) {
+      try {
+        await detectFromCompany(supabase, orgId, id);
+      } catch (e) {
+        console.error(`enrichThinDiscoveryLeads: detection failed for ${id}:`, e);
+      }
+    }
+  }
+
+  return { attempted: leads.length, enriched };
 }

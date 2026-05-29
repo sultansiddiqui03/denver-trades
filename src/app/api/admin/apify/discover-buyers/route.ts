@@ -29,6 +29,7 @@ const DiscoverSchema = z.object({
   product: z.string().trim().min(1).max(120),
   maxSuppliers: z.number().int().min(1).max(100).optional(),
   maxBuyers: z.number().int().min(1).max(50).optional(),
+  enrichTop: z.number().int().min(0).max(6).optional(),
 });
 
 export async function POST(request: Request) {
@@ -42,12 +43,13 @@ export async function POST(request: Request) {
 
     const parsed = await parseBody(request, DiscoverSchema);
     if (!parsed.ok) return parsed.response;
-    const { orgId, product, maxSuppliers, maxBuyers } = parsed.data;
+    const { orgId, product, maxSuppliers, maxBuyers, enrichTop } = parsed.data;
 
     const supabase = getSupabaseServiceClient();
     const result = await discoverBuyersForProduct(supabase, orgId, product, {
       maxSuppliers,
       maxBuyers,
+      enrichTop,
     });
 
     return NextResponse.json({ success: true, ...result });

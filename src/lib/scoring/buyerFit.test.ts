@@ -103,7 +103,28 @@ describe('scoreBuyerFit', () => {
       { commodities: ['spices'], target_markets: ['UAE'] },
     );
     expect(Number.isFinite(score)).toBe(true);
-    expect(score).toBe(11); // 0.1*40 + 0 + 0 + 0.5*10 + 0.2*10
+    // No market data on the company → marketFit is neutral 0.5 (not penalised).
+    expect(score).toBe(14); // 0.1*40 + 0 + 0 + 0.5*10 + 0.5*10
+  });
+
+  it('does not penalise a US importer when the org targets other markets', () => {
+    // The wedge: ImportYeti customs data is US-only, so every discoverable buyer
+    // is a US importer. A US location must not tank an otherwise strong buyer
+    // just because the org sells into UAE/Europe — marketFit stays neutral (0.5),
+    // not the old 0.2 floor.
+    const usBuyer: BuyerFitCompany = {
+      type: 'Importer',
+      products_dealt: ['Black Pepper'],
+      total_shipments: 1000,
+      last_shipment_date: recentIso(),
+      hq_country: 'United States',
+    };
+    const org: BuyerFitOrg = { commodities: ['spices'], target_markets: ['UAE'] };
+    const { score, breakdown } = scoreBuyerFit(usBuyer, org);
+    expect(breakdown.marketFit).toBe(0.5);
+    // 1*40 + 1*25 + 1*15 + 1*10 + 0.5*10 = 95 → still clearly "hot".
+    expect(score).toBe(95);
+    expect(buyerFitTier(score)).toBe('hot');
   });
 
   it('rewards an importer over an exporter, all else equal', () => {

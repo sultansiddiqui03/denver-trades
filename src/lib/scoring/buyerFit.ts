@@ -242,7 +242,8 @@ export function scoreBuyerFit(company: BuyerFitCompany, org: BuyerFitOrg): Buyer
     ...(company.origin_countries ?? []),
   ].filter((m): m is string => Boolean(m));
   let marketFit: number;
-  if (orgMarkets.length === 0) {
+  if (orgMarkets.length === 0 || companyMarkets.length === 0) {
+    // Can't assess fit from one side — stay neutral, don't penalise.
     marketFit = 0.5;
   } else {
     const hit = orgMarkets.find((m) => companyMarkets.some((cm) => marketMatches(m, cm)));
@@ -250,7 +251,11 @@ export function scoreBuyerFit(company: BuyerFitCompany, org: BuyerFitOrg): Buyer
       marketFit = 1;
       reasons.push(`In target market: ${hit}`);
     } else {
-      marketFit = 0.2;
+      // No match is NOT disqualifying — market fit is a positive-only signal.
+      // Our customs data source (US import bills of lading) only ever yields US
+      // buyers, so a non-target geography must not tank an otherwise strong
+      // importer: it's a NEW market opportunity, not evidence against them.
+      marketFit = 0.5;
     }
   }
 
