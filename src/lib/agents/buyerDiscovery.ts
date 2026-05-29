@@ -84,6 +84,30 @@ const US_LIKE = new Set([
   'united states', 'usa', 'us', 'u.s.', 'u.s.a.', 'united states of america',
 ]);
 
+// Customs trading-partner fields are noisy: bills of lading often carry
+// placeholder consignees ("Shipper", "To Order", "N A Trade") or redaction
+// markers ("Missing in source document") instead of a real buyer. Drop those so
+// the discovered buyer list stays clean.
+const JUNK_NAME_PATTERNS: RegExp[] = [
+  /^shipper$/i, /^consignee$/i, /^to order/i, /^to the order/i, /^order$/i,
+  /^n\.?\/?a\.?$/i, /^na$/i, /^not available/i, /^unknown/i, /missing in source/i,
+  /^various/i, /^confidential/i, /^see (above|attached|document)/i, /^to be /i,
+  /^same as/i, /^no consignee/i, /^unidentified/i, /^withheld/i,
+];
+
+function isJunkBuyerName(name: string): boolean {
+  const t = name.trim();
+  if (t.length < 3) return true;
+  if (JUNK_NAME_PATTERNS.some((re) => re.test(t))) return true;
+  const core = normalizeCoreName(t);
+  if (!core) return true;
+  // After stripping corporate suffixes, a real company keeps at least one
+  // multi-letter token; "N A Trade" collapses to single letters → junk.
+  const tokens = core.split(/\s+/).filter(Boolean);
+  if (tokens.every((tok) => tok.length <= 1)) return true;
+  return false;
+}
+
 export interface DiscoveredBuyer {
   name: string;
   country: string;
@@ -220,7 +244,7 @@ export async function discoverBuyersForProduct(
   };
   for (const supplier of relevant) {
     for (const p of supplier.topTradingPartners ?? []) {
-      if (!p.name) continue;
+      if (!p.name || isJunkBuyerName(p.name)) continue;
       if (!US_LIKE.has(norm(p.country ?? ''))) continue; // ImportYeti buyers are US importers
       const match = buyers.find((b) => fuzzySameName(b.name, p.name));
       if (match) {
