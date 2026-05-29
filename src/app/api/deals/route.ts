@@ -4,9 +4,8 @@ import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
 import { parseBody } from '@/lib/validation';
 import { DEAL_STAGES } from '@/lib/pipeline/stages';
+import { mintNextDealCode } from '@/lib/pipeline/dealCode';
 import type { TablesInsert } from '@/lib/supabase/database.types';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@/lib/supabase/database.types';
 
 type DealInsert = TablesInsert<'deals_pipeline'>;
 
@@ -28,65 +27,6 @@ const CreateDealSchema = z.object({
   notes: z.string().max(5000).nullable().optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
 });
-
-/**
- * Mint the next `deal_code` for a new row, following the
- * `<PREFIX>-<year>-<5-digit-seq>` pattern.
- *
- * Sequence is PER-ORG — the unique index `deals_pipeline_deal_code_org_uidx`
- * (added in `20260522120000_per_org_deal_code.sql`) is keyed on
- * `(org_id, deal_code)`, so each tenant has its own counter. Prefix comes
- * from `organizations.deal_code_prefix` (default `'LEAD-OPP'`, validated to
- * `^[A-Z0-9-]{2,12}$` by the migration's CHECK).
- *
- * Race window: between SELECT MAX and INSERT another row could mint the same
- * code. The unique partial index on `(org_id, deal_code)` will reject the
- * duplicate; caller retries once with the freshly-recomputed max.
- */
-async function mintNextDealCode(
-  supabase: SupabaseClient<Database>,
-  orgId: string
-): Promise<string> {
-  // 1. Look up the org's configured prefix. The DB default is `'LEAD-OPP'`
-  //    and a NOT NULL constraint enforces a value, but the user-context
-  //    client is RLS-scoped — if the row isn't visible for any reason we
-  //    fall back to the default so a deal can still be created.
-  const { data: org, error: orgError } = await supabase
-    .from('organizations')
-    .select('deal_code_prefix')
-    .eq('id', orgId)
-    .maybeSingle();
-  if (orgError) throw orgError;
-
-  const dealCodePrefix = org?.deal_code_prefix ?? 'LEAD-OPP';
-  const year = new Date().getUTCFullYear();
-  const prefix = `${dealCodePrefix}-${year}-`;
-
-  // 2. Highest existing code FOR THIS ORG, this year, this prefix. Scoping
-  //    by `org_id` is what makes the per-org sequence safe under the new
-  //    `(org_id, deal_code)` unique index.
-  const { data, error } = await supabase
-    .from('deals_pipeline')
-    .select('deal_code')
-    .eq('org_id', orgId)
-    .like('deal_code', `${prefix}%`)
-    .order('deal_code', { ascending: false })
-    .limit(1);
-
-  if (error) throw error;
-
-  let nextSeq = 1;
-  const latest = data?.[0]?.deal_code;
-  if (latest) {
-    const match = /(\d+)$/.exec(latest);
-    if (match) {
-      const parsed = parseInt(match[1], 10);
-      if (!Number.isNaN(parsed)) nextSeq = parsed + 1;
-    }
-  }
-
-  return `${prefix}${String(nextSeq).padStart(5, '0')}`;
-}
 
 /**
  * Create a new deal row. Returns the inserted row including the

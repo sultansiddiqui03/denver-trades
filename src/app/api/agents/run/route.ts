@@ -135,48 +135,28 @@ export async function POST(request: Request) {
     }
 
     if (agentName === DOC_AUDIT) {
-      const { data: updatedRun } = await supabase
-        .from('agent_runs')
-        .update({
-          status: 'Success',
-          records_processed: 0,
-          records_created: 0,
-          completed_at: new Date().toISOString(),
-        })
-        .eq('id', runRecord.id)
-        .select()
-        .single();
-
+      // Presentational trigger — no real work happens here, so don't leave a
+      // fake "Success" run polluting the activity feed; just navigate.
+      await supabase.from('agent_runs').delete().eq('id', runRecord.id);
       return NextResponse.json({
         success: true,
         mode: 'idle',
         message:
           'Doc Audit is on-demand. Open the Documents page and upload a Letter of Credit + Bill of Lading pair to audit.',
         navigateTo: '/dashboard/documents',
-        run: updatedRun ?? runRecord,
       });
     }
 
     if (agentName === WHATSAPP_PARSER) {
-      const { data: updatedRun } = await supabase
-        .from('agent_runs')
-        .update({
-          status: 'Success',
-          records_processed: 0,
-          records_created: 0,
-          completed_at: new Date().toISOString(),
-        })
-        .eq('id', runRecord.id)
-        .select()
-        .single();
-
+      // Real work happens on inbound Twilio webhooks, not here — don't record a
+      // hollow run; just navigate to the inbox.
+      await supabase.from('agent_runs').delete().eq('id', runRecord.id);
       return NextResponse.json({
         success: true,
         mode: 'idle',
         message:
           'WhatsApp Parser runs in real time on inbound Twilio webhooks. Open the Outreach Inbox to view processed messages.',
         navigateTo: '/dashboard/outreach',
-        run: updatedRun ?? runRecord,
       });
     }
 
