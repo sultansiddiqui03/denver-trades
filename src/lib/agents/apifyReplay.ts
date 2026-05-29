@@ -148,6 +148,27 @@ Output JSON schema matching:
   "description": "A high-quality 2-3 sentence overview of this business based on the crawl data."
 }`;
 
+/**
+ * ImportYeti's `type` is the AUTHORITATIVE buyer/seller classification, derived
+ * straight from US bills of lading: a `company` is a US IMPORTER (a BUYER), a
+ * `supplier` is the overseas EXPORTER they buy from. The free-text enrichment
+ * LLM cannot infer this reliably — it labelled "McCormick" (a US importer with
+ * 10k+ inbound shipments) as an Exporter purely because the name reads like a
+ * brand that "sells" spices. That silently inverts the core wedge (the buyer
+ * never shows up as a buyer). So for customs records we OVERRIDE the LLM's
+ * guess with the customs ground truth. `mapImportYetiRecord` stores the raw
+ * ImportYeti `type` in `categoryName`. Returns null for unknown tokens so
+ * non-customs / unrecognised records keep the LLM classification.
+ */
+function customsTypeOverride(
+  categoryName: string | undefined,
+): EnrichedCompany['type'] | null {
+  const t = (categoryName ?? '').toLowerCase().trim();
+  if (t === 'company') return 'Importer';
+  if (t === 'supplier') return 'Exporter';
+  return null;
+}
+
 function buildEnrichmentPrompt(item: ScrapedPlace): string {
   return `Analyze and structure the following scraped business details:
 Name: ${item.title || 'Unknown'}
@@ -286,12 +307,16 @@ export async function enrichAndInsertScrapedItems(
         ? [{ name: 'Main Office', phone: item.phone, email: null }]
         : [];
 
+      // Customs `type` is a hard fact — never let the LLM's guess override it.
+      const customsType =
+        actor.dataKind === 'customs' ? customsTypeOverride(item.categoryName) : null;
+
       const { data: inserted, error: dbError } = await supabase
         .from('companies')
         .insert({
           org_id: orgId,
           name: enriched.name,
-          type: enriched.type,
+          type: customsType ?? enriched.type,
           hq_country: enriched.hq_country,
           hq_city: enriched.hq_city,
           origin_countries: enriched.origin_countries,
