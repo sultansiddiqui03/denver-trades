@@ -4,6 +4,7 @@ import { generateJSON } from '@/lib/ai/gemini';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
 import { rateLimitOrThrow } from '@/lib/security/rateLimit';
+import { normalizeProductQuery } from '@/lib/agents/productQuery';
 
 const ParsedQuerySchema = z.object({
   keywords: z.array(z.string()).default([]),
@@ -11,6 +12,28 @@ const ParsedQuerySchema = z.object({
   type: z.enum(['Importer', 'Exporter', 'Broker']).nullable().default(null),
 });
 type ParsedQuery = z.infer<typeof ParsedQuerySchema>;
+
+/**
+ * Cheap heuristic parse for short literal queries ("black pepper", "rice
+ * importers") — avoids a Gemini call per search. Returns null when the query is
+ * complex enough (4+ words, likely a location/intent phrase) to warrant the LLM.
+ */
+function parseSimpleQuery(raw: string): ParsedQuery | null {
+  const words = raw.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0 || words.length > 3) return null;
+  const lower = raw.toLowerCase();
+  const type: ParsedQuery['type'] =
+    /\b(importer|importers|buyer|buyers|imports?)\b/.test(lower)
+      ? 'Importer'
+      : /\b(exporter|exporters|seller|sellers|supplier|suppliers|exports?)\b/.test(lower)
+        ? 'Exporter'
+        : /\bbroker\b/.test(lower)
+          ? 'Broker'
+          : null;
+  const product = normalizeProductQuery(raw);
+  const keywords = product ? product.split(/\s+/).filter(Boolean) : [];
+  return { keywords, countries: [], type };
+}
 
 export async function GET(request: Request) {
   try {
@@ -42,34 +65,42 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, results: companies });
     }
 
-    // 1. Parse search intent using Gemini
-    const systemPrompt = `You are a trade intelligence search parser. 
+    // 1. Parse search intent. Skip the LLM for short literal queries (the
+    //    common case) — only complex multi-word/location queries hit Gemini.
+    let parsed = parseSimpleQuery(query);
+    if (!parsed) {
+      const systemPrompt = `You are a trade intelligence search parser.
 Parse the user's natural language search query into structured search terms.
-Format as JSON: 
+Format as JSON:
 {
   "keywords": ["array of raw product keyword matches like pepper, coriander"],
   "countries": ["array of countries mentioned"],
   "type": "Importer" or "Exporter" or "Broker" or null
 }`;
+      parsed = await generateJSON(
+        `Parse the following search query: "${query}"`,
+        ParsedQuerySchema,
+        systemPrompt,
+      );
+    }
 
-    const parsed: ParsedQuery = await generateJSON(
-      `Parse the following search query: "${query}"`,
-      ParsedQuerySchema,
-      systemPrompt
-    );
-
-    // 2. Perform Postgres query
+    // 2. Perform Postgres query. Push the `type` filter into Postgres and bound
+    //    the fetch. We intentionally don't pre-filter by name/description ilike:
+    //    that would drop companies matching only on their products_dealt array
+    //    (which PostgREST can't substring-match), so ranking stays in JS over a
+    //    bounded set. Prefer scored leads + highest-volume buyers first.
     let dbQuery = supabase
       .from('companies')
       .select('*')
-      .eq('org_id', orgId);
+      .eq('org_id', orgId)
+      .order('buyer_fit_score', { ascending: false, nullsFirst: false })
+      .order('total_shipments', { ascending: false, nullsFirst: false });
 
-    // Filter by type if parsed
     if (parsed.type) {
       dbQuery = dbQuery.eq('type', parsed.type);
     }
 
-    const { data: companies, error } = await dbQuery;
+    const { data: companies, error } = await dbQuery.limit(1000);
     if (error) throw error;
 
     // 3. Score results client-side (semantic matching overlay)
