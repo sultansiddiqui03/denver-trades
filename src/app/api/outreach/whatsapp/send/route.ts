@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireUserContext } from '@/lib/auth/server';
 import { getErrorMessage } from '@/lib/errors';
 import { parseBody } from '@/lib/validation';
+import { publicBaseUrl } from '@/lib/agents/dispatchScrape';
 
 const WhatsAppSendSchema = z.object({
   recipient: z.string().min(1, 'recipient phone is required'),
@@ -42,6 +43,8 @@ export async function POST(request: Request) {
       params.append('From', fromNum);
       params.append('To', toNum);
       params.append('Body', message_content);
+      // Delivery callbacks → /api/webhooks/whatsapp/status reconcile thread status.
+      params.append('StatusCallback', `${publicBaseUrl()}/api/webhooks/whatsapp/status`);
 
       const authHeader = 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64');
 
@@ -91,6 +94,9 @@ export async function POST(request: Request) {
         recipient: recipient.startsWith('whatsapp:') ? recipient : `whatsapp:${recipient}`,
         message_content,
         status: statusText,
+        // Persist the Twilio SID so delivery status-callbacks can reconcile this
+        // exact message (and so the inbound replay-guard is two-directional).
+        twilio_message_sid: messageSid || null,
         language: 'en',
         ai_generated: false,
         needs_review: false
