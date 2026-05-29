@@ -8,6 +8,10 @@ import { generateText } from '@/lib/ai/router';
 import { mintNextDealCode } from '@/lib/pipeline/dealCode';
 import { findExistingCompany } from '@/lib/entity/companyMatch';
 import { normalizeProductQuery } from '@/lib/agents/productQuery';
+import { DEAL_STAGES } from '@/lib/pipeline/stages';
+import { sendWhatsAppMessage } from '@/lib/outreach/sendWhatsApp';
+
+interface ContactLike { phone?: string | null; email?: string | null }
 
 /**
  * The assistant's agentic toolset. Every tool is org-scoped via the closed-over
@@ -60,7 +64,7 @@ export function buildAssistantTools(supabase: SupabaseClient<Database>, orgId: s
         const kw = product.toLowerCase().split(/\s+/).filter((w) => w.length >= 2);
         const { data } = await supabase
           .from('companies')
-          .select('name, type, hq_country, buyer_fit_score, total_shipments, products_dealt')
+          .select('id, name, type, hq_country, buyer_fit_score, total_shipments, products_dealt')
           .eq('org_id', orgId)
           .order('buyer_fit_score', { ascending: false, nullsFirst: false })
           .limit(400);
@@ -72,6 +76,7 @@ export function buildAssistantTools(supabase: SupabaseClient<Database>, orgId: s
           })
           .slice(0, 8)
           .map((c) => ({
+            id: c.id,
             name: c.name,
             type: c.type,
             country: c.hq_country,
@@ -97,7 +102,9 @@ export function buildAssistantTools(supabase: SupabaseClient<Database>, orgId: s
           newLeads: r.inserted,
           reachable: r.reachable,
           unreachable: r.unreachable,
-          topBuyers: r.buyers.slice(0, 8).map((b) => ({ name: b.name, viaSuppliers: b.viaSuppliers.slice(0, 3) })),
+          topBuyers: r.buyers
+            .slice(0, 8)
+            .map((b) => ({ id: b.companyId ?? null, name: b.name, viaSuppliers: b.viaSuppliers.slice(0, 3) })),
         };
       },
     }),
@@ -203,6 +210,109 @@ export function buildAssistantTools(supabase: SupabaseClient<Database>, orgId: s
         const prompt = `Write a concise, warm ${channel ?? 'Email'} outreach message from ${org?.name ?? 'our company'} to ${company_name} offering ${product}. ${evidence} Keep it under 120 words, professional, specific, with a clear call to action. No placeholders.`;
         const text = await generateText(prompt, { systemPrompt: 'You are a B2B trade outreach writer. Be specific and credible; never invent facts.' });
         return { draft: text };
+      },
+    }),
+
+    advance_deal_stage: tool({
+      description:
+        'Move a deal to a new pipeline stage. Match the deal by its code (e.g. LEAD-OPP-2026-00007) or the company name.',
+      inputSchema: z.object({
+        deal_code: z.string().nullable().optional(),
+        company_name: z.string().nullable().optional(),
+        stage: z.enum(DEAL_STAGES),
+      }),
+      execute: async ({ deal_code, company_name, stage }) => {
+        let dealQuery = supabase.from('deals_pipeline').select('id, deal_code, title').eq('org_id', orgId);
+        if (deal_code) {
+          dealQuery = dealQuery.eq('deal_code', deal_code);
+        } else if (company_name) {
+          const company = await findExistingCompany(supabase, orgId, company_name);
+          if (!company) return { error: `No company named "${company_name}".` };
+          dealQuery = dealQuery.eq('company_id', company.id);
+        } else {
+          return { error: 'Provide a deal_code or company_name.' };
+        }
+        const { data: deal } = await dealQuery.order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (!deal) return { error: 'No matching deal found.' };
+        const { error } = await supabase
+          .from('deals_pipeline')
+          .update({ stage, updated_at: new Date().toISOString() })
+          .eq('id', deal.id);
+        if (error) return { error: error.message };
+        return { updated: { deal_code: deal.deal_code, title: deal.title, stage } };
+      },
+    }),
+
+    update_opportunity: tool({
+      description:
+        'Update an opportunity\'s status. Set to "acted" to convert it into a pipeline deal, "dismissed" to clear it, or "viewed".',
+      inputSchema: z.object({
+        title: z.string().describe('The opportunity title (or a close match)'),
+        status: z.enum(['viewed', 'acted', 'dismissed']),
+      }),
+      execute: async ({ title, status }) => {
+        const { data: opp } = await supabase
+          .from('opportunities')
+          .select('id, title, company_id, product, status')
+          .eq('org_id', orgId)
+          .ilike('title', `%${title}%`)
+          .limit(1)
+          .maybeSingle();
+        if (!opp) return { error: `No opportunity matching "${title}".` };
+
+        const becameActed = status === 'acted' && opp.status !== 'acted' && Boolean(opp.company_id);
+        await supabase
+          .from('opportunities')
+          .update({ status, updated_at: new Date().toISOString() })
+          .eq('id', opp.id);
+
+        let deal: { deal_code: string | null } | null = null;
+        if (becameActed) {
+          const dealCode = await mintNextDealCode(supabase, orgId);
+          const { data } = await supabase
+            .from('deals_pipeline')
+            .insert({
+              org_id: orgId,
+              company_id: opp.company_id,
+              deal_code: dealCode,
+              title: (opp.product ? `${opp.product} — ${opp.title}` : opp.title).slice(0, 200),
+              stage: 'New Lead',
+              product: opp.product,
+              tags: ['from-opportunity', 'assistant'],
+            })
+            .select('deal_code')
+            .single();
+          deal = data;
+        }
+        return { opportunity: opp.title, status, dealCreated: deal?.deal_code ?? null };
+      },
+    }),
+
+    send_whatsapp: tool({
+      description:
+        "Send a WhatsApp message to a company using the phone number on file. ONLY call this when the user EXPLICITLY asks to send it — otherwise use draft_outreach. Returns delivery status.",
+      inputSchema: z.object({
+        company_name: z.string(),
+        message: z.string().describe('The exact message to send'),
+      }),
+      execute: async ({ company_name, message }) => {
+        const company = await findExistingCompany(supabase, orgId, company_name);
+        if (!company) return { error: `No company named "${company_name}".` };
+        const contacts = Array.isArray(company.contacts) ? (company.contacts as ContactLike[]) : [];
+        const phone = contacts.map((c) => c.phone).find((p): p is string => Boolean(p));
+        if (!phone) return { error: `No phone on file for ${company.name}. Find contacts first, then retry.` };
+        const result = await sendWhatsAppMessage(supabase, orgId, {
+          recipient: phone,
+          message,
+          companyId: company.id,
+          aiGenerated: true,
+        });
+        return {
+          to: company.name,
+          status: result.status,
+          simulated: result.simulated,
+          note: result.simulated ? 'Sent in simulation mode (no Twilio credentials).' : undefined,
+        };
       },
     }),
   };

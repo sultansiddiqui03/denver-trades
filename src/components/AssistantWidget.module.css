@@ -179,6 +179,17 @@
   word-break: break-word;
 }
 
+.msgLink {
+  color: var(--accent-lime);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(204, 255, 0, 0.35);
+}
+
+.msgLink:hover {
+  border-bottom-color: var(--accent-lime);
+}
+
 .thinking {
   display: inline-flex;
   align-items: center;

@@ -9,6 +9,34 @@ interface Msg {
   content: string;
 }
 
+/**
+ * Minimal inline renderer for the assistant's text: turns [label](url) into
+ * clickable links (internal /dashboard links navigate in-app) and **bold** into
+ * <strong>. Deliberately tiny — no markdown dependency.
+ */
+function renderRich(text: string, linkClass: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  const pattern = /\[([^\]]+)\]\((\/[^)\s]+)\)|\*\*([^*]+)\*\*/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  while ((m = pattern.exec(text)) !== null) {
+    if (m.index > last) nodes.push(text.slice(last, m.index));
+    if (m[1] && m[2]) {
+      nodes.push(
+        <a key={key++} href={m[2]} className={linkClass}>
+          {m[1]}
+        </a>,
+      );
+    } else if (m[3]) {
+      nodes.push(<strong key={key++}>{m[3]}</strong>);
+    }
+    last = pattern.lastIndex;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
+}
+
 const SUGGESTIONS = [
   'Find US buyers for black pepper',
   "What's the market for turmeric?",
@@ -189,7 +217,9 @@ export default function AssistantWidget() {
                       <Loader2 size={14} className={styles.spin} /> Working on it…
                     </span>
                   ) : (
-                    <span className={styles.msgText}>{m.content}</span>
+                    <span className={styles.msgText}>
+                      {m.role === 'assistant' ? renderRich(m.content, styles.msgLink) : m.content}
+                    </span>
                   )}
                 </div>
               );

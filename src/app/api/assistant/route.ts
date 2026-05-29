@@ -7,6 +7,7 @@ import { getErrorMessage } from '@/lib/errors';
 import { parseBody } from '@/lib/validation';
 import { buildAssistantTools } from '@/lib/assistant/tools';
 import { captureError } from '@/lib/observability/capture';
+import { rateLimitOrThrowAsync } from '@/lib/security/rateLimit';
 
 // AI SDK reads ANTHROPIC_API_KEY; mirror our CLAUDE_API_KEY (same as claude.ts).
 if (process.env.CLAUDE_API_KEY && !process.env.ANTHROPIC_API_KEY) {
@@ -56,6 +57,14 @@ export async function POST(request: Request) {
   }
 
   const { orgId, user } = context;
+
+  // Cost guardrails on the agentic loop (each turn can fan out to multiple
+  // Claude calls + tool runs). Burst + daily caps, KV-backed when available.
+  const burst = await rateLimitOrThrowAsync({ key: `${orgId}:assistant.burst`, max: 12, windowSec: 300 });
+  if (burst) return burst;
+  const daily = await rateLimitOrThrowAsync({ key: `${orgId}:assistant.daily`, max: 120, windowSec: 86400 });
+  if (daily) return daily;
+
   const userMessage = parsed.data.message;
   const supabase = getSupabaseServiceClient();
 
@@ -90,6 +99,8 @@ Guidelines:
 - If a tool returns nothing or an error, say so plainly and suggest an alternative.
 - Remember the conversation: the user's prior messages are included. Reference earlier context naturally.
 - After acting, suggest one sensible next step.
+- Make entities clickable: when a tool result includes an \`id\`, render that company as a markdown link \`[Company Name](/dashboard/companies/<id>)\`; render deals as \`[DEAL-CODE](/dashboard/pipeline)\`. Use **bold** for key numbers.
+- Only call send_whatsapp when the user EXPLICITLY asks you to send a message; otherwise draft it with draft_outreach for their review.
 
 Workspace snapshot:
 - Organization: ${org?.name ?? 'Unknown'}
