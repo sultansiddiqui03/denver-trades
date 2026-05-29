@@ -124,8 +124,11 @@
   font-family: var(--font-mono);
 }
 
-.enrichBtn {
+.summaryActions {
   margin-left: auto;
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 /* ═══ Active Demand ═══ */

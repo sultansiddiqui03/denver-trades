@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useTransition, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Target, Loader2, Inbox, Send, Medal, Radar, Search, Sparkles } from 'lucide-react';
+import { Target, Loader2, Inbox, Send, Medal, Radar, Search, Sparkles, Mail } from 'lucide-react';
 import BuyerFitBadge from '@/components/BuyerFitBadge';
 import SourcingSignalBadge from '@/components/SourcingSignalBadge';
 import IntentChip from '@/components/IntentChip';
@@ -186,6 +186,7 @@ export default function MatchExplorer({
   const [discoverInput, setDiscoverInput] = useState('');
   const [discovering, setDiscovering] = useState(false);
   const [enriching, setEnriching] = useState(false);
+  const [findingContacts, setFindingContacts] = useState(false);
   const [summary, setSummary] = useState<DiscoverSummary | null>(null);
 
   const runMatch = useCallback(
@@ -273,6 +274,31 @@ export default function MatchExplorer({
       setEnriching(false);
     }
   }, [runMatch, toast, summary]);
+
+  const runFindContacts = useCallback(async () => {
+    setFindingContacts(true);
+    try {
+      const res = await fetch('/api/discover-buyers/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit: 5 }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Contact lookup failed');
+      if ((json.attempted ?? 0) === 0) {
+        toast('No reachable buyers yet — enrich profiles first to surface websites.', 'info');
+      } else {
+        toast(
+          `Found contacts for ${json.withContacts ?? 0} of ${json.attempted ?? 0} buyer${(json.attempted ?? 0) === 1 ? '' : 's'} with a website`,
+          (json.withContacts ?? 0) > 0 ? 'success' : 'info',
+        );
+      }
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Contact lookup failed', 'error');
+    } finally {
+      setFindingContacts(false);
+    }
+  }, [toast]);
 
   const handleDiscoverSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -402,22 +428,40 @@ export default function MatchExplorer({
             <span>
               <strong>{summary.candidateBuyers}</strong> buyers · <strong>{summary.inserted}</strong> new
             </span>
-            <button
-              type="button"
-              className={`btn-secondary ${styles.actionBtn} ${styles.enrichBtn}`}
-              onClick={runEnrich}
-              disabled={enriching}
-            >
-              {enriching ? (
-                <>
-                  <Loader2 size={14} className={styles.spin} /> Enriching…
-                </>
-              ) : (
-                <>
-                  <Sparkles size={14} strokeWidth={2} /> Enrich profiles
-                </>
-              )}
-            </button>
+            <div className={styles.summaryActions}>
+              <button
+                type="button"
+                className={`btn-secondary ${styles.actionBtn}`}
+                onClick={runEnrich}
+                disabled={enriching}
+              >
+                {enriching ? (
+                  <>
+                    <Loader2 size={14} className={styles.spin} /> Enriching…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={14} strokeWidth={2} /> Enrich profiles
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                className={`btn-secondary ${styles.actionBtn}`}
+                onClick={runFindContacts}
+                disabled={findingContacts}
+              >
+                {findingContacts ? (
+                  <>
+                    <Loader2 size={14} className={styles.spin} /> Finding…
+                  </>
+                ) : (
+                  <>
+                    <Mail size={14} strokeWidth={2} /> Find contacts
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         )}
       </section>
