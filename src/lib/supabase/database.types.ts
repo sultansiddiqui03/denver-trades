@@ -432,6 +432,45 @@ export type Database = {
           },
         ]
       }
+      market_intel: {
+        Row: {
+          fetched_at: string
+          hs_breakdown: Json | null
+          id: string
+          product: string
+          sample_shipments: Json | null
+          source: string
+          summary: Json | null
+          top_destinations: Json | null
+          total_records: number | null
+          trade_type: string
+        }
+        Insert: {
+          fetched_at?: string
+          hs_breakdown?: Json | null
+          id?: string
+          product: string
+          sample_shipments?: Json | null
+          source?: string
+          summary?: Json | null
+          top_destinations?: Json | null
+          total_records?: number | null
+          trade_type: string
+        }
+        Update: {
+          fetched_at?: string
+          hs_breakdown?: Json | null
+          id?: string
+          product?: string
+          sample_shipments?: Json | null
+          source?: string
+          summary?: Json | null
+          top_destinations?: Json | null
+          total_records?: number | null
+          trade_type?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null

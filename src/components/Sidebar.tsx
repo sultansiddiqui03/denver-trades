@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Activity,
+  BarChart3,
   Bot,
   Building2,
   ChevronLeft,
@@ -61,6 +62,7 @@ const navGroups: NavGroup[] = [
       { label: 'Companies', path: '/dashboard/companies', Icon: Building2 },
       { label: 'Buyer Match', path: '/dashboard/matches', Icon: Target },
       { label: 'Demand Radar', path: '/dashboard/radar', Icon: Radar },
+      { label: 'Market Intel', path: '/dashboard/market', Icon: BarChart3 },
     ],
   },
   {
