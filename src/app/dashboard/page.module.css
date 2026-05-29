@@ -326,3 +326,88 @@
     padding: var(--space-4);
   }
 }
+
+/* ═══ First-run guided hero ═══ */
+.firstRunCard {
+  margin-top: var(--space-5);
+  background: linear-gradient(180deg, rgba(204, 255, 0, 0.05), var(--bg-card));
+  border: 1px solid rgba(204, 255, 0, 0.3);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.firstRunHead {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.firstRunIcon {
+  color: var(--accent-lime);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.firstRunTitle {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.firstRunDesc {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  max-width: 60ch;
+}
+
+.firstRunSteps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.firstRunStep {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  text-decoration: none;
+  color: inherit;
+}
+
+.firstRunStepNum {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-lime);
+  opacity: 0.6;
+}
+
+.firstRunStepIcon {
+  color: var(--accent-lime);
+}
+
+.firstRunStepTitle {
+  font-family: var(--font-heading);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.firstRunStepDesc {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}

@@ -658,3 +658,19 @@ small {
   border-radius: var(--radius-md);
   padding: var(--space-4);
 }
+
+/* ──────────────────────────────────────────────────────────────────────
+   Accessibility: respect the OS "reduce motion" setting. Disables entrance
+   animations, count-ups, spinners, and transitions for users who opt out —
+   content still renders at its final state (never stuck invisible).
+   ────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

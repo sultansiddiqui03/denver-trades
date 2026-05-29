@@ -42,7 +42,7 @@ export default function SourcingSignalBadge({
       className={`${styles.badge} ${variantClass} ${sizeClass}${
         className ? ` ${className}` : ''
       }`}
-      title={signal?.headline ?? meta.label}
+      title={[meta.label, signal?.headline].filter(Boolean).join(' — ')}
     >
       {meta.label}
     </span>

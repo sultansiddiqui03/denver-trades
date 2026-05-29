@@ -27,13 +27,17 @@ export default function BuyerFitBadge({
   const rounded = Math.max(0, Math.min(100, Math.round(score)));
   const tier = buyerFitTier(rounded);
   const sizeClass = size === 'md' ? styles.sizeMd : styles.sizeSm;
+  const tierWord = tier === 'hot' ? 'strong' : tier === 'warm' ? 'moderate' : 'weak';
+  const title =
+    `Buyer-fit ${rounded}/100 — a ${tierWord} match. ` +
+    `Weighs commodity overlap, shipment volume, recency, importer role, and market fit.`;
 
   return (
     <span
       className={`${styles.badge} ${styles[`tier_${tier}`]} ${sizeClass}${
         className ? ` ${className}` : ''
       }`}
-      title={`Buyer-fit score: ${rounded}/100`}
+      title={title}
     >
       <span className={styles.score}>{rounded}</span>
       {showLabel ? <span className={styles.label}>fit</span> : null}

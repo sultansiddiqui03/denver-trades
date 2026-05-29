@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
+import { ArrowUpRight } from 'lucide-react';
 import styles from './StatsCard.module.css';
 
 interface StatsCardProps {
@@ -10,6 +12,8 @@ interface StatsCardProps {
   changeType: 'positive' | 'negative' | 'neutral';
   icon: React.ReactNode;
   delayIndex?: number;
+  /** When set, the whole card becomes a link to this route. */
+  href?: string;
 }
 
 export default function StatsCard({
@@ -19,6 +23,7 @@ export default function StatsCard({
   changeType,
   icon,
   delayIndex = 0,
+  href,
 }: StatsCardProps) {
   const changeClass =
     changeType === 'positive'
@@ -40,13 +45,8 @@ export default function StatsCard({
       </svg>
     ) : null;
 
-  return (
-    <div
-      className={styles.statsCard}
-      style={{
-        animationDelay: `${delayIndex * 100}ms`,
-      }}
-    >
+  const inner = (
+    <>
       <div className={styles.statsHeader}>
         <span className={styles.statsTitle}>{title}</span>
         <div className={styles.statsIconWrap}>{icon}</div>
@@ -56,6 +56,25 @@ export default function StatsCard({
         {arrow}
         <span>{change}</span>
       </div>
+      {href ? (
+        <ArrowUpRight size={16} strokeWidth={2} className={styles.statsLinkArrow} aria-hidden />
+      ) : null}
+    </>
+  );
+
+  const style = { animationDelay: `${delayIndex * 100}ms` } as React.CSSProperties;
+
+  if (href) {
+    return (
+      <Link href={href} className={`${styles.statsCard} ${styles.statsCardLink} lift press`} style={style}>
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <div className={styles.statsCard} style={style}>
+      {inner}
     </div>
   );
 }

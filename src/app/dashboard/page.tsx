@@ -3,17 +3,20 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
   Activity,
+  BarChart3,
   Building2,
   ChevronRight,
   FileSearch,
   Mail,
+  Radar,
   Sparkles,
+  Target,
   Users,
   Wallet,
   Zap,
 } from 'lucide-react';
 import { getUserContext } from '@/lib/auth/server';
-import { fetchDashboardStats } from '@/lib/dashboard/statsData';
+import { fetchDashboardStats, type DashboardStats } from '@/lib/dashboard/statsData';
 import { fetchActivityFeed } from '@/lib/dashboard/activityData';
 import StatsCard from '@/components/StatsCard';
 import ActiveDemandFeed from '@/components/ActiveDemandFeed';
@@ -22,14 +25,106 @@ import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
 
-function StatsSkeleton() {
+function deltaLabel(n: number, fallback: string): { change: string; changeType: 'positive' | 'neutral' } {
+  return n > 0
+    ? { change: `+${n} this week`, changeType: 'positive' }
+    : { change: fallback, changeType: 'neutral' };
+}
+
+function StatsRow({ stats }: { stats: DashboardStats }) {
+  const companies = deltaLabel(stats.newCompanies7d, 'In directory');
+  const deals = deltaLabel(stats.newDeals7d, 'In pipeline');
+  const enriched = deltaLabel(stats.newEnriched7d, 'AI-profiled');
   return (
     <>
-      <div className={`skeleton ${styles.statsSkeletonCard}`} />
-      <div className={`skeleton ${styles.statsSkeletonCard}`} />
-      <div className={`skeleton ${styles.statsSkeletonCard}`} />
-      <div className={`skeleton ${styles.statsSkeletonCard}`} />
+      <StatsCard
+        title="Total companies"
+        value={stats.totalCompanies.toLocaleString()}
+        change={companies.change}
+        changeType={companies.changeType}
+        href="/dashboard/companies"
+        delayIndex={0}
+        icon={<Building2 size={20} strokeWidth={1.6} />}
+      />
+      <StatsCard
+        title="Active deals"
+        value={stats.activeDeals.toLocaleString()}
+        change={deals.change}
+        changeType={deals.changeType}
+        href="/dashboard/pipeline"
+        delayIndex={1}
+        icon={<Users size={20} strokeWidth={1.6} />}
+      />
+      <StatsCard
+        title="Pipeline value"
+        value={stats.pipelineValue}
+        change={`across ${stats.activeDeals} deal${stats.activeDeals === 1 ? '' : 's'}`}
+        changeType="neutral"
+        href="/dashboard/pipeline"
+        delayIndex={2}
+        icon={<Wallet size={20} strokeWidth={1.6} />}
+      />
+      <StatsCard
+        title="Enriched leads"
+        value={stats.enrichedLeads.toLocaleString()}
+        change={enriched.change}
+        changeType={enriched.changeType}
+        href="/dashboard/companies"
+        delayIndex={3}
+        icon={<Sparkles size={20} strokeWidth={1.6} />}
+      />
     </>
+  );
+}
+
+function FirstRunHero() {
+  const steps = [
+    {
+      href: '/dashboard/matches',
+      Icon: Target,
+      title: 'Find your first buyers',
+      desc: 'Type a product on Buyer Match → Discover to pull real US importers from customs records.',
+    },
+    {
+      href: '/dashboard/market',
+      Icon: BarChart3,
+      title: 'Size your market',
+      desc: 'See demand-by-destination and price benchmarks for any commodity you trade.',
+    },
+    {
+      href: '/dashboard/radar',
+      Icon: Radar,
+      title: 'Watch demand signals',
+      desc: 'Track buyers shifting suppliers and inbound RFQs as they happen.',
+    },
+  ];
+  return (
+    <section className={`${styles.firstRunCard} fade-in`}>
+      <div className={styles.firstRunHead}>
+        <Sparkles size={20} strokeWidth={1.8} className={styles.firstRunIcon} />
+        <div>
+          <h2 className={styles.firstRunTitle}>Let&apos;s find you some buyers</h2>
+          <p className={styles.firstRunDesc}>
+            Your workspace is ready. Start with any of these — each pulls real customs trade data.
+          </p>
+        </div>
+      </div>
+      <div className={styles.firstRunSteps}>
+        {steps.map((s, i) => (
+          <Link
+            key={s.href}
+            href={s.href}
+            className={`${styles.firstRunStep} lift fade-in`}
+            style={{ animationDelay: `${i * 60}ms` }}
+          >
+            <span className={styles.firstRunStepNum}>{i + 1}</span>
+            <s.Icon size={18} strokeWidth={1.7} className={styles.firstRunStepIcon} />
+            <span className={styles.firstRunStepTitle}>{s.title}</span>
+            <span className={styles.firstRunStepDesc}>{s.desc}</span>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -45,50 +140,6 @@ function ActivitySkeleton() {
   );
 }
 
-async function StatsRow() {
-  const context = await getUserContext();
-  if (!context) redirect('/');
-
-  const stats = await fetchDashboardStats(context);
-
-  return (
-    <>
-      <StatsCard
-        title="Total companies"
-        value={stats.totalCompanies.toLocaleString()}
-        change="In directory"
-        changeType="neutral"
-        delayIndex={0}
-        icon={<Building2 size={20} strokeWidth={1.6} />}
-      />
-      <StatsCard
-        title="Active deals"
-        value={stats.activeDeals.toLocaleString()}
-        change="In pipeline"
-        changeType="neutral"
-        delayIndex={1}
-        icon={<Users size={20} strokeWidth={1.6} />}
-      />
-      <StatsCard
-        title="Pipeline value"
-        value={stats.pipelineValue}
-        change="Open opportunities"
-        changeType="neutral"
-        delayIndex={2}
-        icon={<Wallet size={20} strokeWidth={1.6} />}
-      />
-      <StatsCard
-        title="Enriched leads"
-        value={stats.enrichedLeads.toLocaleString()}
-        change="AI-profiled"
-        changeType="neutral"
-        delayIndex={3}
-        icon={<Sparkles size={20} strokeWidth={1.6} />}
-      />
-    </>
-  );
-}
-
 async function ActivityFeed() {
   const context = await getUserContext();
   if (!context) redirect('/');
@@ -98,6 +149,12 @@ async function ActivityFeed() {
 }
 
 export default async function DashboardOverview() {
+  const context = await getUserContext();
+  if (!context) redirect('/');
+  // Stats are cheap COUNT queries — fetch upfront so we can branch on first-run
+  // state (the activity feed stays in Suspense below since it's heavier).
+  const stats = await fetchDashboardStats(context);
+
   // Compute the date on the server. Note: rendered against the server's
   // locale; this matches the previous behavior where the value was frozen
   // at first paint, except now it's frozen at request time rather than at
@@ -131,10 +188,11 @@ export default async function DashboardOverview() {
 
       {/* Stats Cards Grid */}
       <div className={styles.statsGrid}>
-        <Suspense fallback={<StatsSkeleton />}>
-          <StatsRow />
-        </Suspense>
+        <StatsRow stats={stats} />
       </div>
+
+      {/* First-run guidance — only when the org has no data yet */}
+      {stats.isEmpty && <FirstRunHero />}
 
       {/* Active demand — the wedge over Tradyon. Surfaces parsed inbound
          WhatsApp RFQs as a one-tap quote-generation feed. */}

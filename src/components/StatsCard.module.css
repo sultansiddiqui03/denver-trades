@@ -28,6 +28,35 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* Clickable variant — whole card is a Link. */
+.statsCardLink {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.statsCardLink:focus-visible {
+  outline: none;
+  border-color: var(--accent-lime);
+  box-shadow: var(--focus-ring);
+}
+
+.statsLinkArrow {
+  position: absolute;
+  bottom: var(--space-5);
+  right: var(--space-5);
+  opacity: 0;
+  transform: translate(-2px, 2px);
+  transition: all var(--transition-fast);
+  color: var(--text-muted);
+}
+
+.statsCardLink:hover .statsLinkArrow {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
 /* Gradient accent line */
 .statsCard::before {
   content: '';
