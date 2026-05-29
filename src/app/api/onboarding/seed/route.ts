@@ -3,7 +3,12 @@ import { requireOnboardingContext } from '@/lib/auth/server';
 import { getSupabaseServiceClient } from '@/lib/supabase/admin';
 import { getErrorMessage } from '@/lib/errors';
 import { scoreOrgCompanies } from '@/lib/scoring/runScoring';
+import { discoverBuyersForProduct } from '@/lib/agents/buyerDiscovery';
 import type { TablesInsert } from '@/lib/supabase/database.types';
+
+// Onboarding seed may run a live customs discovery for the org's first
+// commodity — give it headroom under the 300s function ceiling.
+export const maxDuration = 300;
 
 type CompanyInsert = TablesInsert<'companies'>;
 type DealInsert = TablesInsert<'deals_pipeline'>;
@@ -190,11 +195,12 @@ export async function POST() {
     // line up with the tenant's chosen naming.
     const { data: orgRow, error: orgFetchErr } = await admin
       .from('organizations')
-      .select('deal_code_prefix')
+      .select('deal_code_prefix, commodities')
       .eq('id', orgId)
       .maybeSingle();
     if (orgFetchErr) throw orgFetchErr;
     const dealPrefix = orgRow?.deal_code_prefix ?? 'LEAD-OPP';
+    const primaryCommodity = (orgRow?.commodities ?? []).filter(Boolean)[0] ?? null;
 
     let createdCompanies = 0;
     let createdDeals = 0;
@@ -273,6 +279,21 @@ export async function POST() {
           await scoreOrgCompanies(admin, orgId, { companyIds: rows.map((r) => r.id) });
         } catch (scoreError) {
           console.error('Onboarding seed: buyer-fit scoring failed', scoreError);
+        }
+      }
+
+      // Beyond the realistic placeholders, pull REAL customs buyers for the
+      // org's primary commodity so a new tenant starts with genuine data, not
+      // just demo rows. Best-effort + bounded — a slow/failed scrape must never
+      // block onboarding completion (the placeholders already cover empty-state).
+      if (primaryCommodity && (process.env.APIFY_TOKEN || process.env.APIFY_API_TOKEN)) {
+        try {
+          await discoverBuyersForProduct(admin, orgId, primaryCommodity, {
+            maxSuppliers: 20,
+            maxBuyers: 8,
+          });
+        } catch (discoverError) {
+          console.error('Onboarding seed: live buyer discovery failed', discoverError);
         }
       }
     }
