@@ -6,6 +6,8 @@ import { useSearchParams } from 'next/navigation';
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
+  BookmarkPlus,
+  Bell,
   CheckCircle2,
   Download,
   ExternalLink,
@@ -13,6 +15,7 @@ import {
   Search as SearchIcon,
   Sparkles,
   Star,
+  X,
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import EmptyState from '@/components/EmptyState';
@@ -70,6 +73,14 @@ const suggestions = [
 
 const TOAST_ENRICH_FAIL = 'Enrichment failed — check Claude/Gemini keys';
 
+interface SavedSearch {
+  id: string;
+  name: string;
+  query: string;
+  alert_enabled: boolean;
+  last_result_count: number | null;
+}
+
 type SearchMode = 'keyword' | 'semantic';
 
 type IntentFilter = 'All' | CompanyType;
@@ -98,6 +109,8 @@ function SearchWorkspace() {
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<SearchMode>('keyword');
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [savingSearch, setSavingSearch] = useState(false);
   const [filterCountry, setFilterCountry] = useState('All');
   // intent filter (Buyers / Sellers / Brokers) reads ?intent=buyers etc. from
   // the URL so the sidebar's Find Buyers / Find Sellers links land here pre-set.
@@ -189,6 +202,55 @@ function SearchWorkspace() {
     performSearch(sug);
     setIsInputFocused(false);
     inputRef.current?.blur();
+  };
+
+  const loadSavedSearches = useCallback(async () => {
+    try {
+      const res = await fetch('/api/saved-searches');
+      const json = await res.json();
+      if (json?.success) setSavedSearches(json.searches ?? []);
+    } catch {
+      /* non-fatal */
+    }
+  }, []);
+
+  useEffect(() => {
+    // Defer the fetch off the effect's synchronous pass (the project's
+    // set-state-in-effect lint rule + the same pattern used for intent rehydrate).
+    const timer = window.setTimeout(() => {
+      loadSavedSearches();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadSavedSearches]);
+
+  const handleSaveSearch = async () => {
+    const q = query.trim();
+    if (!q || savingSearch) return;
+    setSavingSearch(true);
+    try {
+      const res = await fetch('/api/saved-searches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: q, query: q, alert_enabled: true }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? 'Could not save');
+      toast(`Saved "${q}" — you'll be alerted when new matches appear.`, 'success');
+      loadSavedSearches();
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Could not save search', 'error');
+    } finally {
+      setSavingSearch(false);
+    }
+  };
+
+  const handleDeleteSaved = async (id: string) => {
+    try {
+      await fetch(`/api/saved-searches/${id}`, { method: 'DELETE' });
+      setSavedSearches((prev) => prev.filter((s) => s.id !== id));
+    } catch {
+      toast('Could not remove saved search', 'error');
+    }
   };
 
   // Stable handler reference so SearchSuggestions can subscribe to keydowns
@@ -367,6 +429,21 @@ function SearchWorkspace() {
           />
         </div>
 
+        {query.trim().length > 0 && (
+          <div className={styles.searchActionsRow}>
+            <button
+              type="button"
+              className={styles.saveSearchBtn}
+              onClick={handleSaveSearch}
+              disabled={savingSearch}
+              title="Save this search and get alerted when new matches appear"
+            >
+              <BookmarkPlus size={15} strokeWidth={1.8} aria-hidden />
+              {savingSearch ? 'Saving…' : 'Save & alert me'}
+            </button>
+          </div>
+        )}
+
         {/* Suggestions — static "Try" row stays for the empty-query state.
             Once the user starts typing, the typeahead dropdown above takes
             over (it only renders when there's a non-empty query + focus). */}
@@ -382,6 +459,34 @@ function SearchWorkspace() {
               >
                 {sug}
               </button>
+            ))}
+          </div>
+        )}
+
+        {savedSearches.length > 0 && (
+          <div className={styles.suggestionsRow}>
+            <span className={styles.suggestionLabel}>
+              <Bell size={12} strokeWidth={1.8} aria-hidden /> Saved
+            </span>
+            {savedSearches.map((s) => (
+              <span key={s.id} className={styles.savedChip}>
+                <button
+                  type="button"
+                  className={styles.savedChipRun}
+                  onClick={() => handleSuggestionClick(s.query)}
+                  title={`Run "${s.query}"`}
+                >
+                  {s.name}
+                </button>
+                <button
+                  type="button"
+                  className={styles.savedChipRemove}
+                  onClick={() => handleDeleteSaved(s.id)}
+                  aria-label={`Remove saved search ${s.name}`}
+                >
+                  <X size={12} strokeWidth={2.2} aria-hidden />
+                </button>
+              </span>
             ))}
           </div>
         )}

@@ -123,6 +123,75 @@
   box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.32);
 }
 
+/* ── Save search + saved chips ── */
+.searchActionsRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+}
+
+.saveSearchBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-primary);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.saveSearchBtn:hover {
+  border-color: var(--accent-lime);
+  color: var(--accent-lime);
+}
+
+.saveSearchBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.savedChip {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(204, 255, 0, 0.06);
+  border: 1px solid rgba(204, 255, 0, 0.25);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.savedChipRun {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+}
+
+.savedChipRun:hover {
+  color: var(--accent-lime);
+}
+
+.savedChipRemove {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: var(--space-1) 6px;
+  cursor: pointer;
+}
+
+.savedChipRemove:hover {
+  color: var(--danger);
+}
+
 .searchBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
